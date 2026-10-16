@@ -29,7 +29,10 @@ def _parser() -> argparse.ArgumentParser:
     a.add_argument("--titulo", default="", help="título curto (por omissão, a primeira linha do texto)")
     a.add_argument("--projeto", required=True)
     a.add_argument("--texto", help="corpo em Markdown (por omissão lê do stdin)")
-    a.add_argument("--tarefa")
+    a.add_argument("--tarefa", help="chave do ticket, ex.: ABC-123 ou dono/repo#12")
+    a.add_argument("--epico", help="chave do épico ou do pai, ex.: ABC-100")
+    a.add_argument("--url", help="ligação para o ticket ou PR")
+    a.add_argument("--etiqueta", action="append", default=[], help="palavra para pesquisa (pode repetir)")
     a.add_argument("--ficheiro", action="append", default=[], help="caminho de código (pode repetir)")
     a.add_argument("--ligacao", action="append", default=[], help="outra memória (pode repetir)")
     a.add_argument("--custo", type=float, help="custo em dólares")
@@ -38,6 +41,8 @@ def _parser() -> argparse.ArgumentParser:
     q.add_argument("texto", nargs="?", default="")
     q.add_argument("--projeto")
     q.add_argument("--tipo")
+    q.add_argument("--tarefa")
+    q.add_argument("--epico")
     q.add_argument("--limite", type=int, default=10)
     q.add_argument("--json", action="store_true")
 
@@ -101,6 +106,9 @@ def _executar(args: argparse.Namespace) -> int:
             texto=texto,
             projeto=args.projeto,
             tarefa=args.tarefa,
+            epico=args.epico,
+            url=args.url,
+            etiquetas=args.etiqueta,
             ficheiros=args.ficheiro,
             ligacoes=args.ligacao,
             custo_usd=args.custo,
@@ -113,12 +121,15 @@ def _executar(args: argparse.Namespace) -> int:
     if args.comando == "procurar":
         from memoria.service import Memoria
 
-        resultados = Memoria().procurar(args.texto, projeto=args.projeto, tipo=args.tipo, limite=args.limite)
+        resultados = Memoria().procurar(
+            args.texto, projeto=args.projeto, tipo=args.tipo, limite=args.limite, tarefa=args.tarefa, epico=args.epico
+        )
         if args.json:
             print(json.dumps(resultados, ensure_ascii=False, indent=2))
         else:
             for r in resultados:
-                print(f"{r['data'][:10]}  {r['tipo']:<9}  {r['titulo']}  ({r['id']})")
+                chave = " ".join(x for x in (r["tarefa"], f"[{r['epico']}]" if r["epico"] else "") if x)
+                print(f"{r['data'][:10]}  {r['tipo']:<9}  {r['titulo']}  {chave}  ({r['id']})")
             if not resultados:
                 print("Sem resultados.")
         return 0

@@ -2,12 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { chamar } from './api.js';
 import { ROTULOS, TIPOS_MEMORIA } from './tipos.jsx';
 
-export default function NovaMemoria({ projetos, memorias, projetoAtual, onCancelar, onGuardada }) {
+const lista = (texto) =>
+  texto
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, onCancelar, onGuardada }) {
   const primeiro = useRef(null);
   const [tipo, setTipo] = useState('licao');
   const [titulo, setTitulo] = useState('');
   const [projeto, setProjeto] = useState(projetoAtual || projetos[0] || '');
   const [tarefa, setTarefa] = useState('');
+  const [epico, setEpico] = useState('');
+  const [url, setUrl] = useState('');
+  const [etiquetas, setEtiquetas] = useState('');
   const [texto, setTexto] = useState('');
   const [ligacoes, setLigacoes] = useState('');
   const [aGuardar, setAGuardar] = useState(false);
@@ -34,11 +43,11 @@ export default function NovaMemoria({ projetos, memorias, projetoAtual, onCancel
         titulo: titulo.trim(),
         projeto: projeto.trim(),
         tarefa: tarefa.trim(),
+        epico: epico.trim(),
+        url: url.trim(),
+        etiquetas: lista(etiquetas),
         texto,
-        ligacoes: ligacoes
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        ligacoes: lista(ligacoes),
       });
       onGuardada(r);
     } catch (er) {
@@ -85,11 +94,28 @@ export default function NovaMemoria({ projetos, memorias, projetoAtual, onCancel
             <textarea className="campo" value={texto} onChange={(e) => setTexto(e.target.value)} required />
           </label>
           <label className="rotulo">
-            Tarefa (opcional)
+            Tarefa ou ticket (opcional)
             <input className="campo mono" value={tarefa} onChange={(e) => setTarefa(e.target.value)} placeholder="ABC-123" />
           </label>
           <label className="rotulo">
-            Ligações (separadas por vírgulas)
+            Épico (opcional)
+            <input className="campo mono" list="lista-epicos" value={epico} onChange={(e) => setEpico(e.target.value)} placeholder="ABC-100" />
+            <datalist id="lista-epicos">
+              {epicos.map((e) => (
+                <option key={e} value={e} />
+              ))}
+            </datalist>
+          </label>
+          <label className="rotulo">
+            Ligação do ticket ou PR (opcional)
+            <input className="campo" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
+          </label>
+          <label className="rotulo">
+            Etiquetas (separadas por vírgulas)
+            <input className="campo" value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} />
+          </label>
+          <label className="rotulo inteiro">
+            Ligações a outras memórias (separadas por vírgulas)
             <input className="campo" list="lista-memorias" value={ligacoes} onChange={(e) => setLigacoes(e.target.value)} />
             <datalist id="lista-memorias">
               {memorias.slice(-300).map((m) => (

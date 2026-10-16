@@ -1,7 +1,7 @@
 // Tipos de nó, rótulos e formas. As cores vêm dos tokens CSS --tipo-*.
 
 export const TIPOS_MEMORIA = ['licao', 'fazer', 'nao_fazer', 'historico'];
-export const TIPOS_CONTEXTO = ['projeto', 'tarefa', 'ficheiro'];
+export const TIPOS_CONTEXTO = ['projeto', 'epico', 'tarefa', 'ficheiro'];
 export const TODOS_TIPOS = [...TIPOS_MEMORIA, ...TIPOS_CONTEXTO];
 
 export const ROTULOS = {
@@ -10,6 +10,7 @@ export const ROTULOS = {
   nao_fazer: 'Não fazer',
   historico: 'Histórico',
   projeto: 'Projeto',
+  epico: 'Épico',
   tarefa: 'Tarefa',
   ficheiro: 'Ficheiro',
 };
@@ -21,6 +22,7 @@ export const FORMAS = {
   nao_fazer: 'circulo',
   historico: 'circulo',
   projeto: 'quadrado',
+  epico: 'hexagono',
   tarefa: 'losango',
   ficheiro: 'triangulo',
 };
@@ -28,6 +30,7 @@ export const FORMAS = {
 export const MOTIVOS = {
   ligacao: 'ligação',
   tarefa: 'mesma tarefa',
+  epico: 'mesmo épico',
   projeto: 'mesmo projeto',
   ficheiro: 'ficheiro partilhado',
 };
@@ -50,6 +53,15 @@ export function desenharForma(ctx, forma, x, y, r) {
     ctx.lineTo(x, y + r * 1.25);
     ctx.lineTo(x - r * 1.25, y);
     ctx.closePath();
+  } else if (forma === 'hexagono') {
+    for (let i = 0; i < 6; i += 1) {
+      const a = (Math.PI / 3) * i;
+      const px = x + r * 1.2 * Math.cos(a);
+      const py = y + r * 1.2 * Math.sin(a);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
   } else if (forma === 'triangulo') {
     ctx.moveTo(x, y - r * 1.2);
     ctx.lineTo(x + r * 1.1, y + r * 0.8);
@@ -69,7 +81,10 @@ export function Marca({ tipo, tamanho = 12 }) {
   if (forma === 'quadrado') desenho = <rect x={c - r} y={c - r} width={r * 2} height={r * 2} fill={cor} />;
   else if (forma === 'losango')
     desenho = <polygon points={`${c},${c - r * 1.2} ${c + r * 1.2},${c} ${c},${c + r * 1.2} ${c - r * 1.2},${c}`} fill={cor} />;
-  else if (forma === 'triangulo')
+  else if (forma === 'hexagono') {
+    const pts = [0, 1, 2, 3, 4, 5].map((i) => `${c + r * 1.15 * Math.cos((Math.PI / 3) * i)},${c + r * 1.15 * Math.sin((Math.PI / 3) * i)}`);
+    desenho = <polygon points={pts.join(' ')} fill={cor} />;
+  } else if (forma === 'triangulo')
     desenho = <polygon points={`${c},${c - r * 1.15} ${c + r * 1.1},${c + r * 0.85} ${c - r * 1.1},${c + r * 0.85}`} fill={cor} />;
   else desenho = <circle cx={c} cy={c} r={r} fill={cor} />;
   return (

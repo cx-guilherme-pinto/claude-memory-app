@@ -5,12 +5,17 @@ Frontmatter YAML:
     tipo: licao | fazer | nao_fazer | historico
     titulo: texto
     projeto: texto
-    tarefa: texto (opcional, ex.: ABC-123 ou #42)
+    tarefa: chave do ticket (opcional, ex.: ABC-123 ou dono/repo#42)
+    epico: chave do épico ou do pai (opcional, ex.: ABC-100)        [v0.2]
+    url: ligação para o ticket ou PR (opcional, http/https)          [v0.2]
+    etiquetas: [palavras para pesquisa] (opcional)                   [v0.2]
     ficheiros: [caminhos de código]
     data: ISO 8601
     custo_usd: número (opcional)
     ligacoes: [nomes de outras memórias]
 O corpo pode ter ligações [[nome]].
+
+Os campos novos da v0.2 são opcionais: as notas da v0.1 continuam válidas.
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ from pathlib import Path
 import yaml
 
 TIPOS = ("licao", "fazer", "nao_fazer", "historico")
-TIPOS_CONTEXTO = ("projeto", "tarefa", "ficheiro")
+TIPOS_CONTEXTO = ("projeto", "epico", "tarefa", "ficheiro")
 
 _SINONIMOS = {
     "licao": "licao",
@@ -42,6 +47,48 @@ _SINONIMOS = {
 
 _FRONTMATTER = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 LIGACAO_CORPO = re.compile(r"\[\[([^\[\]\n|]+)(?:\|[^\]\n]*)?\]\]")
+
+
+# Chaves de tickets: Jira/Linear (ABC-123) e GitHub/Gitea (dono/repo#12).
+_JIRA = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d+$")
+_GITHUB = re.compile(r"^([\w.-]+/[\w.-]+)#(\d+)$")
+_URL_JIRA = re.compile(r"(?:/browse/|[?&]selectedIssue=)([A-Za-z][A-Za-z0-9_]*-\d+)\b")
+_URL_REPO = re.compile(r"^https?://[^/]+/([\w.-]+)/([\w.-]+)(?:/-)?/(?:issues|pulls?|merge_requests)/(\d+)\b")
+
+
+def normalizar_chave(valor) -> str:
+    """ABC-123 em maiúsculas; dono/repo#12 em minúsculas; o resto como está."""
+    chave = " ".join(str(valor or "").split())
+    if _JIRA.match(chave):
+        return chave.upper()
+    m = _GITHUB.match(chave)
+    if m:
+        return f"{m.group(1).lower()}#{m.group(2)}"
+    return chave
+
+
+def chave_global(chave: str) -> bool:
+    """Chaves únicas fora do projeto (Jira, dono/repo#12). "#12" sozinho não é."""
+    return bool(_JIRA.match(chave) or _GITHUB.match(chave))
+
+
+def chave_de_url(url: str) -> str:
+    """Chave do ticket a partir do URL (Jira /browse/ABC-1, GitHub/Gitea/GitLab issues e PRs)."""
+    url = str(url or "").strip()
+    m = _URL_JIRA.search(url)
+    if m:
+        return m.group(1).upper()
+    m = _URL_REPO.match(url)
+    if m:
+        return f"{m.group(1).lower()}/{m.group(2).lower()}#{m.group(3)}"
+    return ""
+
+
+def validar_url(url: str) -> str:
+    url = str(url or "").strip()
+    if url and not re.match(r"^https?://\S+$", url):
+        raise ValueError("O url tem de começar por http:// ou https://.")
+    return url
 
 
 def sem_acentos(texto: str) -> str:
@@ -88,6 +135,15 @@ def _lista(valor) -> list[str]:
     return [s.strip() for s in str(valor).split(",") if s.strip()]
 
 
+def _etiquetas(valor) -> list[str]:
+    vistas: dict[str, str] = {}
+    for e in _lista(valor):
+        e = e.lstrip("#").strip()
+        if e:
+            vistas.setdefault(e.lower(), e)
+    return list(vistas.values())
+
+
 def _data_iso(valor) -> str:
     if isinstance(valor, datetime):
         return valor.isoformat(timespec="seconds")
@@ -109,6 +165,9 @@ class Nota:
     custo_usd: float | None = None
     ligacoes: list[str] = field(default_factory=list)
     corpo: str = ""
+    epico: str = ""
+    url: str = ""
+    etiquetas: list[str] = field(default_factory=list)
 
     @property
     def ligacoes_corpo(self) -> list[str]:
@@ -131,6 +190,9 @@ class Nota:
             "titulo": self.titulo,
             "projeto": self.projeto,
             "tarefa": self.tarefa,
+            "epico": self.epico,
+            "url": self.url,
+            "etiquetas": self.etiquetas,
             "ficheiros": self.ficheiros,
             "data": self.data,
             "custo_usd": self.custo_usd,
@@ -174,7 +236,10 @@ def ler_nota(caminho: Path, home: Path) -> Nota:
         tipo=tipo,
         titulo=str(meta.get("titulo") or caminho.stem),
         projeto=str(meta.get("projeto") or caminho.parent.name),
-        tarefa=str(meta.get("tarefa") or "").strip(),
+        tarefa=normalizar_chave(meta.get("tarefa")),
+        epico=normalizar_chave(meta.get("epico")),
+        url=str(meta.get("url") or "").strip(),
+        etiquetas=_etiquetas(meta.get("etiquetas")),
         ficheiros=_lista(meta.get("ficheiros")),
         data=data_txt,
         custo_usd=custo,
@@ -212,6 +277,9 @@ def escrever_nota(
     ligacoes: list[str] | None = None,
     custo_usd: float | None = None,
     agora: datetime | None = None,
+    epico: str | None = None,
+    url: str | None = None,
+    etiquetas: list[str] | None = None,
 ) -> Path:
     """Escreve a nota de forma atómica e devolve o caminho. Não redige: ver service."""
     tipo = normalizar_tipo(tipo)
@@ -227,8 +295,17 @@ def escrever_nota(
         "titulo": titulo,
         "projeto": projeto,
     }
-    if tarefa and str(tarefa).strip():
-        meta["tarefa"] = str(tarefa).strip()
+    url = validar_url(url)
+    tarefa = normalizar_chave(tarefa) or chave_de_url(url)
+    epico = normalizar_chave(epico)
+    if tarefa:
+        meta["tarefa"] = tarefa
+    if epico and epico != tarefa:
+        meta["epico"] = epico
+    if url:
+        meta["url"] = url
+    if _etiquetas(etiquetas):
+        meta["etiquetas"] = _etiquetas(etiquetas)
     meta["ficheiros"] = _lista(ficheiros)
     meta["data"] = agora.isoformat(timespec="seconds")
     if custo_usd is not None and custo_usd != "":

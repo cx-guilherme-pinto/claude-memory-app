@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import ForceGraph2D from 'react-force-graph-2d';
 import { chamar, manterVivo } from './api.js';
 import NovaMemoria from './NovaMemoria.jsx';
+import Procura from './Procura.jsx';
 import { FORMAS, Marca, ROTULOS, TIPOS_MEMORIA, TODOS_TIPOS, dataCurta, desenharForma, lerCores } from './tipos.jsx';
 
 // O painel traz o marked e o DOMPurify: só carrega quando é preciso.
@@ -14,9 +15,9 @@ const PERIODOS = [
   ['90', 'Últimos 90 dias'],
   ['365', 'Último ano'],
 ];
-const DISTANCIA = { ligacao: 28, tarefa: 36, projeto: 70, ficheiro: 46 };
-const FORCA = { ligacao: 0.9, tarefa: 0.6, projeto: 0.15, ficheiro: 0.25 };
-const LARGURA = { ligacao: 1.6, tarefa: 0.9, projeto: 0.5, ficheiro: 0.5 };
+const DISTANCIA = { ligacao: 28, tarefa: 36, epico: 60, subtarefa: 40, projeto: 70, ficheiro: 46 };
+const FORCA = { ligacao: 0.9, tarefa: 0.6, epico: 0.2, subtarefa: 0.5, projeto: 0.15, ficheiro: 0.25 };
+const LARGURA = { ligacao: 1.6, tarefa: 0.9, epico: 0.6, subtarefa: 1.2, projeto: 0.5, ficheiro: 0.5 };
 const DURACAO_REPRODUCAO = 6000;
 const semMovimento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -30,6 +31,7 @@ function comAlfa(cor, alfa) {
 function raio(no) {
   const g = Math.sqrt(no.grau || 0);
   if (no.tipo === 'projeto') return Math.min(16, 6 + g * 0.8);
+  if (no.tipo === 'epico') return Math.min(13, 5 + g * 0.8);
   if (no.tipo === 'tarefa') return Math.min(10, 4 + g * 0.9);
   if (no.tipo === 'ficheiro') return Math.min(8, 3 + g * 0.8);
   return Math.min(12, 3.5 + g * 1.4);
@@ -55,6 +57,8 @@ export default function App() {
   const [tamanho, setTamanho] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   const [projeto, setProjeto] = useState('');
+  const [epico, setEpico] = useState('');
+  const [tarefa, setTarefa] = useState('');
   const [tiposAtivos, setTiposAtivos] = useState(() => new Set(TODOS_TIPOS));
   const [periodo, setPeriodo] = useState('tudo');
   const [cursor, setCursor] = useState(Infinity);
@@ -62,6 +66,7 @@ export default function App() {
 
   const [texto, setTexto] = useState('');
   const [resultados, setResultados] = useState(null);
+  const [grupos, setGrupos] = useState(null);
   const [selecionado, setSelecionado] = useState(null);
   const [sobre, setSobre] = useState(null);
   const [novaAberta, setNovaAberta] = useState(false);
@@ -147,6 +152,8 @@ export default function App() {
       if (n.data > ate) break;
       if (!tiposAtivos.has(n.tipo) && n.tipo in ROTULOS) continue;
       if (projeto && n.projeto !== projeto) continue;
+      if (epico && n.epico !== epico && n.tarefa !== epico) continue;
+      if (tarefa && n.tarefa !== tarefa) continue;
       if (desde && n.data.slice(0, 10) < desde) continue;
       ids.add(n.id);
     }
@@ -167,9 +174,19 @@ export default function App() {
         links.push(l);
       }
     }
+    // Tarefa → épico: só quando os dois nós já estão visíveis.
+    for (const l of dados.ligacoes) {
+      if (l.tipo === 'subtarefa' && ids.has(idDe(l.source)) && ids.has(idDe(l.target))) links.push(l);
+    }
     const nodes = dados.nos.filter((n) => ids.has(n.id));
     return { nodes, links, memorias };
-  }, [dados, memoriasOrdenadas, cursorEfetivo, tiposAtivos, projeto, periodo]);
+  }, [dados, memoriasOrdenadas, cursorEfetivo, tiposAtivos, projeto, epico, tarefa, periodo]);
+
+  // Tarefas da lista: só as do épico escolhido.
+  const tarefasDoFiltro = useMemo(() => {
+    const todas = dados?.tarefas || [];
+    return epico ? todas.filter((t) => t.epico === epico || t.chave === epico) : todas;
+  }, [dados, epico]);
 
   const contagemPorTipo = useMemo(() => {
     const c = {};
@@ -218,19 +235,25 @@ export default function App() {
     const t = texto.trim();
     if (!t) {
       setResultados(null);
+      setGrupos(null);
       return undefined;
     }
     let vivo = true;
     const espera = setTimeout(() => {
-      chamar('procurar', t, projeto || null, null)
-        .then((ids) => vivo && setResultados(new Set(ids)))
+      chamar('procurar', t)
+        .then((g) => {
+          if (!vivo) return;
+          setGrupos(g);
+          // Destaca as memórias encontradas, os projetos/tickets e as memórias deles.
+          setResultados(new Set([...g.ids, ...g.nos]));
+        })
         .catch((e) => vivo && setMensagem(e.message));
-    }, 180);
+    }, 160);
     return () => {
       vivo = false;
       clearTimeout(espera);
     };
-  }, [texto, projeto, dados]);
+  }, [texto, dados]);
 
   const correspondencias = useMemo(() => {
     if (!resultados) return [];
@@ -263,17 +286,34 @@ export default function App() {
   const focar = useCallback((no) => {
     if (!no) return;
     setSelecionado(no.id);
-    const fg = grafoRef.current;
-    if (fg && Number.isFinite(no.x)) fg.centerAt(no.x, no.y, semMovimento() ? 0 : 400);
+    const centrar = (tentativas) => {
+      const fg = grafoRef.current;
+      if (fg && Number.isFinite(no.x)) fg.centerAt(no.x, no.y, semMovimento() ? 0 : 400);
+      else if (tentativas > 0) setTimeout(() => centrar(tentativas - 1), 250);
+    };
+    centrar(4);
   }, []);
 
   const abrirRef = useCallback(
     (id) => {
       const no = dados?.nos.find((n) => n.id === id);
-      if (no) focar(no);
-      else setSelecionado(id);
+      if (!no) {
+        setSelecionado(id);
+        return;
+      }
+      // Se o nó está escondido pelos filtros, limpa-os para o mostrar.
+      if (!visivel.nodes.includes(no)) {
+        setProjeto('');
+        setEpico('');
+        setTarefa('');
+        setPeriodo('tudo');
+        setTiposAtivos(new Set(TODOS_TIPOS));
+        setCursor(Infinity);
+        setAReproduzir(false);
+      }
+      focar(no);
     },
-    [dados, focar],
+    [dados, focar, visivel],
   );
 
   const guardada = useCallback(
@@ -430,21 +470,10 @@ export default function App() {
       )}
 
       <div className="barra" style={{ right: selecionado && tamanho.w > 760 ? 412 : 12 }}>
-        <input
-          ref={procuraRef}
-          className="campo campo-procura"
-          type="search"
-          placeholder="Procurar  /"
-          aria-label="Procurar memórias"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && correspondencias.length) focar(correspondencias[0]);
-          }}
-        />
+        <Procura entradaRef={procuraRef} texto={texto} onTexto={setTexto} grupos={grupos} onEscolher={abrirRef} />
         {resultados && (
           <span className="contagem pequeno num" aria-live="polite">
-            {correspondencias.length} {correspondencias.length === 1 ? 'resultado' : 'resultados'}
+            {correspondencias.length} {correspondencias.length === 1 ? 'nó destacado' : 'nós destacados'}
           </span>
         )}
         <select className="seletor" aria-label="Projeto" value={projeto} onChange={(e) => setProjeto(e.target.value)}>
@@ -455,6 +484,34 @@ export default function App() {
             </option>
           ))}
         </select>
+        {(dados?.epicos || []).length > 0 && (
+          <select
+            className="seletor"
+            aria-label="Épico"
+            value={epico}
+            onChange={(e) => {
+              setEpico(e.target.value);
+              setTarefa('');
+            }}
+          >
+            <option value="">Todos os épicos</option>
+            {dados.epicos.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+          </select>
+        )}
+        {tarefasDoFiltro.length > 0 && (
+          <select className="seletor" aria-label="Tarefa" value={tarefa} onChange={(e) => setTarefa(e.target.value)}>
+            <option value="">Todas as tarefas</option>
+            {tarefasDoFiltro.map((t) => (
+              <option key={t.chave} value={t.chave}>
+                {t.chave}
+              </option>
+            ))}
+          </select>
+        )}
         <select className="seletor" aria-label="Período" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
           {PERIODOS.map(([v, t]) => (
             <option key={v} value={v}>
@@ -535,6 +592,7 @@ export default function App() {
             vizinhos={vizinhos}
             onFechar={() => setSelecionado(null)}
             onAbrir={abrirRef}
+            idEpico={(chave) => dados?.nos.find((n) => n.tipo === 'epico' && n.epico === chave)?.id}
           />
         </Suspense>
       )}
@@ -542,6 +600,7 @@ export default function App() {
       {novaAberta && (
         <NovaMemoria
           projetos={dados?.projetos || []}
+          epicos={dados?.epicos || []}
           memorias={memoriasOrdenadas}
           projetoAtual={projeto}
           onCancelar={() => setNovaAberta(false)}

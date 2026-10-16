@@ -41,15 +41,18 @@ def verificar_base() -> bool:
                 titulo="Teste de arranque",
                 texto="Chave sk-ant-api03-ABCDEFGHIJKLMNOPQRST não pode ficar. Ver [[segunda nota]].",
                 projeto="selftest",
-                tarefa="T-1",
+                tarefa="TESTE-2",
+                epico="TESTE-1",
             )
-            mem.adicionar(tipo="fazer", titulo="Segunda nota", texto="Outra nota.", projeto="selftest", tarefa="T-1")
+            mem.adicionar(tipo="fazer", titulo="Segunda nota", texto="Outra nota.", projeto="selftest", tarefa="TESTE-3", epico="TESTE-1")
             conteudo = Path(a["caminho"]).read_text("utf-8")
             resultados.append(_linha("sk-ant-" not in conteudo and "[REDIGIDO:" in conteudo, "Redação de segredos"))
             achados = mem.procurar("arranque")
             resultados.append(_linha(bool(achados) and achados[0]["id"] == a["id"], "Pesquisa FTS5"))
             rel = mem.relacionadas(a["id"])
             resultados.append(_linha(bool(rel) and rel[0]["motivos"].get("ligacao") == 1, "Arestas e relacionadas"))
+            por_chave = {r["titulo"] for r in mem.procurar("TESTE-2")}
+            resultados.append(_linha(por_chave == {"Teste de arranque", "Segunda nota"}, "Pesquisa por tarefa e épico"))
             estado = mem.reindexar()
             resultados.append(_linha(estado["total"] == 2, "Reindex a partir do Markdown"))
             resultados.append(_linha(_mcp_ok(mem), "Servidor MCP (3 ferramentas)"))

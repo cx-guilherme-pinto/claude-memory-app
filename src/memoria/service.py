@@ -46,6 +46,9 @@ class Memoria:
         ficheiros: list[str] | None = None,
         ligacoes: list[str] | None = None,
         custo_usd: float | None = None,
+        epico: str | None = None,
+        url: str | None = None,
+        etiquetas: list[str] | None = None,
     ) -> dict:
         """Redige segredos, escreve o Markdown e atualiza o índice."""
         texto, n_texto = redigir(texto or "")
@@ -64,6 +67,9 @@ class Memoria:
             ficheiros=redigir_valor(list(ficheiros or [])),
             ligacoes=redigir_valor(list(ligacoes or [])),
             custo_usd=custo_usd,
+            epico=redigir(epico or "")[0] or None,
+            url=redigir(url or "")[0] or None,
+            etiquetas=redigir_valor(list(etiquetas or [])),
         )
         self.sincronizar(forcar=True)
         return {
@@ -72,9 +78,21 @@ class Memoria:
             "redigidos": n_texto + n_titulo,
         }
 
-    def procurar(self, texto: str, projeto: str | None = None, tipo: str | None = None, limite: int = 10) -> list[dict]:
+    def procurar(
+        self,
+        texto: str,
+        projeto: str | None = None,
+        tipo: str | None = None,
+        limite: int = 10,
+        tarefa: str | None = None,
+        epico: str | None = None,
+    ) -> list[dict]:
         self.sincronizar()
-        return self.indice.procurar(texto, projeto=projeto, tipo=tipo, limite=limite)
+        return self.indice.procurar(texto, projeto=projeto, tipo=tipo, limite=limite, tarefa=tarefa, epico=epico)
+
+    def procurar_agrupado(self, texto: str, limite: int = 8) -> dict:
+        self.sincronizar()
+        return self.indice.procurar_agrupado(texto, limite=limite)
 
     def relacionadas(self, ref: str, limite: int = 10) -> list[dict]:
         self.sincronizar()

@@ -26,9 +26,11 @@ def test_ferramentas_e_esquemas(mem):
     ferramentas = {t.name: t for t in _correr(principal())}
     assert set(ferramentas) == {"memoria_procurar", "memoria_adicionar", "memoria_relacionadas"}
     props = ferramentas["memoria_adicionar"].input_schema["properties"]
-    assert set(props) == {"tipo", "titulo", "texto", "projeto", "tarefa", "ficheiros", "ligacoes", "custo_usd"}
+    assert set(props) == {
+        "tipo", "titulo", "texto", "projeto", "tarefa", "epico", "url", "ficheiros", "ligacoes", "etiquetas", "custo_usd",
+    }
     assert set(ferramentas["memoria_adicionar"].input_schema["required"]) == {"tipo", "titulo", "texto", "projeto"}
-    assert set(ferramentas["memoria_procurar"].input_schema["properties"]) == {"texto", "projeto", "tipo", "limite"}
+    assert set(ferramentas["memoria_procurar"].input_schema["properties"]) == {"texto", "projeto", "tipo", "tarefa", "epico", "limite"}
     assert ferramentas["memoria_procurar"].input_schema["properties"]["limite"]["default"] == 10
     assert set(ferramentas["memoria_relacionadas"].input_schema["properties"]) == {"id_ou_caminho", "limite"}
     assert ferramentas["memoria_procurar"].annotations.read_only_hint is True

@@ -19,6 +19,7 @@
   --tipo-nao_fazer: #eb6834;
   --tipo-historico: #7c8388;
   --tipo-projeto: #2b3033;
+  --tipo-epico: #3f4549;
   --tipo-tarefa: #5a6064;
   --tipo-ficheiro: #a3a9ad;
 
@@ -46,6 +47,7 @@
     --tipo-nao_fazer: #d95926;
     --tipo-historico: #858c91;
     --tipo-projeto: #d3d8da;
+    --tipo-epico: #bcc2c5;
     --tipo-tarefa: #a2a9ae;
     --tipo-ficheiro: #646b70;
   }
@@ -66,6 +68,7 @@
   --tipo-nao_fazer: #d95926;
   --tipo-historico: #858c91;
   --tipo-projeto: #d3d8da;
+  --tipo-epico: #bcc2c5;
   --tipo-tarefa: #a2a9ae;
   --tipo-ficheiro: #646b70;
 }
@@ -128,7 +131,6 @@ button, input, select, textarea {
   min-height: 34px;
 }
 .campo::placeholder { color: var(--muted); }
-.campo-procura { width: min(320px, 100%); }
 .seletor { padding-right: 6px; }
 
 .botao {
@@ -155,6 +157,43 @@ button, input, select, textarea {
 .espaco { flex: 1; }
 
 .contagem { color: var(--muted); padding: 0 4px; }
+
+/* ---------------------------------------------------------------- procura */
+.procura { position: relative; width: min(340px, 100%); }
+.procura .campo-procura { width: 100%; }
+.resultados {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 5;
+  animation: aparecer 150ms var(--ease) both;
+}
+.resultados h3 {
+  font-size: var(--t-pequeno);
+  color: var(--muted);
+  font-weight: 600;
+  margin: 6px 6px 2px;
+}
+.resultados ul { list-style: none; margin: 0; padding: 0; }
+.resultados li {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.resultados li[aria-selected="true"], .resultados li:hover { background: var(--surface-2); }
+.resultados .lado { color: var(--muted); font-size: var(--t-pequeno); white-space: nowrap; }
+.resultados .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resultados .vazio-lista { color: var(--muted); padding: 6px; margin: 0; }
 
 /* ---------------------------------------------------------------- legenda */
 .legenda {
@@ -256,6 +295,17 @@ button, input, select, textarea {
 .meta dt { color: var(--muted); }
 .meta dd { margin: 0; overflow-wrap: anywhere; }
 .tipo-marca { display: inline-flex; align-items: center; gap: 6px; }
+.ligacao-texto {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
 
 .markdown { overflow-wrap: anywhere; }
 .markdown :first-child { margin-top: 0; }
@@ -286,6 +336,7 @@ button, input, select, textarea {
 }
 .lista button:hover { background: var(--surface-2); }
 .lista .motivo { color: var(--muted); font-size: var(--t-pequeno); }
+.lista-motivos .motivo { grid-column: 2 / -1; margin-top: -2px; }
 .acoes { display: flex; gap: 8px; margin-top: 18px; }
 
 /* ------------------------------------------------------------- formulário */

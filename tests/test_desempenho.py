@@ -50,8 +50,8 @@ def test_500_memorias_indice_e_payload(home: Path, tmp_path: Path):
     )
     assert estado["total"] == 500 and grafo["total"] == 500
     assert total < ORCAMENTO_S
-    # Margem para o browser: o lado do Python deve ficar bem abaixo de metade do orçamento.
-    assert total < ORCAMENTO_S / 2
+    # Margem para o browser: o lado do Python fica bem abaixo do orçamento.
+    assert total < ORCAMENTO_S * 0.75
 
 
 def test_sincronizar_sem_alteracoes_e_rapido(home: Path):

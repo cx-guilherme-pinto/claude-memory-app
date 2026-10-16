@@ -11,7 +11,10 @@ def test_add_procurar_reindex(home: Path, capsys, monkeypatch):
             "--titulo", "Pela linha de comandos",
             "--projeto", "cli",
             "--texto", "corpo com password=naoGuardar123",
-            "--tarefa", "C-1",
+            "--tarefa", "c-1",
+            "--epico", "c-0",
+            "--url", "https://empresa.atlassian.net/browse/C-1",
+            "--etiqueta", "cli",
             "--ficheiro", "a.py",
             "--ficheiro", "b.py",
             "--ligacao", "outra",
@@ -26,6 +29,9 @@ def test_add_procurar_reindex(home: Path, capsys, monkeypatch):
 
     assert main(["procurar", "linha"]) == 0
     assert "Pela linha de comandos" in capsys.readouterr().out
+    assert main(["procurar", "", "--epico", "C-0"]) == 0
+    saida = capsys.readouterr().out
+    assert "Pela linha de comandos" in saida and "C-1 [C-0]" in saida
     assert main(["reindex"]) == 0
     assert "1 memórias" in capsys.readouterr().out
 

@@ -28,7 +28,7 @@ function motivos(m) {
     .join(', ');
 }
 
-export default function Painel({ no, vizinhos, onFechar, onAbrir }) {
+export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
   const memoria = TIPOS_MEMORIA.includes(no.tipo) || !(no.tipo in ROTULOS);
   const [nota, setNota] = useState(null);
   const [erro, setErro] = useState('');
@@ -96,6 +96,36 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir }) {
             <dd className="mono">{nota.tarefa}</dd>
           </>
         )}
+        {(nota?.epico || (!memoria && no.tipo === 'tarefa' && no.epico)) && (
+          <>
+            <dt>Épico</dt>
+            <dd className="mono">
+              {idEpico(nota?.epico || no.epico) ? (
+                <button className="ligacao-texto" type="button" onClick={() => onAbrir(idEpico(nota?.epico || no.epico))}>
+                  {nota?.epico || no.epico}
+                </button>
+              ) : (
+                nota?.epico || no.epico
+              )}
+            </dd>
+          </>
+        )}
+        {nota?.url && (
+          <>
+            <dt>Ticket</dt>
+            <dd>
+              <button className="ligacao-texto" type="button" onClick={() => chamar('abrir_url', nota.url).catch((e) => setErro(e.message))} title={nota.url}>
+                {nota.url.replace(/^https?:\/\//, '')}
+              </button>
+            </dd>
+          </>
+        )}
+        {nota?.etiquetas?.length > 0 && (
+          <>
+            <dt>Etiquetas</dt>
+            <dd>{nota.etiquetas.join(', ')}</dd>
+          </>
+        )}
         <dt>Data</dt>
         <dd className="num">{dataCurta(nota?.data || no.data)}</dd>
         {nota?.custo_usd != null && (
@@ -130,7 +160,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir }) {
       {nota?.relacionadas?.length > 0 && (
         <section className="seccao">
           <h3>Relacionadas</h3>
-          <ul className="lista">
+          <ul className="lista lista-motivos">
             {nota.relacionadas.map((r) => (
               <li key={r.id}>
                 <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>

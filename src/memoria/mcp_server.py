@@ -12,8 +12,9 @@ from memoria.service import Memoria
 
 INSTRUCOES = (
     "Memória local do participante, em Markdown. "
-    "Antes de planear, usa memoria_procurar com o projeto atual e guarda as lições. "
+    "Antes de planear, usa memoria_procurar com o projeto atual (e a tarefa ou o épico, se houver). "
     "Depois de uma tarefa, usa memoria_adicionar com uma lição curta e acionável. "
+    "Se houver um ticket (Jira, GitHub), indica sempre tarefa, epico e url: ficam pesquisáveis. "
     "Tipos: licao, fazer, nao_fazer, historico. Nunca guardes segredos."
 )
 
@@ -34,17 +35,23 @@ def criar_servidor(memoria: Memoria | None = None):
 
     @servidor.tool(
         name="memoria_procurar",
-        description="Procura memórias por texto (FTS5). Filtra por projeto e tipo. Devolve as mais relevantes.",
+        description=(
+            "Procura memórias no título, texto, projeto, tarefa, épico e etiquetas. "
+            "Uma chave de ticket (ex.: ABC-123) devolve tudo dessa tarefa e do seu épico. "
+            "Filtra por projeto, tipo, tarefa e épico."
+        ),
         annotations=so_leitura,
     )
     def memoria_procurar(
         texto: Annotated[str, Field(description="Palavras a procurar. Vazio devolve as mais recentes.")],
         projeto: Annotated[str | None, Field(description="Só deste projeto.")] = None,
         tipo: Annotated[str | None, Field(description="licao, fazer, nao_fazer ou historico.")] = None,
+        tarefa: Annotated[str | None, Field(description="Só desta tarefa, ex.: ABC-123 ou dono/repo#12.")] = None,
+        epico: Annotated[str | None, Field(description="Só deste épico (inclui as suas tarefas), ex.: ABC-100.")] = None,
         limite: Annotated[int, Field(ge=1, le=100, description="Máximo de resultados.")] = 10,
     ) -> dict:
         try:
-            resultados = mem.procurar(texto, projeto=projeto, tipo=tipo, limite=limite)
+            resultados = mem.procurar(texto, projeto=projeto, tipo=tipo, limite=limite, tarefa=tarefa, epico=epico)
         except ValueError as erro:
             raise ToolError(str(erro)) from erro
         return {"total": len(resultados), "resultados": _compacto(resultados)}
@@ -62,9 +69,12 @@ def criar_servidor(memoria: Memoria | None = None):
         titulo: Annotated[str, Field(description="Título curto.")],
         texto: Annotated[str, Field(description="Corpo em Markdown. Pode ter ligações [[nome]].")],
         projeto: Annotated[str, Field(description="Nome do projeto, ex.: arena-de-seguranca.")],
-        tarefa: Annotated[str | None, Field(description="Id da tarefa, ex.: ABC-123 ou #42.")] = None,
+        tarefa: Annotated[str | None, Field(description="Chave do ticket, ex.: ABC-123 ou dono/repo#12.")] = None,
+        epico: Annotated[str | None, Field(description="Chave do épico ou do pai, ex.: ABC-100.")] = None,
+        url: Annotated[str | None, Field(description="Ligação para o ticket ou PR (http/https).")] = None,
         ficheiros: Annotated[list[str] | None, Field(description="Caminhos de código relacionados.")] = None,
         ligacoes: Annotated[list[str] | None, Field(description="Nomes ou ids de outras memórias.")] = None,
+        etiquetas: Annotated[list[str] | None, Field(description="Palavras para pesquisa, ex.: ['ci', 'cache'].")] = None,
         custo_usd: Annotated[float | None, Field(ge=0, description="Custo da tarefa em dólares.")] = None,
     ) -> str:
         try:
@@ -74,8 +84,11 @@ def criar_servidor(memoria: Memoria | None = None):
                 texto=texto,
                 projeto=projeto,
                 tarefa=tarefa,
+                epico=epico,
+                url=url,
                 ficheiros=ficheiros,
                 ligacoes=ligacoes,
+                etiquetas=etiquetas,
                 custo_usd=custo_usd,
             )
         except ValueError as erro:
@@ -86,7 +99,7 @@ def criar_servidor(memoria: Memoria | None = None):
         name="memoria_relacionadas",
         description=(
             "Memórias ligadas a uma memória, da relação mais forte para a mais fraca: "
-            "ligação explícita, mesma tarefa, mesmo projeto, ficheiros partilhados."
+            "ligação explícita, mesma tarefa, mesmo épico, mesmo projeto, ficheiros partilhados."
         ),
         annotations=so_leitura,
     )

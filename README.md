@@ -4,7 +4,8 @@ A Memória guarda o que o Claude Code aprende, em ficheiros Markdown no teu comp
 Mostra essas notas num grafo e dá-as ao Claude Code por um servidor MCP.
 
 - **Lições** e regras (**fazer**, **não fazer**) e **histórico** de tarefas.
-- Pesquisa rápida (SQLite FTS5) e ligações entre notas.
+- Cada nota pode ficar ligada a um ticket (Jira, GitHub) e ao seu épico.
+- Pesquisa rápida (SQLite FTS5) por nome, projeto, ticket, épico, etiquetas e texto.
 - Uma janela com o grafo, filtros, linha temporal e um formulário para notas novas.
 - Tudo fica no teu computador. Nada é enviado para fora.
 
@@ -16,13 +17,13 @@ Não precisa de permissões de administrador.
 **macOS** (Intel e Apple Silicon) e Linux, no Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.1.0/install.sh | sh
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.0/install.sh | sh
 ```
 
 **Windows 10/11**, no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.1.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.0/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -48,8 +49,8 @@ Ferramentas MCP:
 
 | Ferramenta | Para quê |
 |---|---|
-| `memoria_procurar(texto, projeto?, tipo?, limite=10)` | Procura notas. |
-| `memoria_adicionar(tipo, titulo, texto, projeto, tarefa?, ficheiros?, ligacoes?, custo_usd?)` | Guarda uma nota e devolve o caminho. |
+| `memoria_procurar(texto, projeto?, tipo?, tarefa?, epico?, limite=10)` | Procura notas. Uma chave (`ABC-123`) traz a tarefa e o seu épico. |
+| `memoria_adicionar(tipo, titulo, texto, projeto, tarefa?, epico?, url?, ficheiros?, ligacoes?, etiquetas?, custo_usd?)` | Guarda uma nota e devolve o caminho. |
 | `memoria_relacionadas(id_ou_caminho, limite=10)` | Notas ligadas, da relação mais forte para a mais fraca. |
 
 ## Usar
@@ -58,15 +59,17 @@ Ferramentas MCP:
 |---|---|
 | `memoria` | Abre a janela. |
 | `memoria --browser` | Abre a mesma interface no browser. |
-| `memoria add --tipo licao --projeto p --titulo "..." --texto "..."` | Guarda uma nota. |
-| `memoria procurar "texto"` | Procura na linha de comandos. |
+| `memoria add --tipo licao --projeto p --titulo "..." --texto "..." [--tarefa ABC-123 --epico ABC-100 --url ...]` | Guarda uma nota. |
+| `memoria procurar "texto" [--tarefa ABC-123] [--epico ABC-100]` | Procura na linha de comandos. |
 | `memoria reindex` | Reconstrói o índice a partir dos Markdown. |
 | `memoria update` | Instala a versão mais recente. |
 | `memoria selftest [--gui]` | Verifica a instalação. Com `--gui`, abre e fecha a janela. |
 | `memoria mcp` | Servidor MCP (usado pelo Claude Code). |
 
 Na janela, clica num nó para ver a nota. Usa `/` para procurar e `Esc` para fechar.
-A legenda filtra por tipo. O botão de reprodução da linha temporal mostra o grafo a crescer.
+A procura mostra memórias, projetos e tarefas/épicos; escolhe um para o focar.
+Os filtros escolhem projeto, épico, tarefa e período. A legenda filtra por tipo.
+O botão de reprodução da linha temporal mostra o grafo a crescer.
 
 No Windows, se o WebView2 faltar, a interface abre no browser, em `127.0.0.1`.
 
@@ -78,7 +81,7 @@ Em `~/.memoria` (ou na pasta indicada por `MEMORIA_HOME`):
 ~/.memoria/
   <projeto>/<AAAA-MM-DD>-<slug>.md   uma nota por ficheiro
   config.json                        URLs de atualização (opcional)
-  .indice/memoria.sqlite             índice; pode ser apagado
+  .indice/memoria-v2.sqlite          índice; pode ser apagado
 ```
 
 Cada nota tem um cabeçalho YAML:
@@ -88,7 +91,10 @@ Cada nota tem um cabeçalho YAML:
 tipo: licao            # licao | fazer | nao_fazer | historico
 titulo: Usar cache no build
 projeto: arena-de-seguranca
-tarefa: ARENA-12       # opcional
+tarefa: ARENA-12       # opcional: chave do ticket (ou dono/repo#12)
+epico: ARENA-1         # opcional: épico ou pai
+url: https://empresa.atlassian.net/browse/ARENA-12   # opcional
+etiquetas: [ci, cache] # opcional
 ficheiros: [orquestrador/plan.mjs]
 data: '2026-10-16T13:25:33+01:00'
 custo_usd: 1.25        # opcional
@@ -100,9 +106,17 @@ O build fica 3x mais rápido com cache. Ver [[Evitar retries]].
 
 Podes editar os ficheiros à mão. A app deteta as alterações.
 `memoria reindex` reconstrói o índice a qualquer momento.
+Os campos `epico`, `url` e `etiquetas` são da v0.2 e opcionais: as notas da v0.1 continuam válidas.
+
+Tickets:
+
+- Chaves do Jira ficam em maiúsculas (`abc-123` → `ABC-123`); do GitHub, `dono/repo#12`.
+- Sem `tarefa`, a app tira-a do `url` quando é um ticket do Jira ou um issue/PR.
+- Uma nota sem `epico` herda o épico da sua tarefa, se outra nota o indicar.
+- Procurar `ABC-123` encontra as notas dessa tarefa, as do seu épico e as que a citam.
 
 Força das ligações, da mais forte para a mais fraca:
-ligação explícita (`[[...]]` ou `ligacoes`), mesma tarefa, mesmo projeto, ficheiros em comum.
+ligação explícita (`[[...]]` ou `ligacoes`), mesma tarefa, mesmo épico, mesmo projeto, ficheiros em comum.
 
 ## Atualizar
 

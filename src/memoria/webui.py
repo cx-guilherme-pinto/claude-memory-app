@@ -97,22 +97,29 @@ class Api:
         nota["relacionadas"] = self._mem.relacionadas(nota["id"], limite=12)
         return nota
 
-    def procurar(self, texto: str, projeto: str | None = None, tipo: str | None = None) -> list[str]:
-        return [r["id"] for r in self._mem.procurar(texto, projeto=projeto or None, tipo=tipo or None, limite=200)]
+    def procurar(self, texto: str) -> dict:
+        """Resultados agrupados (memórias, projetos, tarefas e épicos) e os nós a destacar."""
+        return self._mem.procurar_agrupado(str(texto or ""))
 
     def adicionar(self, dados: dict) -> dict:
         if not isinstance(dados, dict):
             raise ValueError("Dados inválidos.")
-        ligacoes = dados.get("ligacoes") or []
-        if isinstance(ligacoes, str):
-            ligacoes = [x.strip() for x in ligacoes.split(",") if x.strip()]
+        def lista(chave: str) -> list[str]:
+            valor = dados.get(chave) or []
+            if isinstance(valor, str):
+                valor = valor.split(",")
+            return [str(x).strip() for x in valor if str(x).strip()]
+
         return self._mem.adicionar(
             tipo=str(dados.get("tipo") or ""),
             titulo=str(dados.get("titulo") or ""),
             texto=str(dados.get("texto") or ""),
             projeto=str(dados.get("projeto") or ""),
             tarefa=str(dados.get("tarefa") or "") or None,
-            ligacoes=ligacoes,
+            epico=str(dados.get("epico") or "") or None,
+            url=str(dados.get("url") or "") or None,
+            etiquetas=lista("etiquetas"),
+            ligacoes=lista("ligacoes"),
         )
 
     def abrir_ficheiro(self, ref: str) -> bool:

@@ -79,8 +79,8 @@ def test_api_fluxo_completo(servidor):
     assert novo["id"].startswith("p/") and novo["id"].endswith("primeira-linha")
     grafo = json.loads(_pedido(servidor, "POST", "/api/grafo", {"args": []}, token=t)[2])["resultado"]
     assert grafo["total"] == 1
-    ids = json.loads(_pedido(servidor, "POST", "/api/procurar", {"args": ["primeira", None, None]}, token=t)[2])["resultado"]
-    assert ids == [novo["id"]]
+    achados = json.loads(_pedido(servidor, "POST", "/api/procurar", {"args": ["primeira"]}, token=t)[2])["resultado"]
+    assert achados["ids"] == [novo["id"]] and achados["memorias"][0]["id"] == novo["id"]
     nota = json.loads(_pedido(servidor, "POST", "/api/nota", {"args": [novo["id"]]}, token=t)[2])["resultado"]
     assert nota["corpo"].startswith("Primeira linha") and nota["relacionadas"] == []
     estado, _, corpo = _pedido(servidor, "POST", "/api/nota", {"args": ["nada"]}, token=t)

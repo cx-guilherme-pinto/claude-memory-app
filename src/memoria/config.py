@@ -38,7 +38,9 @@ def config_path() -> Path:
 
 
 def indice_path() -> Path:
-    return memoria_home() / ".indice" / "memoria.sqlite"
+    from memoria.index import NOME_FICHEIRO
+
+    return memoria_home() / ".indice" / NOME_FICHEIRO
 
 
 def ler_conf(texto: str) -> dict[str, str]:

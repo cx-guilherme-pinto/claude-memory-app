@@ -12,6 +12,7 @@ from pathlib import Path
 from memoria import store
 
 PROJETOS = ["arena-de-seguranca", "loja-online", "api-pagamentos", "portal-rh", "app-movel"]
+PREFIXOS = {"arena-de-seguranca": "ARENA", "loja-online": "LOJA", "api-pagamentos": "PAG", "portal-rh": "RH", "app-movel": "APP"}
 TEMAS = [
     ("cache", "Usar cache no build reduz o tempo de CI."),
     ("retries", "Repetir pedidos só com backoff exponencial."),
@@ -42,6 +43,9 @@ def gerar(home: Path, n: int, semente: int = 7) -> list[Path]:
         corpo = f"{frase}\n\nDetalhe {i}: aplicado na tarefa com sucesso."
         if titulos and rnd.random() < 0.3:
             corpo += f" Ver [[{titulos[rnd.randrange(len(titulos))]}]]."
+        prefixo = PREFIXOS[projeto]
+        numero = rnd.randrange(10, 60)
+        com_tarefa = rnd.random() < 0.7
         caminhos.append(
             store.escrever_nota(
                 home,
@@ -49,7 +53,10 @@ def gerar(home: Path, n: int, semente: int = 7) -> list[Path]:
                 titulo=titulo,
                 texto=corpo,
                 projeto=projeto,
-                tarefa=f"T-{rnd.randrange(1, 60)}" if rnd.random() < 0.7 else None,
+                tarefa=f"{prefixo}-{numero}" if com_tarefa else None,
+                epico=f"{prefixo}-{1 + numero % 4}" if com_tarefa and rnd.random() < 0.6 else None,
+                url=f"https://exemplo.atlassian.net/browse/{prefixo}-{numero}" if com_tarefa and rnd.random() < 0.3 else None,
+                etiquetas=[tema] if rnd.random() < 0.5 else None,
                 ficheiros=rnd.sample(FICHEIROS, k=rnd.choice([0, 1, 2])),
                 ligacoes=ligacoes,
                 custo_usd=round(rnd.uniform(0.05, 4.0), 2) if rnd.random() < 0.4 else None,
