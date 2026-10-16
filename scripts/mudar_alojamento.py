@@ -8,12 +8,13 @@ Muda só estes ficheiros:
   release.conf          MEMORY_APP_REPO_URL, MEMORY_APP_VERSION, RELEASE_PROVIDER
   install/install.sh    bloco de configuração gerado (render_installers.py --escrever)
   install/install.ps1   idem
-  README.md             bloco de instalação gerado (idem)
+  README*.md            bloco de instalação gerado em cada língua (idem)
   pyproject.toml        version do projeto
   web/package.json      version do pacote
   web/package-lock.json version do próprio pacote (raiz e packages[""]), não das dependências
   uv.lock               versão do pacote memoria (uv lock), se o uv existir
-  CHANGELOG.md          secção nova no topo: "## [X.Y.Z] - data" com "Publicação em <servidor>."
+  CHANGELOG.md          secção nova no topo: "## [X.Y.Z] - data" com "Published on <servidor>."
+  CHANGELOG.pt.md       idem, com "Publicação em <servidor>." (se existir)
 
 Não toca em mais nada (o docs/HANDOVER.md fala do Gitea como história). Não faz commit.
 No fim diz o que mudou e onde ainda aparece o servidor antigo.
@@ -126,19 +127,27 @@ def main() -> int:
             lock["packages"][""]["version"] = numero
         escrever(lock_caminho, json.dumps(lock, ensure_ascii=False, indent=2) + "\n", mudados)
 
-    # 4. CHANGELOG: secção nova no topo (uma só vez).
-    cl_caminho = RAIZ / "CHANGELOG.md"
-    cl = ler(cl_caminho)
-    if not re.search(rf"^## \[{re.escape(numero)}\]", cl, re.M):
-        secao_nova = f"## [{numero}] - {args.data}\n\n### Alterado\n\n- Publicação em {servidor}.\n\n"
+    # 4. CHANGELOG (inglês) e CHANGELOG.pt.md: secção nova no topo (uma só vez).
+    changelogs = (
+        ("CHANGELOG.md", "### Changed", f"- Published on {servidor}."),
+        ("CHANGELOG.pt.md", "### Alterado", f"- Publicação em {servidor}."),
+    )
+    for nome, titulo, linha in changelogs:
+        cl_caminho = RAIZ / nome
+        if not cl_caminho.exists():
+            continue
+        cl = ler(cl_caminho)
+        if re.search(rf"^## \[{re.escape(numero)}\]", cl, re.M):
+            print(f"{nome} já tem a secção [{numero}]: fica como está.")
+            continue
+        secao_nova = f"## [{numero}] - {args.data}\n\n{titulo}\n\n{linha}\n\n"
         primeira = re.search(r"^## \[", cl, re.M)
         cl = cl[: primeira.start()] + secao_nova + cl[primeira.start():] if primeira else cl.rstrip() + "\n\n" + secao_nova
         escrever(cl_caminho, cl, mudados)
-    else:
-        print(f"CHANGELOG.md já tem a secção [{numero}]: fica como está.")
 
     # 5. install/*.sh/.ps1 e README: blocos gerados a partir do release.conf.
-    antes = {f: ler(RAIZ / f) for f in ("install/install.sh", "install/install.ps1", "README.md")}
+    gerados = ["install/install.sh", "install/install.ps1"] + sorted(p.name for p in RAIZ.glob("README*.md"))
+    antes = {f: ler(RAIZ / f) for f in gerados}
     r = subprocess.run([sys.executable, str(RAIZ / "scripts" / "render_installers.py"), "--escrever"], capture_output=True, text=True)
     if r.returncode != 0:
         falha(f"render_installers.py falhou: {r.stderr.strip()}")

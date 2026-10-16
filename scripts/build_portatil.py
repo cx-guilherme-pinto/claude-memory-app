@@ -154,7 +154,8 @@ def modelos_windows(pasta: Path, site: Path, versao: str, menor: str) -> None:
     copiar_crlf(MODELOS / "windows" / "python._pth", pasta / f"{dll}._pth")
     shutil.copyfile(MODELOS / "windows" / "sitecustomize.py", site / "sitecustomize.py")
     copiar_crlf(MODELOS / "windows" / "memoria.cmd", pasta / "memoria.cmd")
-    copiar_crlf(MODELOS / "windows" / "LEIA-ME.txt", pasta / "LEIA-ME.txt", bom=True, versao=versao)
+    for leia in ("README.txt", "LEIA-ME.txt"):
+        copiar_crlf(MODELOS / "windows" / leia, pasta / leia, bom=True, versao=versao)
 
 
 def compilar(prefixo: Path) -> None:

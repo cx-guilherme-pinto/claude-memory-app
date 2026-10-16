@@ -80,19 +80,29 @@ def render(conf: dict[str, str], sha: str) -> dict[str, str]:
     return {"install.sh": substituir(sh, bloco_sh(conf, sha)), "install.ps1": ps_novo}
 
 
-def bloco_readme(conf: dict[str, str]) -> str:
+# README de cada língua e as frases do bloco de instalação gerado.
+READMES = {
+    "README.md": ("**macOS** (Intel and Apple Silicon) and Linux, in Terminal:", "**Windows 10/11**, in PowerShell:"),
+    "README.pt.md": ("**macOS** (Intel e Apple Silicon) e Linux, no Terminal:", "**Windows 10/11**, no PowerShell:"),
+    "README.hi.md": ("**macOS** (Intel और Apple Silicon) और Linux, Terminal में:", "**Windows 10/11**, PowerShell में:"),
+    "README.he.md": ("**macOS** (Intel ו-Apple Silicon) ו-Linux, ב-Terminal:", "**Windows 10/11**, ב-PowerShell:"),
+}
+
+
+def bloco_readme(conf: dict[str, str], nome: str = "README.md") -> str:
     repo = conf["MEMORY_APP_REPO_URL"].rstrip("/").removesuffix(".git")
     url = conf["RELEASE_DOWNLOAD_URL"].replace("{repo}", repo).replace("{version}", conf["MEMORY_APP_VERSION"])
+    mac, windows = READMES[nome]
     return "\n".join(
         [
             "<!-- >>> instalar: gerado a partir de release.conf por scripts/render_installers.py -->",
-            "**macOS** (Intel e Apple Silicon) e Linux, no Terminal:",
+            mac,
             "",
             "```bash",
             f"curl -fsSL {url.replace('{file}', 'install.sh')} | sh",
             "```",
             "",
-            "**Windows 10/11**, no PowerShell:",
+            windows,
             "",
             "```powershell",
             f'powershell -ExecutionPolicy Bypass -c "irm {url.replace("{file}", "install.ps1")} | iex"',
@@ -102,11 +112,18 @@ def bloco_readme(conf: dict[str, str]) -> str:
     )
 
 
-def readme(conf: dict[str, str]) -> str:
-    texto = (RAIZ / "README.md").read_text("utf-8")
-    inicio = texto.index("<!-- >>> instalar")
-    fim = texto.index("<!-- <<< instalar -->") + len("<!-- <<< instalar -->")
-    return texto[:inicio] + bloco_readme(conf) + texto[fim:]
+def readmes(conf: dict[str, str]) -> dict[Path, str]:
+    """Os READMEs que existem, com o bloco de instalação atualizado."""
+    resultado = {}
+    for nome in READMES:
+        caminho = RAIZ / nome
+        if not caminho.exists():
+            continue
+        texto = caminho.read_text("utf-8")
+        inicio = texto.index("<!-- >>> instalar")
+        fim = texto.index("<!-- <<< instalar -->") + len("<!-- <<< instalar -->")
+        resultado[caminho] = texto[:inicio] + bloco_readme(conf, nome) + texto[fim:]
+    return resultado
 
 
 def sha256(caminho: Path) -> str:
@@ -127,7 +144,7 @@ def main() -> int:
     if a.escrever or a.verificar:
         diferentes = []
         ficheiros = {RAIZ / "install" / n: t for n, t in render(conf, "").items()}
-        ficheiros[RAIZ / "README.md"] = readme(conf)
+        ficheiros.update(readmes(conf))
         for destino, texto in ficheiros.items():
             nome = destino.name
             if destino.read_text("utf-8") != texto:

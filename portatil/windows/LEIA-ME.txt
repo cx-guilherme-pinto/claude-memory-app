@@ -20,3 +20,5 @@ Notas
   As memórias ficam em %USERPROFILE%\.memoria, fora desta pasta.
   Depois de ligar ao Claude Code, não movas esta pasta.
   Se a janela não abrir (falta o WebView2), a Memória abre no browser.
+
+In English: README.txt.

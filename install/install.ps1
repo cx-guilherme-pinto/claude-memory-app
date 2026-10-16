@@ -58,7 +58,7 @@ function Install-Memoria {
         try {
             Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing -Headers $headers
         } catch {
-            throw ('Nao consegui descarregar ' + $Url + ': ' + $_.Exception.Message)
+            throw ('Could not download ' + $Url + ': ' + $_.Exception.Message)
         }
     }
 
@@ -83,16 +83,16 @@ function Install-Memoria {
     try {
         # --- 1. WebView2 ---------------------------------------------------
         if (Test-WebView2) {
-            Write-Host 'WebView2: instalado.'
+            Write-Host 'WebView2: installed.'
         } else {
-            Write-Host 'A instalar o WebView2 Runtime (por utilizador)...'
+            Write-Host 'Installing the WebView2 Runtime (per user)...'
             $wv = Join-Path $tmp 'MicrosoftEdgeWebview2Setup.exe'
             Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $wv -UseBasicParsing
             $p = Start-Process -FilePath $wv -ArgumentList '/silent', '/install' -Wait -PassThru
             if (Test-WebView2) {
-                Write-Host 'WebView2: instalado.'
+                Write-Host 'WebView2: installed.'
             } else {
-                Write-Host ('Aviso: o WebView2 nao ficou instalado (codigo ' + $p.ExitCode + '). A Memoria abre no browser.')
+                Write-Host ('Warning: WebView2 was not installed (code ' + $p.ExitCode + '). Memoria will open in the browser.')
             }
         }
 
@@ -103,19 +103,19 @@ function Install-Memoria {
         $uvLocal = Join-Path $env:USERPROFILE '.local\bin\uv.exe'
         if (-not $uv -and (Test-Path $uvLocal)) { $uv = $uvLocal }
         if (-not $uv) {
-            Write-Host ('A instalar o uv ' + $uvVer + '...')
+            Write-Host ('Installing uv ' + $uvVer + '...')
             $inst = Join-Path $tmp 'uv-installer.ps1'
             Invoke-WebRequest -Uri ('https://github.com/astral-sh/uv/releases/download/' + $uvVer + '/uv-installer.ps1') -OutFile $inst -UseBasicParsing
             & powershell -NoProfile -ExecutionPolicy Bypass -File $inst
-            if ($LASTEXITCODE -ne 0) { throw 'A instalacao do uv falhou.' }
+            if ($LASTEXITCODE -ne 0) { throw 'The uv install failed.' }
             $uv = $uvLocal
-            if (-not (Test-Path $uv)) { throw ('Nao encontrei o uv em ' + $uv) }
+            if (-not (Test-Path $uv)) { throw ('uv not found at ' + $uv) }
         }
         Write-Host ('uv: ' + (& $uv --version))
 
         # --- 3. download e verificacao -----------------------------------
         $wheel = 'memoria-' + $version.TrimStart('v') + '-py3-none-any.whl'
-        Write-Host ('A descarregar a Memoria ' + $version + '...')
+        Write-Host ('Downloading Memoria ' + $version + '...')
         Get-Asset (Get-AssetUrl 'SHA256SUMS') (Join-Path $tmp 'SHA256SUMS')
         $sums = @{}
         foreach ($line in Get-Content (Join-Path $tmp 'SHA256SUMS')) {
@@ -125,23 +125,23 @@ function Install-Memoria {
         foreach ($f in @($wheel, 'constraints.txt')) {
             $out = Join-Path $tmp $f
             Get-Asset (Get-AssetUrl $f) $out
-            if (-not $sums.ContainsKey($f)) { throw ($f + ' nao esta no SHA256SUMS.') }
+            if (-not $sums.ContainsKey($f)) { throw ($f + ' is not in SHA256SUMS.') }
             $real = (Get-FileHash -Algorithm SHA256 -Path $out).Hash.ToLower()
-            if ($real -ne $sums[$f]) { throw ('SHA-256 nao confere: ' + $f) }
+            if ($real -ne $sums[$f]) { throw ('SHA-256 mismatch: ' + $f) }
         }
         if ($WheelSha256 -and $version -eq $BuildVersion) {
             $real = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $tmp $wheel)).Hash.ToLower()
-            if ($real -ne $WheelSha256) { throw 'SHA-256 do wheel diferente do esperado por este instalador.' }
+            if ($real -ne $WheelSha256) { throw 'The wheel SHA-256 is not the one this installer expects.' }
         }
-        Write-Host 'SHA-256 verificado.'
+        Write-Host 'SHA-256 verified.'
 
         # --- 4. instalar ----------------------------------------------------
         & $uv tool install --force --managed-python --python $pyVer (Join-Path $tmp $wheel) --constraints (Join-Path $tmp 'constraints.txt')
-        if ($LASTEXITCODE -ne 0) { throw 'uv tool install falhou.' }
+        if ($LASTEXITCODE -ne 0) { throw 'uv tool install failed.' }
         $bin = (& $uv tool dir --bin).Trim()
         $memoria = Join-Path $bin 'memoria.exe'
         $memoriaGui = Join-Path $bin 'memoria-gui.exe'
-        if (-not (Test-Path $memoria)) { throw ('Nao encontrei ' + $memoria) }
+        if (-not (Test-Path $memoria)) { throw ('Not found: ' + $memoria) }
 
         # --- 5. atalho no menu Iniciar ------------------------------------
         $alvo = if (Test-Path $memoriaGui) { $memoriaGui } else { $memoria }
@@ -153,19 +153,19 @@ function Install-Memoria {
         $lnk.WorkingDirectory = $env:USERPROFILE
         $lnk.Description = 'Memorias do Claude Code'
         $lnk.Save()
-        Write-Host ('Atalho: ' + (Join-Path $programs $lnkName))
+        Write-Host ('Shortcut: ' + (Join-Path $programs $lnkName))
 
         # --- verificacao ---------------------------------------------------
         & $memoria selftest | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw ('O selftest falhou. Corre: "' + $memoria + '" selftest') }
+        if ($LASTEXITCODE -ne 0) { throw ('selftest failed. Run: "' + $memoria + '" selftest') }
 
         Write-Host ''
-        Write-Host ('Memoria ' + $version + ' instalada.')
-        Write-Host 'Para ligar ao Claude Code:'
+        Write-Host ('Memoria ' + $version + ' installed.')
+        Write-Host 'To connect it to Claude Code:'
         Write-Host ('  claude mcp add --scope user memoria -- "' + $memoria + '" mcp')
         $pathUser = [Environment]::GetEnvironmentVariable('Path', 'User')
         if (($env:Path + ';' + $pathUser) -notlike ('*' + $bin + '*')) {
-            Write-Host ('Nota: ' + $bin + ' nao esta no PATH. Abre um terminal novo.')
+            Write-Host ('Note: ' + $bin + ' is not on PATH. Open a new terminal.')
         }
     } finally {
         Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
@@ -175,5 +175,5 @@ function Install-Memoria {
 try {
     Install-Memoria
 } catch {
-    Write-Host ('Erro: ' + $_.Exception.Message) -ForegroundColor Red
+    Write-Host ('Error: ' + $_.Exception.Message) -ForegroundColor Red
 }

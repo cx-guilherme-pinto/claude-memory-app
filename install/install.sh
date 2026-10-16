@@ -28,9 +28,9 @@ UV_INSTALLER_URL="https://github.com/astral-sh/uv/releases/download/${UV_VERSION
 MEMORIA_DOWNLOAD_TOKEN="${MEMORIA_DOWNLOAD_TOKEN:-}"
 
 diz() { printf '%s\n' "$*"; }
-falha() { printf 'Erro: %s\n' "$*" >&2; exit 1; }
+falha() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
-command -v curl >/dev/null 2>&1 || falha "falta o curl."
+command -v curl >/dev/null 2>&1 || falha "curl is missing."
 
 repo="${MEMORY_APP_REPO_URL%/}"
 repo="${repo%.git}"
@@ -51,7 +51,7 @@ baixar() {
       curl --config - -fsSL --retry 3 --proto '=https' --proto-redir '=https' -o "$2" "$1"
   else
     curl -fsSL --retry 3 --proto '=https' --proto-redir '=https' -o "$2" "$1"
-  fi || falha "não consegui descarregar $1"
+  fi || falha "could not download $1"
 }
 
 sha256() {
@@ -68,10 +68,10 @@ if [ -z "$UV" ] && [ -x "$HOME/.local/bin/uv" ]; then
   UV="$HOME/.local/bin/uv"
 fi
 if [ -z "$UV" ]; then
-  diz "A instalar o uv $UV_VERSION..."
-  curl -fsSL --proto '=https' --proto-redir '=https' "$UV_INSTALLER_URL" | sh || falha "a instalação do uv falhou."
+  diz "Installing uv $UV_VERSION..."
+  curl -fsSL --proto '=https' --proto-redir '=https' "$UV_INSTALLER_URL" | sh || falha "the uv install failed."
   UV="$HOME/.local/bin/uv"
-  [ -x "$UV" ] || falha "não encontrei o uv em $UV."
+  [ -x "$UV" ] || falha "uv not found at $UV."
 fi
 diz "uv: $("$UV" --version)"
 
@@ -80,25 +80,25 @@ tmp="$(mktemp -d 2>/dev/null || mktemp -d -t memoria)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 wheel="memoria-${MEMORY_APP_VERSION#v}-py3-none-any.whl"
 
-diz "A descarregar a Memória $MEMORY_APP_VERSION..."
+diz "Downloading Memória $MEMORY_APP_VERSION..."
 baixar "$(url_asset SHA256SUMS)" "$tmp/SHA256SUMS"
 for f in "$wheel" constraints.txt; do
   baixar "$(url_asset "$f")" "$tmp/$f"
   esperado="$(awk -v f="$f" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")"
-  [ -n "$esperado" ] || falha "$f não está no SHA256SUMS."
-  [ "$(sha256 "$tmp/$f")" = "$esperado" ] || falha "SHA-256 não confere: $f"
+  [ -n "$esperado" ] || falha "$f is not in SHA256SUMS."
+  [ "$(sha256 "$tmp/$f")" = "$esperado" ] || falha "SHA-256 mismatch: $f"
 done
 if [ -n "$WHEEL_SHA256" ] && [ "$MEMORY_APP_VERSION" = "$BUILD_VERSION" ]; then
-  [ "$(sha256 "$tmp/$wheel")" = "$WHEEL_SHA256" ] || falha "SHA-256 do wheel diferente do esperado por este instalador."
+  [ "$(sha256 "$tmp/$wheel")" = "$WHEEL_SHA256" ] || falha "the wheel SHA-256 is not the one this installer expects."
 fi
-diz "SHA-256 verificado."
+diz "SHA-256 verified."
 
 # --- 3. instalar ---------------------------------------------------------------
 "$UV" tool install --force --managed-python --python "$PYTHON_VERSION" \
-  "$tmp/$wheel" --constraints "$tmp/constraints.txt" || falha "uv tool install falhou."
+  "$tmp/$wheel" --constraints "$tmp/constraints.txt" || falha "uv tool install failed."
 bin="$("$UV" tool dir --bin)"
 memoria="$bin/memoria"
-[ -x "$memoria" ] || falha "não encontrei $memoria."
+[ -x "$memoria" ] || falha "$memoria not found."
 
 # --- 4. atalho -------------------------------------------------------------
 case "$(uname -s)" in
@@ -126,7 +126,7 @@ PLIST
 exec "$memoria" "\$@"
 LAUNCHER
     chmod +x "$app/Contents/MacOS/memoria-app"
-    diz "Atalho: $app"
+    diz "Shortcut: $app"
     ;;
   Linux)
     pasta="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
@@ -135,23 +135,23 @@ LAUNCHER
 [Desktop Entry]
 Type=Application
 Name=Memória
-Comment=Memórias do Claude Code
+Comment=Claude Code memories
 Exec="$memoria"
 Terminal=false
 Categories=Development;
 DESKTOP
-    diz "Atalho: $pasta/memoria.desktop"
+    diz "Shortcut: $pasta/memoria.desktop"
     ;;
 esac
 
 # --- verificação ---------------------------------------------------------
-"$memoria" selftest >/dev/null || falha "o selftest falhou. Corre: $memoria selftest"
+"$memoria" selftest >/dev/null || falha "selftest failed. Run: $memoria selftest"
 
 diz ""
-diz "Memória $MEMORY_APP_VERSION instalada."
-diz "Para ligar ao Claude Code:"
+diz "Memória $MEMORY_APP_VERSION installed."
+diz "To connect it to Claude Code:"
 diz "  claude mcp add --scope user memoria -- \"$memoria\" mcp"
 case ":$PATH:" in
   *":$bin:"*) ;;
-  *) diz "Nota: $bin não está no PATH. Abre um terminal novo ou adiciona-o." ;;
+  *) diz "Note: $bin is not on PATH. Open a new terminal or add it." ;;
 esac

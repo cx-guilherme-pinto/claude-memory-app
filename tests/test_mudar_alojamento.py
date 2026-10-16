@@ -13,7 +13,11 @@ FICHEIROS = [
     "release.conf",
     "pyproject.toml",
     "CHANGELOG.md",
+    "CHANGELOG.pt.md",
     "README.md",
+    "README.pt.md",
+    "README.hi.md",
+    "README.he.md",
     "install/install.sh",
     "install/install.ps1",
     "web/package.json",
@@ -60,11 +64,14 @@ def test_muda_tudo_de_uma_vez(copia: Path):
     for instalador in ("install/install.sh", "install/install.ps1"):
         texto = (copia / instalador).read_text("utf-8")
         assert NOVO in texto and "v9.8.7" in texto and "gitea.guilhermepinto.pt" not in texto
-    readme = (copia / "README.md").read_text("utf-8")
-    assert "https://github.empresa.com/org-ia/claude-memory-app/releases/download/v9.8.7/install.sh" in readme
-    changelog = (copia / "CHANGELOG.md").read_text("utf-8")
-    assert changelog.index("## [9.8.7] - 2026-11-02") < changelog.index("## [0.")
-    assert "- Publicação em github.empresa.com." in changelog
+    for readme in ("README.md", "README.pt.md", "README.hi.md", "README.he.md"):
+        texto = (copia / readme).read_text("utf-8")
+        assert "https://github.empresa.com/org-ia/claude-memory-app/releases/download/v9.8.7/install.sh" in texto, readme
+        assert "gitea.guilhermepinto.pt" not in texto, readme
+    for nome, linha in (("CHANGELOG.md", "- Published on github.empresa.com."), ("CHANGELOG.pt.md", "- Publicação em github.empresa.com.")):
+        changelog = (copia / nome).read_text("utf-8")
+        assert changelog.index("## [9.8.7] - 2026-11-02") < changelog.index("## [0."), nome
+        assert linha in changelog, nome
     # Os instaladores ficam em sincronia com o release.conf (o build.sh verifica isto).
     v = subprocess.run([sys.executable, str(copia / "scripts/render_installers.py"), "--verificar"], capture_output=True, text=True)
     assert v.returncode == 0, v.stderr

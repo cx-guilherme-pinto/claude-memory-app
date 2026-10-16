@@ -43,7 +43,13 @@ def _app_mac(base: Path, versao: str, selftest_ok: bool = True) -> Path:
     app = base / "Memoria.app"
     prefixo = app / "Contents" / "Resources" / "python"
     prefixo.mkdir(parents=True)
-    marcador = {"formato": 1, "versao": versao, "plataforma": "macos-arm64", "prefixo": "Contents/Resources/python", "comando": ["Contents/MacOS/memoria"]}
+    marcador = {
+        "formato": 1,
+        "versao": versao,
+        "plataforma": "macos-arm64",
+        "prefixo": "Contents/Resources/python",
+        "comando": ["Contents/MacOS/memoria"],
+    }
     (prefixo / portatil.MARCADOR).write_text(json.dumps(marcador), "utf-8")
     (prefixo / "bin").mkdir()
     (prefixo / "bin" / "python3.12").write_text("binário", "utf-8")
@@ -274,7 +280,8 @@ def test_script_troca_windows(tmp_path: Path):
 @pytest.mark.skipif(not shutil.which("pwsh"), reason="pwsh não instalado: análise do script só estática")
 def test_script_troca_sintaxe_com_pwsh(tmp_path: Path):
     script = tmp_path / "trocar.ps1"
-    texto = portatil.script_troca(Path("C:/a b/Memoria"), Path("C:/a b/.x/nova/Memoria"), Path("C:/a b/.x"), 1, ["C:/a b/Memoria/python.exe", "-m", "memoria"])
+    comando = ["C:/a b/Memoria/python.exe", "-m", "memoria"]
+    texto = portatil.script_troca(Path("C:/a b/Memoria"), Path("C:/a b/.x/nova/Memoria"), Path("C:/a b/.x"), 1, comando)
     script.write_text(texto, encoding="utf-8-sig")
     cmd = (
         "$e=$null; [System.Management.Automation.Language.Parser]::ParseFile("
@@ -356,7 +363,8 @@ def test_sign_macos_sem_credenciais():
 def test_lancador_compilado(tmp_path: Path):
     exe = tmp_path / "Memoria.app" / "Contents" / "MacOS" / "memoria"
     exe.parent.mkdir(parents=True)
-    r = subprocess.run(["clang", "-O2", "-Wall", "-Werror", "-o", str(exe), str(MODELOS / "macos" / "lancador.c")], capture_output=True, text=True)
+    fonte = MODELOS / "macos" / "lancador.c"
+    r = subprocess.run(["clang", "-O2", "-Wall", "-Werror", "-o", str(exe), str(fonte)], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     # Um "python3" falso que mostra os argumentos que recebeu.
     python = tmp_path / "Memoria.app" / "Contents" / "Resources" / "python" / "bin" / "python3"

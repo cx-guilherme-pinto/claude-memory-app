@@ -1,125 +1,127 @@
 # Changelog
 
-Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
+**English** · [Português](CHANGELOG.pt.md)
+
+All notable changes are listed here. Versions follow [SemVer](https://semver.org/).
 
 ## [0.4.0] - 2026-10-16
 
-### Adicionado
+### Added
 
-- Vista **Atividade do Claude**: o que o Claude chamou pelo MCP. Quatro números (chamadas hoje, no total,
-  por minuto e memórias recordadas sem repetir) e as últimas 100 memórias recordadas, com hora, ferramenta,
-  título, projeto e tarefa. Clicar abre a memória no mapa. Atualiza-se sozinha.
-- Registo local das chamadas MCP em `$MEMORIA_HOME/.indice/registo.sqlite`, com limite.
-  O texto pesquisado é redigido e cortado; o conteúdo das notas nunca é guardado. O `reindex` não o apaga.
+- **Claude activity** view: what Claude called over MCP. Four numbers (calls today, total calls,
+  calls per minute and unique memories recalled) and the last 100 recalled memories, with time, tool,
+  title, project and task. Clicking opens the memory on the map. It refreshes on its own.
+- Local, capped log of MCP calls in `$MEMORIA_HOME/.indice/registo.sqlite`.
+  The searched text is redacted and cut short; note contents are never logged. `reindex` keeps it.
 
-### Alterado
+### Changed
 
-- Hindi e hebraico revistos para o registo de quem programa: termos técnicos em inglês
-  (tokens, MCP, ticket, versão, etc.), como se diz no dia a dia.
+- Hindi and Hebrew reworded in a developer's register: technical terms stay in English
+  (tokens, MCP, ticket, version, etc.), the way people actually say them.
 
 ## [0.3.0] - 2026-10-16
 
-### Adicionado
+### Added
 
-- Línguas: português, inglês, hindi e hebraico. A app segue a língua do sistema
-  (macOS: AppleLanguages; Windows: língua da interface; reserva: inglês).
-- Seletor de línguas no topo da coluna; a escolha fica em `$MEMORIA_HOME/preferencias.json`.
-  `memoria lingua [pt|en|hi|he]` faz o mesmo na linha de comandos. `MEMORIA_LANG` sobrepõe-se.
-- Hebraico da direita para a esquerda; o conteúdo de cada nota segue a sua própria direção.
-- Noto Sans Devanagari e Noto Sans Hebrew (OFL), locais, para o hindi e o hebraico.
-- Mensagens da linha de comandos, do selftest, do update e dos erros nas quatro línguas.
+- Languages: Portuguese, English, Hindi and Hebrew. The app follows the system language
+  (macOS: AppleLanguages; Windows: display language; fallback: English).
+- Language picker at the top of the column; the choice is saved in `$MEMORIA_HOME/preferencias.json`.
+  `memoria lingua [pt|en|hi|he]` does the same from the command line. `MEMORIA_LANG` overrides it.
+- Hebrew runs right to left; each note's content keeps its own direction.
+- Noto Sans Devanagari and Noto Sans Hebrew (OFL), bundled, for Hindi and Hebrew.
+- Command-line, selftest, update and error messages in all four languages.
 
-### Alterado
+### Changed
 
-- As descrições das ferramentas MCP e as instruções do servidor passam a inglês
-  (são lidas pelo modelo). Os nomes das ferramentas e dos parâmetros não mudam.
-- O texto do selftest segue a língua da app. O resultado continua no código de saída.
+- MCP tool descriptions and server instructions are now in English (the model reads them).
+  Tool and parameter names don't change.
+- Selftest text follows the app language. The result is still the exit code.
 
 ## [0.2.3] - 2026-10-16
 
-### Adicionado
+### Added
 
-- Editar uma memória dentro da app: o botão "Editar" no painel abre o ficheiro Markdown
-  (cabeçalho e texto) num editor da própria janela. Guardar com o botão ou ⌘S / Ctrl+S.
-  Antes de gravar, confirma o cabeçalho, redige segredos e não escreve por cima de uma edição
-  feita entretanto (por exemplo, pelo Claude Code). O índice e o mapa atualizam logo.
+- Edit a memory inside the app: the "Edit" button in the panel opens the Markdown file
+  (header and text) in an editor in the window. Save with the button or ⌘S / Ctrl+S.
+  Before saving, it checks the header, redacts secrets and never overwrites a change made
+  in the meantime (for example, by Claude Code). The index and the map update at once.
 
-### Alterado
+### Changed
 
-- O painel deixa de abrir o editor externo do sistema.
+- The panel no longer opens the system's external editor.
 
 ## [0.2.2] - 2026-10-16
 
-### Adicionado
+### Added
 
-- Versão portátil: `Memoria-<versão>-macos-arm64.zip`, `-macos-x86_64.zip` e `-windows-x64.zip`,
-  com o Python 3.12 e as dependências lá dentro. Extrai e abre, sem instalador nem admin.
-- `memoria update` na versão portátil: descarrega o zip, verifica o SHA-256, testa e troca a pasta no mesmo sítio.
-- `memoria selftest` na versão portátil mostra o comando `claude mcp add` para essa pasta.
-- `scripts/sign-macos.sh` (opcional, corrido pelo organizador): assina e notariza os zips do Mac
-  com o Developer ID. Não faz parte da release normal.
+- Portable version: `Memoria-<version>-macos-arm64.zip`, `-macos-x86_64.zip` and `-windows-x64.zip`,
+  with Python 3.12 and all dependencies inside. Unzip and open, no installer and no admin rights.
+- `memoria update` in the portable version: downloads the zip, checks the SHA-256, tests it and swaps the folder in place.
+- `memoria selftest` in the portable version prints the `claude mcp add` command for that folder.
+- `scripts/sign-macos.sh` (optional, run by the organizer): signs and notarizes the Mac zips
+  with a Developer ID. Not part of the normal release.
 
-### Alterado
+### Changed
 
-- Interface com a skill de design do workshop (`design-taste-frontend`, regras da casa e DESIGN.md):
-  coluna à esquerda com o nome, as contas, a procura, os filtros e as últimas memórias pelo título;
-  mapa à direita, com a linha temporal ("Ver crescer") por baixo.
-- Período em segmentos; tipos (a legenda do mapa) na coluna; datas como "21 jun.".
-- Monospace só em código real (caminhos e comandos).
+- Interface built with the workshop design skill (`design-taste-frontend`, house rules and DESIGN.md):
+  a column on the left with the name, counts, search, filters and latest memories by title;
+  the map on the right, with the timeline ("Watch it grow") below.
+- Period as segments; types (the map legend) in the column; dates like "21 Jun".
+- Monospace only for real code (paths and commands).
 
-### Notas
+### Notes
 
-- Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
-  Definições do Sistema → Privacidade e Segurança.
+- Install with the one-line command. Downloading through the browser needs approval in
+  System Settings → Privacy & Security.
 
 ## [0.2.1] - 2026-10-16
 
-### Corrigido
+### Fixed
 
-- Modo browser (o recurso do Windows sem WebView2) mostrava um grafo vazio: o URL impresso
-  não levava a chave da sessão e a página ficava à espera da ponte da janela.
-  Agora o URL é `http://127.0.0.1:<porta>/?t=<chave>`; a chave passa a um cookie de sessão
-  (HttpOnly, SameSite=Strict) e o servidor diz à página em que modo está.
-  Sem a chave, a página explica o que abrir. Na janela, se a ponte não aparecer, a página usa HTTP.
+- Browser mode (the Windows fallback without WebView2) showed an empty graph: the printed URL
+  didn't carry the session key and the page waited for the window bridge.
+  The URL is now `http://127.0.0.1:<port>/?t=<key>`; the key becomes a session cookie
+  (HttpOnly, SameSite=Strict) and the server tells the page which mode it's in.
+  Without the key, the page explains what to open. In the window, if the bridge never shows up, the page uses HTTP.
 
-### Alterado
+### Changed
 
-- Visual alinhado com a Arena e os slides (DESIGN.md do workshop): tokens de cor, cantos retos,
-  letra Bricolage Grotesque (local, licença OFL), botão principal azul.
-- Cores dos tipos da paleta de estado: lição amarelo, fazer verde, não fazer vermelho (desenhado
-  como anel, para não depender da cor), histórico neutro; nós de contexto em tons neutros.
-- Pesquisa: palavras no nome da memória contam mais (desempata o BM25 com poucas notas).
+- Look aligned with the Arena and the slides (workshop DESIGN.md): color tokens, square corners,
+  Bricolage Grotesque font (bundled, OFL license), blue primary button.
+- Type colors from the status palette: lesson yellow, do green, don't red (drawn as a ring,
+  so it doesn't depend on color), history neutral; context nodes in neutral tones.
+- Search: words in the memory's name count more (breaks BM25 ties with few notes).
 
 ## [0.2.0] - 2026-10-16
 
-### Adicionado
+### Added
 
-- Campos opcionais `epico`, `url` e `etiquetas` nas notas. As notas da v0.1 continuam válidas.
-- Nó de épico no grafo; tarefas ligam ao seu épico. Uma nota sem épico herda o da sua tarefa.
-- Pesquisa por nome, projeto, tarefa, épico e etiquetas. Uma chave (`ABC-123`) traz a tarefa,
-  o seu épico e o resto do épico.
-- MCP: `memoria_procurar` aceita `tarefa` e `epico`; `memoria_adicionar` aceita `epico`, `url` e `etiquetas`.
-- Interface: procura com resultados agrupados (Memórias, Projetos, Tarefas e épicos) e filtros por épico e tarefa.
-- CLI: `memoria add --epico --url --etiqueta` e `memoria procurar --tarefa --epico`.
+- Optional `epico`, `url` and `etiquetas` fields in notes. v0.1 notes stay valid.
+- Epic node in the graph; tasks link to their epic. A note without an epic inherits its task's.
+- Search by name, project, task, epic and tags. A key (`ABC-123`) returns the task,
+  its epic and the rest of the epic.
+- MCP: `memoria_procurar` accepts `tarefa` and `epico`; `memoria_adicionar` accepts `epico`, `url` and `etiquetas`.
+- Interface: grouped search results (Memories, Projects, Tasks and epics) and filters by epic and task.
+- CLI: `memoria add --epico --url --etiqueta` and `memoria procurar --tarefa --epico`.
 
-### Alterado
+### Changed
 
-- Força das relações: ligação explícita > mesma tarefa > mesmo épico > mesmo projeto > ficheiros.
-- Chaves do Jira e do GitHub juntam notas de projetos diferentes. Chaves locais (`#12`) ficam no projeto.
-- O índice passa a `.indice/memoria-v2.sqlite` e reconstrói-se sozinho. O da v0.1 é apagado no `reindex`.
+- Relation strength: explicit link > same task > same epic > same project > files.
+- Jira and GitHub keys join notes across projects. Local keys (`#12`) stay within the project.
+- The index moves to `.indice/memoria-v2.sqlite` and rebuilds itself. The v0.1 one is deleted on `reindex`.
 
 ## [0.1.0] - 2026-10-16
 
-Primeira versão.
+First release.
 
-### Adicionado
+### Added
 
-- Notas em Markdown em `$MEMORIA_HOME/<projeto>/<AAAA-MM-DD>-<slug>.md`, com cabeçalho YAML
+- Markdown notes in `$MEMORIA_HOME/<project>/<YYYY-MM-DD>-<slug>.md`, with a YAML header
   (`tipo`, `titulo`, `projeto`, `tarefa`, `ficheiros`, `data`, `custo_usd`, `ligacoes`).
-- Índice SQLite com FTS5 e arestas, reconstruível com `memoria reindex`.
-- Redação de segredos antes de gravar.
-- Servidor MCP em stdio: `memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`.
-- Janela nativa (pywebview) com grafo, filtros, linha temporal, painel da nota e formulário.
-  No Windows sem WebView2, a interface abre no browser.
-- `memoria update` por `git ls-remote` e SHA-256.
-- Instaladores `install.sh` e `install.ps1`, sem admin.
+- SQLite index with FTS5 and edges, rebuildable with `memoria reindex`.
+- Secret redaction before saving.
+- MCP server over stdio: `memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`.
+- Native window (pywebview) with the graph, filters, timeline, note panel and form.
+  On Windows without WebView2, the interface opens in the browser.
+- `memoria update` via `git ls-remote` and SHA-256.
+- `install.sh` and `install.ps1` installers, no admin rights needed.

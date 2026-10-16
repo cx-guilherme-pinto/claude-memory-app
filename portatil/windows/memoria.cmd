@@ -1,5 +1,5 @@
 @echo off
-rem Memoria portatil: linha de comandos. Exemplos:
+rem Memoria portable: command line. Examples:
 rem   memoria.cmd selftest
 rem   memoria.cmd update
 "%~dp0python.exe" -m memoria %*

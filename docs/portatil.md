@@ -1,83 +1,85 @@
-# Versão portátil
+# Portable version
 
-Decisão aprovada a 16 out. 2026. Pedido da organização: uma app que se abre, sem instalador.
+**English** · [Português](portatil.pt.md)
 
-## O que é
+Decision approved on 16 Oct 2026. The organizers asked for an app that just opens, with no installer.
 
-Um zip por plataforma, com o Python e todas as dependências lá dentro:
+## What it is
 
-| Ficheiro | Conteúdo | Tamanho |
+One zip per platform, with Python and every dependency inside:
+
+| File | Contents | Size |
 |---|---|---|
-| `Memoria-<versão>-macos-arm64.zip` | `Memoria.app` (Apple Silicon) | 37 MB |
-| `Memoria-<versão>-macos-x86_64.zip` | `Memoria.app` (Intel) | 37 MB |
-| `Memoria-<versão>-windows-x64.zip` | pasta `Memoria` (duplo clique em `Memoria.exe`) | 36 MB |
+| `Memoria-<version>-macos-arm64.zip` | `Memoria.app` (Apple Silicon) | 37 MB |
+| `Memoria-<version>-macos-x86_64.zip` | `Memoria.app` (Intel) | 37 MB |
+| `Memoria-<version>-windows-x64.zip` | `Memoria` folder (double-click `Memoria.exe`) | 36 MB |
 
-Não há instalador, nem uv, nem PyPI no dia do workshop. Só um download do Gitea.
-O caminho de instalação com o uv (`install.sh`, `install.ps1`, wheel) continua igual.
+No installer, no uv and no PyPI on the workshop day. Just one download from the release server.
+The uv install path (`install.sh`, `install.ps1`, wheel) stays as it is.
 
-## Decisões
+## Decisions
 
-1. **Python embutido, entregue pelo setup.** O setup do workshop descarrega o zip com
-   `curl` (Mac) ou `Invoke-WebRequest` (Windows) e extrai-o para uma pasta fixa.
-   Assim o ficheiro não fica marcado como "transferido da Internet":
-   sem Gatekeeper, sem SmartScreen, sem avisos.
-2. **Windows em zip.** Não há `.exe` único: seria um executável sem assinatura.
-3. **Python do python-build-standalone 3.12.15 nos três zips.** É o mesmo que o uv instala hoje.
-   Tem FTS5 e as correções de segurança. Os `.exe` não são assinados.
-   A alternativa (zip "embeddable" do python.org, assinado pela PSF) ficou parada no 3.12.10.
-4. **`memoria update` troca a pasta no mesmo sítio.** O caminho não muda,
-   por isso a ligação ao Claude Code (MCP) continua válida.
-5. **Sem assinatura Apple na release normal** (decisão do organizador: só se for mesmo preciso).
-   Pelo setup não é preciso: testado, um zip descarregado com `curl` não fica em quarentena
-   e a app abre sem perguntas. Há um script opcional para assinar e notarizar
-   (ver "Assinatura opcional").
+1. **Bundled Python, delivered by the setup.** The workshop setup downloads the zip with
+   `curl` (Mac) or `Invoke-WebRequest` (Windows) and extracts it to a fixed folder.
+   That way the file isn't marked as "downloaded from the Internet":
+   no Gatekeeper, no SmartScreen, no warnings.
+2. **Windows as a zip.** No single `.exe`: it would be an unsigned executable.
+3. **python-build-standalone 3.12.15 in all three zips.** It's the same Python uv installs today.
+   It has FTS5 and the security fixes. The `.exe` files aren't signed.
+   The alternative (python.org's "embeddable" zip, signed by the PSF) stopped at 3.12.10.
+4. **`memoria update` swaps the folder in place.** The path doesn't change,
+   so the Claude Code connection (MCP) stays valid.
+5. **No Apple signing in the normal release** (the organizer's call: only if really needed).
+   The setup doesn't need it: tested, a zip downloaded with `curl` isn't quarantined
+   and the app opens with no questions. There's an optional script to sign and notarize
+   (see "Optional signing").
 
-Opções postas de parte: PyInstaller e Briefcase (lançadores sem assinatura, mais falsos
-positivos dos antivírus; o Briefcase precisa de uma máquina Windows para o build).
+Options set aside: PyInstaller and Briefcase (unsigned launchers, more antivirus false
+positives; Briefcase needs a Windows machine for the build).
 
-## Como funciona
+## How it works
 
 macOS:
 
-- `Memoria.app/Contents/MacOS/memoria` é um script `sh` que corre
+- `Memoria.app/Contents/MacOS/memoria` is an `sh` script that runs
   `Resources/python/bin/python3 -I -B -m memoria "$@"`.
-- Sem argumentos abre a janela. Com argumentos é a linha de comandos.
-- O MCP é `…/Memoria.app/Contents/MacOS/memoria mcp`.
+- With no arguments it opens the window. With arguments it's the command line.
+- The MCP command is `…/Memoria.app/Contents/MacOS/memoria mcp`.
 
 Windows:
 
-- `Memoria.exe` é uma cópia do `pythonw.exe`. O `sitecustomize.py` abre a janela
-  quando o executável é `Memoria.exe` e não há argumentos. Nos outros casos não faz nada.
-- `python312._pth` fixa os caminhos e ignora `PYTHONPATH`/`PYTHONHOME` do utilizador.
-- O MCP é `…\Memoria\python.exe -m memoria mcp`. Na consola: `memoria.cmd selftest`.
-- Se o zip veio pelo browser, a app tira a marca da Internet aos seus ficheiros no arranque.
-  Sem isso, o .NET recusa as DLL do pythonnet e do WebView2 e a janela não abre.
+- `Memoria.exe` is a copy of `pythonw.exe`. `sitecustomize.py` opens the window
+  when the executable is `Memoria.exe` and there are no arguments. Otherwise it does nothing.
+- `python312._pth` pins the paths and ignores the user's `PYTHONPATH`/`PYTHONHOME`.
+- The MCP command is `…\Memoria\python.exe -m memoria mcp`. In a console: `memoria.cmd selftest`.
+- If the zip came through a browser, the app removes the Internet mark from its files at startup.
+  Without that, .NET refuses the pythonnet and WebView2 DLLs and the window doesn't open.
 
-Os `.pyc` vêm compilados (hash sem verificação). A app nunca escreve dentro da sua pasta.
-O build é reprodutível: o mesmo wheel dá zips iguais, byte a byte.
+The `.pyc` files ship compiled (unchecked hash). The app never writes inside its own folder.
+The build is reproducible: the same wheel gives the same zips, byte for byte.
 
 ## Build
 
 ```bash
-scripts/build.sh                 # wheel, instaladores e os três zips
-PORTATIL=0 scripts/build.sh      # sem os zips
+scripts/build.sh                 # wheel, installers and the three zips
+PORTATIL=0 scripts/build.sh      # without the zips
 uv run --no-project --python 3.12 python scripts/build_portatil.py --wheel dist/memoria-X-py3-none-any.whl --plataforma macos-arm64
 ```
 
-Corre no Mac e no Linux (CI). As dependências de cada plataforma vêm em wheels
-(`uv pip install --python-platform`). No Mac, o build corre o `selftest` de cada zip do Mac
-(o Intel pelo Rosetta). O Python fixado (versão, URL e SHA-256) está em `release.conf`.
+It runs on Mac and Linux (CI). Each platform's dependencies come as wheels
+(`uv pip install --python-platform`). On a Mac, the build runs the `selftest` of each Mac zip
+(Intel through Rosetta). The pinned Python (version, URL and SHA-256) is in `release.conf`.
 
-## Integração no setup do workshop
+## Workshop setup integration
 
-Esboço. O setup já tem `url_asset` e a verificação do `SHA256SUMS`.
+A sketch. The setup already has `url_asset` and the `SHA256SUMS` check.
 
-macOS (`hw.optional.arm64` é fiável mesmo num Terminal em Rosetta):
+macOS (`hw.optional.arm64` is reliable even in a Terminal running under Rosetta):
 
 ```sh
 arq=x86_64; [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ] && arq=arm64
 zip="Memoria-${MEMORY_APP_VERSION#v}-macos-$arq.zip"
-baixar "$(url_asset "$zip")" "$tmp/$zip"      # e confirmar o SHA-256
+baixar "$(url_asset "$zip")" "$tmp/$zip"      # and check the SHA-256
 mkdir -p "$HOME/Applications"
 rm -rf "$HOME/Applications/Memoria.app"
 ditto -x -k "$tmp/$zip" "$HOME/Applications"
@@ -86,11 +88,11 @@ app="$HOME/Applications/Memoria.app/Contents/MacOS/memoria"
 claude mcp add --scope user memoria -- "$app" mcp
 ```
 
-Windows (PowerShell 5.1; o `Expand-Archive` é lento com milhares de ficheiros):
+Windows (PowerShell 5.1; `Expand-Archive` is slow with thousands of files):
 
 ```powershell
 $zip = 'Memoria-' + $version.TrimStart('v') + '-windows-x64.zip'
-Get-Asset (Get-AssetUrl $zip) (Join-Path $tmp $zip)   # e confirmar o SHA-256
+Get-Asset (Get-AssetUrl $zip) (Join-Path $tmp $zip)   # and check the SHA-256
 $destino = Join-Path $env:LOCALAPPDATA 'Programs'
 Remove-Item -Recurse -Force (Join-Path $destino 'Memoria') -ErrorAction SilentlyContinue
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -98,93 +100,93 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $py = Join-Path $destino 'Memoria\python.exe'
 & $py -m memoria selftest
 claude mcp add --scope user memoria -- $py -m memoria mcp
-# Atalho no menu Iniciar para Memoria\Memoria.exe (como o install.ps1 já faz).
+# Start menu shortcut to Memoria\Memoria.exe (as install.ps1 already does).
 ```
 
-O WebView2 continua a ser instalado pelo setup, se faltar. Sem ele, a app abre no browser.
+The setup still installs WebView2 if it's missing. Without it, the app opens in the browser.
 
-## Download pelo browser (plano B)
+## Browser download (plan B)
 
-macOS: o Gatekeeper bloqueia a app (não tem assinatura). No macOS 15 ou mais recente já não
-há "Abrir" com o botão direito. Há duas saídas:
+macOS: Gatekeeper blocks the app (it isn't signed). On macOS 15 or later, right-click "Open"
+is gone. Two ways out:
 
-- no Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`;
-- ou Definições do Sistema → Privacidade e Segurança → "Abrir mesmo assim" (pede a palavra-passe;
-  descrito pela Apple e por terceiros, não verificado aqui).
+- in Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`;
+- or System Settings → Privacy & Security → "Open Anyway" (asks for the password;
+  described by Apple and others, not verified here).
 
-Windows: o SmartScreen mostra "O Windows protegeu o computador".
-Clica em "Mais informações" e depois em "Executar mesmo assim".
+Windows: SmartScreen shows "Windows protected your PC".
+Click "More info", then "Run anyway".
 
-Nota para a página da release (está no CHANGELOG, que é o texto da release):
-"Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
-Definições do Sistema → Privacidade e Segurança."
+Note for the release page (it's in the CHANGELOG, which is the release text):
+"Install with the one-line command. Downloading through the browser needs approval in
+System Settings → Privacy & Security."
 
-## Assinatura opcional (macOS)
+## Optional signing (macOS)
 
-Só para quem descarrega pelo browser, AirDrop ou Mail, ou para empresas cujo EDR
-só aceita executáveis assinados. Não faz parte da release normal. Corre-a o organizador,
-no Mac dele, com o seu Developer ID. Nenhum script guarda credenciais.
+Only for people who download through a browser, AirDrop or Mail, or for companies whose EDR
+only accepts signed executables. It isn't part of the normal release. The organizer runs it,
+on their Mac, with their Developer ID. No script stores credentials.
 
-Uma vez, no Mac do organizador:
+Once, on the organizer's Mac:
 
-1. Criar o certificado "Developer ID Application" (Xcode → Settings → Accounts →
-   Manage Certificates → +). Só o titular da conta o pode criar.
-2. Criar uma palavra-passe específica da app em account.apple.com.
-3. Guardar o perfil do notarytool no Keychain (pede a palavra-passe; não fica em ficheiros):
+1. Create the "Developer ID Application" certificate (Xcode → Settings → Accounts →
+   Manage Certificates → +). Only the account holder can create it.
+2. Create an app-specific password at account.apple.com.
+3. Save the notarytool profile in the Keychain (it asks for the password; nothing goes to files):
 
    ```bash
    xcrun notarytool store-credentials memoria-notary --apple-id <email> --team-id <TEAMID>
    ```
 
-Em cada release, depois de `scripts/build.sh` e antes de `scripts/publish-release.sh`:
+For each release, after `scripts/build.sh` and before `scripts/publish-release.sh`:
 
 ```bash
-scripts/sign-macos.sh --identidade "Developer ID Application: <Nome> (<TEAMID>)" --perfil memoria-notary \
-  dist/Memoria-<versão>-macos-arm64.zip dist/Memoria-<versão>-macos-x86_64.zip
+scripts/sign-macos.sh --identidade "Developer ID Application: <Name> (<TEAMID>)" --perfil memoria-notary \
+  dist/Memoria-<version>-macos-arm64.zip dist/Memoria-<version>-macos-x86_64.zip
 ```
 
-O script troca o lançador `sh` por um executável compilado (`portatil/macos/lancador.c`,
-arm64 e x86_64), assina cada Mach-O e a app com o hardened runtime e
-`portatil/macos/entitlements.plist`, notariza, agrafa o ticket, verifica com `spctl`,
-refaz os zips e atualiza o `SHA256SUMS`.
-Para testar sem conta Apple: `scripts/sign-macos.sh --adhoc --saida /tmp/teste <zip>`.
+The script swaps the `sh` launcher for a compiled executable (`portatil/macos/lancador.c`,
+arm64 and x86_64), signs each Mach-O and the app with the hardened runtime and
+`portatil/macos/entitlements.plist`, notarizes, staples the ticket, checks with `spctl`,
+rebuilds the zips and updates `SHA256SUMS`.
+To test without an Apple account: `scripts/sign-macos.sh --adhoc --saida /tmp/teste <zip>`.
 
-Testado em modo `--adhoc` (macOS 26.6, Apple Silicon): `codesign --verify --deep --strict`
-passa depois de extrair com o `ditto` e com o extrator do `memoria update`; `selftest --gui`
-passa com o hardened runtime (o zip Intel também, no Rosetta); correr a app não estraga a assinatura.
-Por testar: a notarização e o `spctl` com um Developer ID verdadeiro.
+Tested in `--adhoc` mode (macOS 26.6, Apple Silicon): `codesign --verify --deep --strict`
+passes after extracting with `ditto` and with the `memoria update` extractor; `selftest --gui`
+passes with the hardened runtime (the Intel zip too, under Rosetta); running the app doesn't break the signature.
+Not tested yet: notarization and `spctl` with a real Developer ID.
 
-## Verificado
+## Verified
 
-No Mac (Apple Silicon, macOS 26.6):
+On a Mac (Apple Silicon, macOS 26.6):
 
-- Os três zips geram-se em cerca de 25 s.
-- Zip descarregado com `curl` e extraído com `unzip`: sem quarentena.
-  `memoria selftest --gui` passa (janela pronta em menos de 1 s). Abre pelo Finder (`open`).
-- Nada é escrito dentro da app.
-- Zip Intel: `selftest` passa no Rosetta (sem janela).
-- Cópia com quarentena (`0083;…;Google Chrome;…` e `0081;…;Safari;`): o `ditto` e o `unzip`
-  passam a quarentena do zip para a app. A app não arranca. O macOS mostra o aviso do
-  Gatekeeper (`spctl`: "rejected, no usable signature"). Depois de `xattr -dr com.apple.quarantine`, abre.
-- `memoria update` com um servidor local: descarrega, verifica o SHA-256, corre o `selftest`
-  da versão nova, troca a pasta e reindexa. Testado também em `~/Applications` e com a app renomeada.
-- MCP por stdio através do lançador (`memoria mcp`): as três ferramentas respondem.
-- O script de troca do Windows passa no parser e corre no PowerShell 7 (no Mac).
-- O mesmo arranque do Windows (Python com outro nome, sem argumentos, janela aberta
-  pelo `sitecustomize`) funciona no Mac.
+- The three zips build in about 25 s.
+- Zip downloaded with `curl` and extracted with `unzip`: no quarantine.
+  `memoria selftest --gui` passes (window ready in under 1 s). It opens from Finder (`open`).
+- Nothing is written inside the app.
+- Intel zip: `selftest` passes under Rosetta (no window).
+- Quarantined copy (`0083;…;Google Chrome;…` and `0081;…;Safari;`): `ditto` and `unzip`
+  carry the zip's quarantine over to the app. The app doesn't start. macOS shows the
+  Gatekeeper warning (`spctl`: "rejected, no usable signature"). After `xattr -dr com.apple.quarantine`, it opens.
+- `memoria update` against a local server: downloads, checks the SHA-256, runs the new version's
+  `selftest`, swaps the folder and reindexes. Also tested in `~/Applications` and with the app renamed.
+- MCP over stdio through the launcher (`memoria mcp`): all three tools answer.
+- The Windows swap script passes the parser and runs in PowerShell 7 (on the Mac).
+- The same Windows startup (Python under another name, no arguments, window opened
+  by `sitecustomize`) works on the Mac.
+- Uploading the 37 MB assets to Gitea: releases v0.2.2 to v0.4.0 were published with them.
 
-## Por verificar (Windows não corre aqui)
+## Not verified yet (Windows doesn't run here)
 
-- Duplo clique em `Memoria.exe` abre a janela (pythonnet, WinForms e WebView2 em modo `._pth`).
-- O `python312._pth` é respeitado pelo Python do python-build-standalone
-  (confirmado só pela leitura do `getpath.py` do CPython 3.12).
-- O `pywin32.pth` e o `pywin32_bootstrap` funcionam neste modo.
-- A remoção da marca da Internet (`Zone.Identifier`) resolve o erro 0x80131515 do .NET.
-- O texto exato do SmartScreen para o `Memoria.exe` sem assinatura.
-- O script de troca no PowerShell 5.1 com ficheiros em uso (MCP aberto no Claude Code).
-- Políticas das empresas: AppLocker, regras ASR do Defender, antivírus.
-- Windows ARM (corre o zip x64 em emulação).
-- Envio de assets de 37 MB para o Gitea (limites do servidor e do proxy). A release não foi publicada.
+- Double-clicking `Memoria.exe` opens the window (pythonnet, WinForms and WebView2 in `._pth` mode).
+- `python312._pth` is honored by the python-build-standalone Python
+  (confirmed only by reading CPython 3.12's `getpath.py`).
+- `pywin32.pth` and `pywin32_bootstrap` work in this mode.
+- Removing the Internet mark (`Zone.Identifier`) fixes .NET error 0x80131515.
+- SmartScreen's exact text for the unsigned `Memoria.exe`.
+- The swap script in PowerShell 5.1 with files in use (MCP open in Claude Code).
+- Company policies: AppLocker, Defender ASR rules, antivirus.
+- Windows ARM (runs the x64 zip under emulation).
 
-Também por fazer: o menu da app mostra "Memoria" (sem acento), a app não tem ícone,
-e o aviso de versão nova na interface diz `memoria update` (na versão portátil é o caminho completo).
+Also still to do: the app menu shows "Memoria" (no accent), the app has no icon,
+and the new-version notice in the UI says `memoria update` (in the portable version it's the full path).

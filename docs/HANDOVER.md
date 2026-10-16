@@ -1,116 +1,125 @@
 # Handover: Memória
 
-Para continuar o trabalho noutra máquina (por exemplo, a da empresa, com GitHub corporativo).
-As regras do dia a dia estão no [CLAUDE.md](../CLAUDE.md).
+**English** · [Português](HANDOVER.pt.md)
 
-## Estado na v0.4.0
+To carry on the work on another machine (for example, the company one, with a corporate GitHub).
+Day-to-day rules are in [CLAUDE.md](../CLAUDE.md).
 
-Publicada no Gitea do organizador (`gitea.guilhermepinto.pt/guilherme/claude-memory-app`), a 16 out. 2026.
+## Status at v0.4.0
 
-| Versão | O que trouxe |
+Released on the organizer's Gitea (`gitea.guilhermepinto.pt/guilherme/claude-memory-app`) on 16 Oct 2026.
+There is a private copy at `github.com/cx-guilherme-pinto/claude-memory-app`; the organizer's `origin`
+pushes to both. Releases v0.1.0 to v0.4.0 are being copied there by the workshop kit.
+
+| Version | What it brought |
 |---|---|
-| 0.1.0 | Notas Markdown, índice FTS5, grafo, servidor MCP, redação de segredos, `memoria update`, instaladores |
-| 0.2.0 | Épico, url e etiquetas; pesquisa por nome, projeto e chave de ticket |
-| 0.2.1 | Modo browser corrigido (sessão por cookie); visual do workshop |
-| 0.2.2 | Versão portátil (zips Mac arm64/x86_64 e Windows x64) e interface nova |
-| 0.2.3 | Editar a memória dentro da app |
-| 0.3.0 | 4 línguas (pt, en, hi, he), hebraico RTL, seletor de língua |
-| 0.4.0 | Vista "Atividade do Claude" (registo das chamadas MCP) |
+| 0.1.0 | Markdown notes, FTS5 index, graph, MCP server, secret redaction, `memoria update`, installers |
+| 0.2.0 | Epic, url and tags; search by name, project and ticket key |
+| 0.2.1 | Browser mode fixed (session cookie); workshop look |
+| 0.2.2 | Portable version (Mac arm64/x86_64 and Windows x64 zips) and the new interface |
+| 0.2.3 | Edit a memory inside the app |
+| 0.3.0 | 4 languages (pt, en, hi, he), Hebrew RTL, language picker |
+| 0.4.0 | "Claude activity" view (MCP call log) |
 
-Assets de cada release: wheel, `constraints.txt`, `install.sh`, `install.ps1`, `SHA256SUMS`
-e os 3 zips portáteis.
+Assets in each release: the wheel, `constraints.txt`, `install.sh`, `install.ps1`, `SHA256SUMS`
+and the 3 portable zips.
 
-Verificado:
+Since v0.4.0 (on `main`, not released): English-first docs (READMEs in 4 languages, `*.pt.md` translations),
+English installer messages and Windows readme, `scripts/mudar-alojamento.sh`, and `publish-release.sh`
+support for GitHub Enterprise.
 
-- 227 testes no macOS (Apple Silicon), incluindo Playwright e a janela nativa.
-- Atualizações reais com `memoria update`: instalação uv 0.2.1 → 0.4.0 e portátil 0.2.3 → 0.3.0 → 0.4.0.
-  As notas não mudaram.
-- O zip portátil do Mac a correr como `memoria mcp` (como o Claude Code o lança).
+Verified:
 
-## O que falta
+- 236 tests on macOS (Apple Silicon), including Playwright and the native window.
+- Real updates with `memoria update`: uv install 0.2.1 → 0.4.0 and portable 0.2.3 → 0.3.0 → 0.4.0.
+  Notes were not touched.
+- The Mac portable zip running as `memoria mcp` (the way Claude Code launches it).
 
-1. **Testar no Windows a sério.** Só houve verificação estática: `install.ps1`, o zip portátil,
-   o WebView2, o pythonnet, o `memoria-gui.exe` e a troca de pasta no `memoria update`.
-2. **Testar no Mac Intel e no Windows ARM.** Os wheels existem (ver `scripts/lock.sh`), mas não houve teste real.
-3. **Rever o hindi e o hebraico com quem fala a língua:** `web/src/locales/hi.json`, `he.json` e `src/memoria/mensagens.py`.
-4. **Traduzir o que ficou em português:** as mensagens de `install/install.sh` e `install/install.ps1`
-   (o `.ps1` tem de ficar ASCII) e os modelos `portatil/windows/LEIA-ME.txt` e `memoria.cmd`
-   (o `cmd.exe` lida mal com texto não latino).
-5. **Correr o workflow de CI pela primeira vez** (`.github/workflows/release.yml`). No Gitea não havia
-   runner: todas as releases foram feitas à mão com os mesmos scripts.
-6. **Assinatura Apple real** (Developer ID + notarização): só foi testada a assinatura ad hoc.
+## Open work
 
-## Riscos
+1. **Test on real Windows.** Only static checks so far: `install.ps1`, the portable zip,
+   WebView2, pythonnet, `memoria-gui.exe` and the folder swap in `memoria update`.
+2. **Test on an Intel Mac and on Windows ARM.** The wheels exist (see `scripts/lock.sh`), but nothing was run there.
+3. **Have native speakers review Hindi and Hebrew:** `web/src/locales/hi.json`, `he.json`,
+   `src/memoria/mensagens.py`, `README.hi.md` and `README.he.md`.
+4. **Installer messages in other languages.** `install.sh` and `install.ps1` speak English only
+   (the `.ps1` must stay ASCII). The Windows zip has `README.txt` (English) and `LEIA-ME.txt` (Portuguese).
+5. **Run the CI workflow for the first time** (`.github/workflows/release.yml`). Gitea had no runner:
+   every release was made by hand with the same scripts.
+6. **Real Apple signing** (Developer ID + notarization): only ad hoc signing was tested.
 
-- **Repositório privado ou interno.** Os instaladores, o setup do kit e o `memoria update` descarregam
-  por `{repo}/releases/download/<tag>/<ficheiro>`. No GitHub esse URL só funciona sem login num
-  repositório público. Num repositório privado ou interno, os participantes não conseguem instalar
-  nem atualizar. Soluções: publicar as releases num repositório público, ou acrescentar um download
-  pela API (com token) ao `update.py` e aos instaladores.
-- **Gatekeeper, SmartScreen e EDR.** Os zips não são assinados. Pelo setup (curl ou Invoke-WebRequest)
-  não ficam em quarentena. Descarregados pelo browser, o macOS bloqueia-os.
-- **Proxies com inspeção de TLS.** O uv precisa de `UV_SYSTEM_CERTS=1`. O `memoria update` usa os
-  certificados do sistema (truststore). O `git ls-remote` do update usa a configuração do git.
-- **`cryptography` fixado em 46.0.3** (`constraints.in`): é a última versão com wheels para Mac Intel
-  e Windows ARM. Vem do `mcp`, mas o servidor stdio não o usa.
-- **Atualizar no Windows com o Claude Code aberto.** O `memoria mcp` prende os ficheiros. O script de
-  troca espera até 3 minutos e pede para fechar a Memória e o Claude Code.
-- **Testes de canvas no Chromium headless.** Os animation frames nem sempre correm. Os testes usam
-  o valor visto no momento do desenho (`tests/test_browser.py`, `_esperar_desenho`).
+## Risks
 
-## Publicar uma versão
+- **Private or internal repository.** The installers, the kit's setup and `memoria update` download from
+  `{repo}/releases/download/<tag>/<file>`. On GitHub that URL only works without login on a public
+  repository. With a private or internal repository, participants can't install or update.
+  Fixes: publish releases on a public repository, or add an API download (with a token) to `update.py`
+  and the installers.
+- **Gatekeeper, SmartScreen and EDR.** The zips aren't signed. Through the setup (curl or Invoke-WebRequest)
+  they aren't quarantined. Downloaded in a browser, macOS blocks them.
+- **TLS-inspecting proxies.** uv needs `UV_SYSTEM_CERTS=1`. `memoria update` uses the system certificates
+  (truststore). Its `git ls-remote` uses the git configuration.
+- **`cryptography` pinned to 46.0.3** (`constraints.in`): the last version with wheels for Intel Mac
+  and Windows ARM. It comes from `mcp`; the stdio server doesn't use it.
+- **Updating on Windows with Claude Code open.** `memoria mcp` locks the files. The swap script waits up
+  to 3 minutes and asks to close Memória and Claude Code.
+- **Canvas tests in headless Chromium.** Animation frames don't always run. The tests use the value seen
+  at drawing time (`tests/test_browser.py`, `_esperar_desenho`).
 
-### Mudar de alojamento e versão (um comando)
+## Publishing a version
+
+### Change hosting and version (one command)
 
 ```bash
-scripts/mudar-alojamento.sh --repo-url https://<servidor>/<org>/claude-memory-app.git \
-  --provider github --versao vX.Y.Z [--data AAAA-MM-DD]
+scripts/mudar-alojamento.sh --repo-url https://<server>/<org>/claude-memory-app.git \
+  --provider github --versao vX.Y.Z [--data YYYY-MM-DD]
 ```
 
-Muda só: `release.conf` (URL, versão e `RELEASE_PROVIDER`), os blocos gerados de `install/install.sh`,
-`install/install.ps1` e `README.md`, `pyproject.toml`, `web/package.json`, `web/package-lock.json`
-(só o próprio pacote), `uv.lock`, e acrescenta `## [X.Y.Z] - data` no topo do `CHANGELOG.md`.
-Não faz commit. No fim diz o que mudou e onde ainda aparece o servidor antigo.
-Correr outra vez com os mesmos argumentos não muda nada. O `RELEASE_DOWNLOAD_URL` fica igual.
+It changes only: `release.conf` (URL, version and `RELEASE_PROVIDER`), the generated blocks in
+`install/install.sh`, `install/install.ps1` and every `README*.md`, `pyproject.toml`, `web/package.json`,
+`web/package-lock.json` (the package itself only), `uv.lock`, and it adds `## [X.Y.Z] - date` at the top of
+`CHANGELOG.md` and `CHANGELOG.pt.md`. It doesn't commit. At the end it lists what changed and where the
+old server still appears. Running it again with the same arguments changes nothing.
+`RELEASE_DOWNLOAD_URL` stays as it is.
 
-Para mudar só a versão no mesmo alojamento, passa o URL e o fornecedor atuais.
-À mão, sem o script: editar o `release.conf`, `pyproject.toml` e `CHANGELOG.md`, depois
-`python3 scripts/render_installers.py --escrever` e `uv lock`.
+To change only the version on the same hosting, pass the current URL and provider.
+By hand, without the script: edit `release.conf`, `pyproject.toml`, `CHANGELOG.md` and `CHANGELOG.pt.md`,
+then run `python3 scripts/render_installers.py --escrever` and `uv lock`.
 
-### Publicar
+### Publish
 
-1. `scripts/mudar-alojamento.sh …` (acima).
-2. UI e testes:
+1. `scripts/mudar-alojamento.sh …` (above).
+2. UI and tests:
    ```bash
    uv sync
    (cd web && npm ci && npm run build) && rm -rf src/memoria/web_dist && cp -R web/dist src/memoria/web_dist
    uv run playwright install chromium && uv run pytest
    ```
-3. Commit e push do `main` para o servidor novo. O remoto tem de se chamar `origin`:
-   o `publish-release.sh` faz push da tag para `origin`.
-   **Não cries a tag à mão.** O `publish-release.sh` cria-a (anotada, no `HEAD`, com a versão do
-   `release.conf`) e envia-a. Se já existir, usa-a; tem de apontar para o commit do build.
-4. `scripts/build.sh`. Gera em `dist/` o wheel, `constraints.txt`, `install.sh` e `install.ps1` com o
-   SHA-256 do wheel, os 3 zips portáteis e o `SHA256SUMS`. `PORTATIL=0 scripts/build.sh` salta os zips.
-5. Login: `gh auth login --hostname <servidor>` (ou `GH_ENTERPRISE_TOKEN`). O servidor vem do
-   `MEMORY_APP_REPO_URL`: o `GH_HOST` não é preciso (e não atrapalha).
-   `scripts/publish-release.sh --so-token` confirma o login.
-6. `scripts/publish-release.sh`: cria e envia a tag, cria a release, envia os assets com o `gh`
-   (só aqui se fala com a API), verifica-os pela API e depois pelo URL público.
-   Num repositório privado ou interno, o URL público dá um aviso (ver "Riscos").
-7. Avisar o kit para mudar o `MEMORY_APP_VERSION` no `repos.conf`.
+3. Commit and push `main` to the new server. The remote must be called `origin`:
+   `publish-release.sh` pushes the tag to `origin`.
+   **Don't create the tag by hand.** `publish-release.sh` creates it (annotated, on `HEAD`, with the version
+   from `release.conf`) and pushes it. If it already exists, it uses it; it must point at the commit you built.
+4. `scripts/build.sh`. It writes to `dist/` the wheel, `constraints.txt`, `install.sh` and `install.ps1` with
+   the wheel's SHA-256, the 3 portable zips and `SHA256SUMS`. `PORTATIL=0 scripts/build.sh` skips the zips.
+5. Log in: `gh auth login --hostname <server>` (or `GH_ENTERPRISE_TOKEN`). The server comes from
+   `MEMORY_APP_REPO_URL`: `GH_HOST` isn't needed (and doesn't hurt).
+   `scripts/publish-release.sh --so-token` checks the login.
+6. `scripts/publish-release.sh`: creates and pushes the tag, creates the release, uploads the assets with `gh`
+   (the only place that talks to the API), verifies them through the API and then through the public URL.
+   On a private or internal repository, the public URL gives a warning (see "Risks").
+7. Tell the kit to bump `MEMORY_APP_VERSION` in `repos.conf`.
 
-**Atenção ao CI.** Uma tag `v*` enviada para o servidor dispara o `.github/workflows/release.yml`,
-que também publica. Escolhe um dos caminhos:
-- publicação local (passos 4 a 6): desliga as Actions do repositório, ou o workflow, antes do passo 6;
-- publicação pelo CI: depois do passo 3, cria e envia a tag (`git tag -a vX.Y.Z -m "Memória vX.Y.Z"`
-  e `git push origin vX.Y.Z`) e não corras os passos 4 a 6. O runner precisa de acesso ao PyPI, ao npm
-  e aos downloads do python-build-standalone.
+**Watch out for CI.** A `v*` tag pushed to the server triggers `.github/workflows/release.yml`,
+which also publishes. Pick one path:
+- local publishing (steps 4 to 6): turn off the repository's Actions, or the workflow, before step 6;
+- CI publishing: after step 3, create and push the tag (`git tag -a vX.Y.Z -m "Memória vX.Y.Z"` and
+  `git push origin vX.Y.Z`) and skip steps 4 to 6. The runner needs access to PyPI, npm and the
+  python-build-standalone downloads.
 
-O workflow corre build, testes e publicação. A tag tem de ser igual ao `MEMORY_APP_VERSION`.
+The workflow runs build, tests and publishing. The tag must equal `MEMORY_APP_VERSION`.
 
-## Assinatura opcional do Mac
+## Optional Mac signing
 
-`scripts/sign-macos.sh` assina e notariza os zips do Mac com um Developer ID. Corre-o só o organizador,
-no Mac dele, depois do `build.sh` e antes do `publish-release.sh`. Não faz parte da release normal.
-Instruções e decisões em [docs/portatil.md](portatil.md#assinatura-opcional-macos).
+`scripts/sign-macos.sh` signs and notarizes the Mac zips with a Developer ID. Only the organizer runs it,
+on their Mac, after `build.sh` and before `publish-release.sh`. It isn't part of the normal release.
+Instructions and decisions in [docs/portatil.md](portatil.md#optional-signing-macos).
