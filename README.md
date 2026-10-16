@@ -17,13 +17,13 @@ Não precisa de permissões de administrador.
 **macOS** (Intel e Apple Silicon) e Linux, no Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.2/install.sh | sh
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.3/install.sh | sh
 ```
 
 **Windows 10/11**, no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.2/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.3/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
