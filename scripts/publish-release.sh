@@ -158,7 +158,7 @@ PY
         gh release upload "$VERSION" --repo "$alvo" "${ASSETS[@]/#/dist/}"
       else
         gh release create "$VERSION" --repo "$alvo" --title "$VERSION" \
-          --notes-file "$notas" --verify-tag "${extra[@]}" "${ASSETS[@]/#/dist/}"
+          --notes-file "$notas" --verify-tag ${extra[@]+"${extra[@]}"} "${ASSETS[@]/#/dist/}"
       fi
       rm -f "$notas"
       # Verificação pela API (funciona em repositórios privados e internos).
