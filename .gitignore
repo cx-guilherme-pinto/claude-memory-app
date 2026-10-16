@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# UI (gerado por scripts/build.sh)
+web/node_modules/
+web/dist/
+src/memoria/web_dist/
+
+# Sistema
+.DS_Store
+Thumbs.db

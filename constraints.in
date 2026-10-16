@@ -1,0 +1,7 @@
+# Restrições extra usadas por scripts/lock.sh para gerar constraints.txt.
+#
+# cryptography vem de mcp -> pyjwt[crypto]. Não é usado pelo servidor stdio.
+# A 49.x deixou de publicar wheels para Mac Intel e a 46.0.4+ para Windows ARM.
+# Sem wheel, o uv tentaria compilar com Rust, o que falha nos portáteis.
+# 46.0.3 é a versão mais recente com wheels para as quatro plataformas.
+cryptography==46.0.3

@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "memoria"
+version = "0.1.0"
+description = "Memória: notas locais do Claude Code em Markdown, com grafo e servidor MCP."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Guilherme Pinto" }]
+requires-python = ">=3.12"
+classifiers = [
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+]
+# Versões fixadas. As versões exatas de tudo (incluindo dependências indiretas)
+# estão em constraints.txt, publicado em cada release.
+dependencies = [
+  "pywebview==6.2.1",
+  "mcp>=2.3,<3",
+  "PyYAML==6.0.3",
+  "truststore==0.10.5",
+]
+
+[project.scripts]
+memoria = "memoria.cli:main"
+
+[project.gui-scripts]
+# Sem consola no Windows. É o alvo do atalho do menu Iniciar.
+memoria-gui = "memoria.cli:main_gui"
+
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/memoria"]
+# A UI compilada está no .gitignore, mas tem de entrar no wheel.
+artifacts = ["src/memoria/web_dist/**"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"release.conf" = "memoria/release.conf"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/memoria", "release.conf", "README.md", "LICENSE", "CHANGELOG.md"]
+artifacts = ["src/memoria/web_dist/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "gui: abre uma janela nativa (só em máquinas com ecrã)",
+]
+
+[tool.uv]
+# Igual a constraints.in (ver a explicação lá). Mantém o ambiente de desenvolvimento
+# com as mesmas versões que os participantes instalam.
+constraint-dependencies = ["cryptography==46.0.3"]

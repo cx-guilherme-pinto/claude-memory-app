@@ -1,0 +1,168 @@
+# Memória
+
+A Memória guarda o que o Claude Code aprende, em ficheiros Markdown no teu computador.
+Mostra essas notas num grafo e dá-as ao Claude Code por um servidor MCP.
+
+- **Lições** e regras (**fazer**, **não fazer**) e **histórico** de tarefas.
+- Pesquisa rápida (SQLite FTS5) e ligações entre notas.
+- Uma janela com o grafo, filtros, linha temporal e um formulário para notas novas.
+- Tudo fica no teu computador. Nada é enviado para fora.
+
+## Instalar
+
+Não precisa de permissões de administrador.
+
+<!-- >>> instalar: gerado a partir de release.conf por scripts/render_installers.py -->
+**macOS** (Intel e Apple Silicon) e Linux, no Terminal:
+
+```bash
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.1.0/install.sh | sh
+```
+
+**Windows 10/11**, no PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.1.0/install.ps1 | iex"
+```
+<!-- <<< instalar -->
+
+O instalador:
+
+1. instala o [uv](https://docs.astral.sh/uv/) (versão fixada), se faltar;
+2. descarrega o wheel e o `constraints.txt` e verifica o SHA-256;
+3. instala a app com o Python 3.12 gerido pelo uv;
+4. no Windows, instala o WebView2 Runtime (por utilizador), se faltar;
+5. cria um atalho: `~/Applications/Memória.app` no Mac, "Memória" no menu Iniciar no Windows.
+
+Os comandos ficam em `~/.local/bin` (Mac/Linux) ou `%USERPROFILE%\.local\bin` (Windows).
+
+## Ligar ao Claude Code
+
+```bash
+claude mcp add --scope user memoria -- "$HOME/.local/bin/memoria" mcp
+```
+
+No Windows: `claude mcp add --scope user memoria -- "%USERPROFILE%\.local\bin\memoria.exe" mcp`.
+
+Ferramentas MCP:
+
+| Ferramenta | Para quê |
+|---|---|
+| `memoria_procurar(texto, projeto?, tipo?, limite=10)` | Procura notas. |
+| `memoria_adicionar(tipo, titulo, texto, projeto, tarefa?, ficheiros?, ligacoes?, custo_usd?)` | Guarda uma nota e devolve o caminho. |
+| `memoria_relacionadas(id_ou_caminho, limite=10)` | Notas ligadas, da relação mais forte para a mais fraca. |
+
+## Usar
+
+| Comando | O que faz |
+|---|---|
+| `memoria` | Abre a janela. |
+| `memoria --browser` | Abre a mesma interface no browser. |
+| `memoria add --tipo licao --projeto p --titulo "..." --texto "..."` | Guarda uma nota. |
+| `memoria procurar "texto"` | Procura na linha de comandos. |
+| `memoria reindex` | Reconstrói o índice a partir dos Markdown. |
+| `memoria update` | Instala a versão mais recente. |
+| `memoria selftest [--gui]` | Verifica a instalação. Com `--gui`, abre e fecha a janela. |
+| `memoria mcp` | Servidor MCP (usado pelo Claude Code). |
+
+Na janela, clica num nó para ver a nota. Usa `/` para procurar e `Esc` para fechar.
+A legenda filtra por tipo. O botão de reprodução da linha temporal mostra o grafo a crescer.
+
+No Windows, se o WebView2 faltar, a interface abre no browser, em `127.0.0.1`.
+
+## Onde ficam as memórias
+
+Em `~/.memoria` (ou na pasta indicada por `MEMORIA_HOME`):
+
+```text
+~/.memoria/
+  <projeto>/<AAAA-MM-DD>-<slug>.md   uma nota por ficheiro
+  config.json                        URLs de atualização (opcional)
+  .indice/memoria.sqlite             índice; pode ser apagado
+```
+
+Cada nota tem um cabeçalho YAML:
+
+```markdown
+---
+tipo: licao            # licao | fazer | nao_fazer | historico
+titulo: Usar cache no build
+projeto: arena-de-seguranca
+tarefa: ARENA-12       # opcional
+ficheiros: [orquestrador/plan.mjs]
+data: '2026-10-16T13:25:33+01:00'
+custo_usd: 1.25        # opcional
+ligacoes: [Evitar retries]
+---
+
+O build fica 3x mais rápido com cache. Ver [[Evitar retries]].
+```
+
+Podes editar os ficheiros à mão. A app deteta as alterações.
+`memoria reindex` reconstrói o índice a qualquer momento.
+
+Força das ligações, da mais forte para a mais fraca:
+ligação explícita (`[[...]]` ou `ligacoes`), mesma tarefa, mesmo projeto, ficheiros em comum.
+
+## Atualizar
+
+```bash
+memoria update
+```
+
+1. Descobre a última versão com `git ls-remote --tags` (sem API).
+2. Descarrega o wheel e o `constraints.txt` e verifica o `SHA256SUMS`.
+3. Reinstala com `uv tool install --force`.
+4. Reconstrói o índice. **Nunca toca nas notas.**
+
+No Windows, a instalação termina numa janela nova. Fecha o Claude Code antes.
+
+Os URLs vêm de `~/.memoria/config.json` e, se faltarem, do `release.conf` do pacote.
+Chaves lidas (uma variável de ambiente com o mesmo nome sobrepõe-se):
+
+| Chave | Exemplo |
+|---|---|
+| `MEMORY_APP_REPO_URL` | `https://<servidor>/<dono>/claude-memory-app.git` |
+| `RELEASE_DOWNLOAD_URL` | `{repo}/releases/download/{version}/{file}` |
+| `PYTHON_VERSION` | `3.12` (opcional) |
+| `UV` | caminho do executável `uv` (opcional) |
+
+## Privacidade
+
+- As notas, o índice e a interface ficam no teu computador.
+- Antes de gravar, a app redige tokens, chaves de API (`sk-ant-…`, `ghp_…`, `AKIA…`, `xox…`),
+  JWTs, chaves privadas e padrões como `password=…`.
+- A interface só escuta em `127.0.0.1`, com um token de sessão aleatório.
+- A única ligação à rede é a verificação de versões (`git ls-remote`) e o `memoria update`.
+  Para a desligar: `MEMORIA_SEM_UPDATE=1`.
+- Não há embeddings nem modelos. A pesquisa é texto (SQLite FTS5).
+
+## Problemas comuns
+
+- **"O SQLite deste Python não tem FTS5"**: reinstala com o Python do uv
+  (`uv tool install --force --managed-python --python 3.12 <wheel>`).
+- **Proxy da empresa**: o uv e o `memoria update` usam `HTTPS_PROXY` e os certificados do sistema.
+  Para o uv, define também `UV_SYSTEM_CERTS=1`.
+- **A janela não abre**: `memoria --browser` abre a mesma interface no browser.
+
+## Desenvolvimento
+
+Precisas de `uv` e Node.js 22 ou mais recente.
+
+```bash
+uv sync
+(cd web && npm ci && npm run build) && cp -R web/dist src/memoria/web_dist
+uv run pytest
+```
+
+- `scripts/build.sh`: UI, wheel, instaladores e `SHA256SUMS` em `dist/`.
+- `scripts/publish-release.sh`: tag, release e assets. As chamadas à API do alojamento
+  estão só em `create_release()` (Gitea ou GitHub, por `RELEASE_PROVIDER`).
+- `scripts/lock.sh`: gera o `constraints.txt` e confirma que há wheels para Mac e Windows.
+- `release.conf`: a única fonte dos URLs e versões.
+
+As versões seguem [SemVer](https://semver.org/lang/pt-PT/). Ver o [CHANGELOG](CHANGELOG.md).
+
+## Licença
+
+MIT. Ver [LICENSE](LICENSE).

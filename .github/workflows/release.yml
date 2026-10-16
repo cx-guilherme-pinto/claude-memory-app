@@ -1,0 +1,47 @@
+# Release: build, testes e publicação quando entra uma tag v*.
+#
+# Compatível com GitHub Actions e Gitea Actions (o Gitea lê .github/workflows
+# quando não existe .gitea/workflows). Hoje não há runner no Gitea: a release
+# faz-se localmente com os mesmos scripts (scripts/build.sh e scripts/publish-release.sh).
+#
+# O fornecedor vem de release.conf (RELEASE_PROVIDER). Tokens:
+#   Gitea  -> secrets.GITEA_TOKEN (o Gitea Actions cria-o em cada execução)
+#   GitHub -> secrets.GITHUB_TOKEN (para o gh)
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+
+      - name: Build
+        run: scripts/build.sh
+
+      - name: Testes
+        env:
+          MEMORIA_SEM_UPDATE: "1"
+        run: |
+          uv sync --python 3.12 --locked
+          uv run --python 3.12 pytest -m "not gui" -q
+
+      - name: Publicar
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/publish-release.sh
