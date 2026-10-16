@@ -2,7 +2,7 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
-## [Por publicar]
+## [0.2.2] - 2026-10-16
 
 ### Adicionado
 
