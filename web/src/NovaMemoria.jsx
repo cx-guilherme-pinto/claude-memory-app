@@ -95,11 +95,11 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
           </label>
           <label className="rotulo">
             Tarefa ou ticket (opcional)
-            <input className="campo mono" value={tarefa} onChange={(e) => setTarefa(e.target.value)} placeholder="ABC-123" />
+            <input className="campo" value={tarefa} onChange={(e) => setTarefa(e.target.value)} placeholder="ABC-123" />
           </label>
           <label className="rotulo">
             Épico (opcional)
-            <input className="campo mono" list="lista-epicos" value={epico} onChange={(e) => setEpico(e.target.value)} placeholder="ABC-100" />
+            <input className="campo" list="lista-epicos" value={epico} onChange={(e) => setEpico(e.target.value)} placeholder="ABC-100" />
             <datalist id="lista-epicos">
               {epicos.map((e) => (
                 <option key={e} value={e} />

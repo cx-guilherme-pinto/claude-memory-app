@@ -17,13 +17,13 @@ Não precisa de permissões de administrador.
 **macOS** (Intel e Apple Silicon) e Linux, no Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.0/install.sh | sh
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.1/install.sh | sh
 ```
 
 **Windows 10/11**, no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.1/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -72,6 +72,8 @@ Os filtros escolhem projeto, épico, tarefa e período. A legenda filtra por tip
 O botão de reprodução da linha temporal mostra o grafo a crescer.
 
 No Windows, se o WebView2 faltar, a interface abre no browser, em `127.0.0.1`.
+O terminal mostra o endereço da sessão (`http://127.0.0.1:<porta>/?t=<chave>`).
+A chave é local e só vale enquanto a app está aberta.
 
 ## Onde ficam as memórias
 
@@ -180,3 +182,5 @@ As versões seguem [SemVer](https://semver.org/lang/pt-PT/). Ver o [CHANGELOG](C
 ## Licença
 
 MIT. Ver [LICENSE](LICENSE).
+A letra Bricolage Grotesque vai incluída na interface com a licença SIL OFL 1.1
+(`web/public/fonts/OFL.txt`).

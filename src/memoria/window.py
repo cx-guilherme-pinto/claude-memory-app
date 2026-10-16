@@ -146,7 +146,7 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
     escuro = tema_escuro()
     janela = webview.create_window(
         "Memória",
-        url=servidor.url(com_token=False),
+        url=servidor.url(),
         js_api=api,
         width=1280,
         height=820,
@@ -169,7 +169,7 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
             else:
                 _info(
                     f"selftest --gui: OK. {info.get('nos', '?')} nós; interface pronta em "
-                    f"{info.get('ms', '?')} ms (ponte {info.get('ponte', '?')} ms, dados {info.get('grafo', '?')} ms); "
+                    f"{info.get('ms', '?')} ms (ponte {info.get('via', '?')} em {info.get('ponte', '?')} ms, dados {info.get('grafo', '?')} ms); "
                     f"total desde o arranque {total_ms:.0f} ms."
                 )
         time.sleep(0.2)
@@ -192,13 +192,13 @@ def _correr_browser(mem: Memoria, selftest: bool, timeout: float, t0: float) -> 
     servidor = ServidorUI(api)
     servidor.csp = True
     servidor.iniciar()
-    url = servidor.url(com_token=True)
+    url = servidor.url()
     try:
-        if not webbrowser.open(url):
-            # Só aqui mostramos o URL: é local e válido apenas enquanto esta sessão corre.
-            _info(f"Abre este endereço no browser: {url}")
-        else:
-            _info(f"Memória aberta no browser (http://127.0.0.1:{servidor.porta}). Ctrl+C para terminar.")
+        # O URL leva a chave desta sessão (como o Jupyter): é local e só vale enquanto
+        # este processo corre. Mostramo-lo sempre, para se poder abrir noutro browser.
+        aberto = webbrowser.open(url)
+        _info(f"Memória no browser: {url}")
+        _info("A página abriu no browser. Ctrl+C para terminar." if aberto else "Abre este endereço no browser. Ctrl+C para terminar.")
         if selftest:
             if api._pronto.wait(timeout) and not api._info_pronto.get("erro"):
                 _info(f"selftest: OK no browser em {api._info_pronto.get('ms', '?')} ms.")

@@ -19,7 +19,7 @@ export const ROTULOS = {
 export const FORMAS = {
   licao: 'circulo',
   fazer: 'circulo',
-  nao_fazer: 'circulo',
+  nao_fazer: 'anel',
   historico: 'circulo',
   projeto: 'quadrado',
   epico: 'hexagono',
@@ -53,6 +53,11 @@ export function desenharForma(ctx, forma, x, y, r) {
     ctx.lineTo(x, y + r * 1.25);
     ctx.lineTo(x - r * 1.25, y);
     ctx.closePath();
+  } else if (forma === 'anel') {
+    // Anel: o furo distingue "não fazer" de "fazer" sem depender da cor.
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.moveTo(x + r * 0.45, y);
+    ctx.arc(x, y, r * 0.45, 0, Math.PI * 2, true);
   } else if (forma === 'hexagono') {
     for (let i = 0; i < 6; i += 1) {
       const a = (Math.PI / 3) * i;
@@ -86,6 +91,9 @@ export function Marca({ tipo, tamanho = 12 }) {
     desenho = <polygon points={pts.join(' ')} fill={cor} />;
   } else if (forma === 'triangulo')
     desenho = <polygon points={`${c},${c - r * 1.15} ${c + r * 1.1},${c + r * 0.85} ${c - r * 1.1},${c + r * 0.85}`} fill={cor} />;
+  else if (forma === 'anel') desenho = <circle cx={c} cy={c} r={r * 0.72} fill="none" stroke={cor} strokeWidth={r * 0.56} />;
+  else if (tipo === 'licao')
+    desenho = <circle cx={c} cy={c} r={r} fill={cor} stroke="var(--ink)" strokeOpacity="0.45" strokeWidth="1" />;
   else desenho = <circle cx={c} cy={c} r={r} fill={cor} />;
   return (
     <svg width={tamanho} height={tamanho} viewBox={`0 0 ${tamanho} ${tamanho}`} aria-hidden="true">

@@ -93,13 +93,13 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
         {nota?.tarefa && (
           <>
             <dt>Tarefa</dt>
-            <dd className="mono">{nota.tarefa}</dd>
+            <dd className="num">{nota.tarefa}</dd>
           </>
         )}
         {(nota?.epico || (!memoria && no.tipo === 'tarefa' && no.epico)) && (
           <>
             <dt>Épico</dt>
-            <dd className="mono">
+            <dd className="num">
               {idEpico(nota?.epico || no.epico) ? (
                 <button className="ligacao-texto" type="button" onClick={() => onAbrir(idEpico(nota?.epico || no.epico))}>
                   {nota?.epico || no.epico}

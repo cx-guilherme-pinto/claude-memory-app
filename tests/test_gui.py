@@ -36,6 +36,7 @@ def test_selftest_gui_vazio(home: Path):
     r = _selftest(home)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "selftest --gui: OK" in r.stderr
+    assert "ponte pywebview" in r.stderr  # a janela usa o js_api, não o recurso HTTP
 
 
 def test_selftest_gui_500_memorias_abaixo_de_2s(home: Path):

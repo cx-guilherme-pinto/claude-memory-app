@@ -27,11 +27,16 @@ def servidor(mem: Memoria, raiz_ui: Path):
     s.parar()
 
 
-def _pedido(s: ServidorUI, metodo: str, caminho: str, corpo=None, token: str | None = None, host: str | None = None):
+def _pedido(s: ServidorUI, metodo: str, caminho: str, corpo=None, token: str | None = None, host: str | None = None,
+            cookie: str | None = None, origem: str | None = None):
     c = http.client.HTTPConnection("127.0.0.1", s.porta, timeout=10)
     cab = {"Host": host or f"127.0.0.1:{s.porta}"}
     if token is not None:
         cab["X-Memoria-Token"] = token
+    if cookie:
+        cab["Cookie"] = cookie
+    if origem:
+        cab["Origin"] = origem
     dados = None
     if corpo is not None:
         dados = json.dumps(corpo).encode()
@@ -42,12 +47,39 @@ def _pedido(s: ServidorUI, metodo: str, caminho: str, corpo=None, token: str | N
 
 
 def test_estaticos_e_cabecalhos(servidor):
-    estado, cab, corpo = _pedido(servidor, "GET", "/")
-    assert estado == 200 and b"Mem" in corpo
+    estado, cab, corpo = _pedido(servidor, "GET", "/assets/a.js")
+    assert estado == 200 and cab["Content-Type"].startswith("text/javascript")
     assert "default-src 'self'" in cab["Content-Security-Policy"]
     assert cab["X-Content-Type-Options"] == "nosniff"
-    estado, cab, _ = _pedido(servidor, "GET", "/assets/a.js")
-    assert estado == 200 and cab["Content-Type"].startswith("text/javascript")
+
+
+def test_sessao_por_cookie(servidor):
+    # Sem chave: página a explicar o que abrir (não um grafo vazio).
+    estado, _, corpo = _pedido(servidor, "GET", "/")
+    assert estado == 403 and "Sessão sem chave".encode() in corpo
+    assert _pedido(servidor, "GET", "/?t=errada")[0] == 403
+    # Com a chave: cookie HttpOnly + SameSite=Strict e redireção para "/".
+    estado, cab, _ = _pedido(servidor, "GET", f"/?t={servidor.token}")
+    assert estado == 303 and cab["Location"] == "/"
+    cookie = cab["Set-Cookie"]
+    assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
+    valor = cookie.split(";", 1)[0]
+    estado, _, corpo = _pedido(servidor, "GET", "/", cookie=valor)
+    assert estado == 200 and b'<meta name="memoria-modo" content="browser">' in corpo
+    # A API aceita o cookie; recusa outra Origin.
+    assert _pedido(servidor, "POST", "/api/inicio", {"args": []}, cookie=valor)[0] == 200
+    assert _pedido(servidor, "POST", "/api/inicio", {"args": []}, cookie=valor, origem="https://mau.pt")[0] == 403
+    assert _pedido(servidor, "POST", "/api/inicio", {"args": []}, cookie="memoria_1=x")[0] == 403
+
+
+def test_janela_abre_sem_cookie(mem: Memoria, raiz_ui: Path):
+    s = ServidorUI(Api(mem, modo="janela"), raiz=raiz_ui).iniciar()
+    try:
+        estado, _, corpo = _pedido(s, "GET", "/")
+        assert estado == 200 and b'content="janela"' in corpo
+        assert _pedido(s, "POST", "/api/inicio", {"args": []})[0] == 403  # a API continua protegida
+    finally:
+        s.parar()
 
 
 def test_sem_fuga_de_pasta(servidor):

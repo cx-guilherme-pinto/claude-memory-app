@@ -4,16 +4,22 @@ A mesma classe `Api` serve as duas pontes:
 - janela nativa: `js_api` do pywebview (window.pywebview.api.<método>);
 - browser: POST /api/<método> com o cabeçalho X-Memoria-Token.
 
-O servidor só aceita ligações locais, valida o cabeçalho Host (contra DNS
-rebinding) e exige um token de sessão aleatório nas chamadas à API.
-O token vai no fragmento do URL (#t=...), que o browser nunca envia ao servidor.
+O servidor só aceita ligações locais e valida o cabeçalho Host (contra DNS
+rebinding) e a Origin. Cada sessão tem uma chave aleatória:
+- o URL de entrada é http://127.0.0.1:<porta>/?t=<chave>;
+- o servidor troca a chave por um cookie HttpOnly e SameSite=Strict e redireciona para "/";
+- a API aceita o cookie ou o cabeçalho X-Memoria-Token.
+No modo browser, sem a chave, a página explica o que abrir (não mostra um grafo vazio).
+O servidor diz à página em que modo está (<meta name="memoria-modo">).
 """
 
 from __future__ import annotations
 
 import hmac
+import html
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -23,6 +29,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from memoria import __version__, store
 from memoria.service import Memoria
@@ -36,6 +43,7 @@ TIPOS_MIME = {
     ".png": "image/png",
     ".ico": "image/x-icon",
     ".woff2": "font/woff2",
+    ".txt": "text/plain; charset=utf-8",
 }
 
 CSP = (
@@ -166,20 +174,47 @@ METODOS = {
 }
 
 
+PAGINA_SEM_SESSAO = """<!doctype html>
+<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memória</title>
+<style>
+body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif;
+  background: #f2f2ef; color: #121614; }}
+main {{ max-width: 34rem; padding: 1.5rem; }}
+p {{ line-height: 1.5; }}
+@media (prefers-color-scheme: dark) {{ body {{ background: #0f1311; color: #e8ede9; }} }}
+</style></head>
+<body><main>
+<h1>Sessão sem chave</h1>
+<p>Abre o endereço completo que a Memória mostrou no terminal. Começa por {base}?t=</p>
+<p>Ou fecha esta página e corre de novo: memoria --browser</p>
+</main></body></html>
+"""
+
+
 class ServidorUI:
     def __init__(self, api: Api, raiz: Path | None = None):
         self.api = api
+        self.modo = api._modo
         self.raiz = (raiz or pasta_ui()).resolve()
         self.token = secrets.token_urlsafe(24)
         self.csp = False
         self._httpd = ThreadingHTTPServer(("127.0.0.1", 0), self._handler())
         self._httpd.daemon_threads = True
         self.porta = self._httpd.server_address[1]
+        self.cookie = f"memoria_{self.porta}"
         self._thread: threading.Thread | None = None
 
-    def url(self, com_token: bool) -> str:
-        base = f"http://127.0.0.1:{self.porta}/"
-        return base + (f"#t={self.token}" if com_token else "#modo=janela")
+    @property
+    def base(self) -> str:
+        return f"http://127.0.0.1:{self.porta}/"
+
+    def url(self) -> str:
+        """URL de entrada desta sessão. A chave só vale enquanto o processo corre."""
+        return f"{self.base}?t={self.token}"
+
+    def chave_valida(self, valor: str | None) -> bool:
+        return bool(valor) and hmac.compare_digest(str(valor).encode(), self.token.encode())
 
     def iniciar(self) -> "ServidorUI":
         self._thread = threading.Thread(target=self._httpd.serve_forever, name="memoria-http", daemon=True)
@@ -211,6 +246,30 @@ class ServidorUI:
                 if servidor.csp:
                     self.send_header("Content-Security-Policy", CSP)
 
+            def _cookie(self) -> str | None:
+                for parte in self.headers.get("Cookie", "").split(";"):
+                    nome, _, valor = parte.strip().partition("=")
+                    if nome == servidor.cookie:
+                        return valor
+                return None
+
+            def _origem_valida(self) -> bool:
+                origem = self.headers.get("Origin")
+                return origem is None or origem in (f"http://127.0.0.1:{servidor.porta}", f"http://localhost:{servidor.porta}")
+
+            def _autenticado(self) -> bool:
+                return servidor.chave_valida(self.headers.get("X-Memoria-Token")) or servidor.chave_valida(self._cookie())
+
+            def _enviar(self, estado: int, tipo: str, corpo: bytes, extra: dict | None = None) -> None:
+                self.send_response(estado)
+                self.send_header("Content-Type", tipo)
+                self.send_header("Content-Length", str(len(corpo)))
+                for chave, valor in (extra or {}).items():
+                    self.send_header(chave, valor)
+                self._cabecalhos_comuns()
+                self.end_headers()
+                self.wfile.write(corpo)
+
             def _json(self, estado: int, dados) -> None:
                 corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
                 self.send_response(estado)
@@ -224,9 +283,10 @@ class ServidorUI:
             def do_GET(self) -> None:  # noqa: N802
                 if not self._host_valido():
                     return self._json(HTTPStatus.FORBIDDEN, {"erro": "host inválido"})
-                caminho = self.path.split("?", 1)[0].split("#", 1)[0]
-                if caminho in ("", "/"):
-                    caminho = "/index.html"
+                partes = urlsplit(self.path)
+                caminho = partes.path
+                if caminho in ("", "/", "/index.html"):
+                    return self._pagina(parse_qs(partes.query).get("t", [None])[0])
                 alvo = (servidor.raiz / caminho.lstrip("/")).resolve()
                 try:
                     alvo.relative_to(servidor.raiz)
@@ -244,12 +304,37 @@ class ServidorUI:
                 self.end_headers()
                 self.wfile.write(corpo)
 
+            def _pagina(self, chave: str | None) -> None:
+                """index.html com o modo injetado; troca ?t=<chave> por um cookie de sessão."""
+                if chave is not None:
+                    if not servidor.chave_valida(chave):
+                        return self._sem_sessao()
+                    cookie = f"{servidor.cookie}={servidor.token}; Path=/; HttpOnly; SameSite=Strict"
+                    return self._enviar(
+                        HTTPStatus.SEE_OTHER,
+                        "text/plain; charset=utf-8",
+                        b"",
+                        {"Location": "/", "Set-Cookie": cookie, "Cache-Control": "no-store"},
+                    )
+                # Na janela, a página abre sem cookie (a API passa pelo js_api).
+                if servidor.modo != "janela" and not self._autenticado():
+                    return self._sem_sessao()
+                texto = (servidor.raiz / "index.html").read_text("utf-8")
+                meta = f'<meta name="memoria-modo" content="{html.escape(servidor.modo)}">'
+                cabeca = re.search(r"<head[^>]*>", texto, re.I) or re.search(r"<!doctype[^>]*>", texto, re.I)
+                posicao = cabeca.end() if cabeca else 0
+                texto = f"{texto[:posicao]}\n    {meta}{texto[posicao:]}"
+                self._enviar(HTTPStatus.OK, "text/html; charset=utf-8", texto.encode("utf-8"), {"Cache-Control": "no-store"})
+
+            def _sem_sessao(self) -> None:
+                corpo = PAGINA_SEM_SESSAO.format(base=html.escape(servidor.base)).encode("utf-8")
+                self._enviar(HTTPStatus.FORBIDDEN, "text/html; charset=utf-8", corpo, {"Cache-Control": "no-store"})
+
             def do_POST(self) -> None:  # noqa: N802
-                if not self._host_valido():
-                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "host inválido"})
-                token = self.headers.get("X-Memoria-Token", "")
-                if not hmac.compare_digest(token.encode(), servidor.token.encode()):
-                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "token inválido"})
+                if not self._host_valido() or not self._origem_valida():
+                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "origem inválida"})
+                if not self._autenticado():
+                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "sessão inválida"})
                 if not self.path.startswith("/api/"):
                     return self._json(HTTPStatus.NOT_FOUND, {"erro": "não encontrado"})
                 metodo = self.path[len("/api/"):].split("?", 1)[0]

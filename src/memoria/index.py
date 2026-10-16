@@ -457,6 +457,14 @@ class Indice:
                     pontos[nid] = 0.0
             linhas = self._linhas(con, list(pontos))
             corpos = self._corpos(con, [i for i in pontos if i not in excertos])
+        # Bónus pelo nome da memória: desempata quando o BM25 não distingue
+        # (poucas notas, ou todas com as mesmas palavras no projeto).
+        palavras = [p for p in re.findall(r"\w+", _normal(_CHAVE_NO_TEXTO.sub(" ", texto or ""))) if len(p) > 1]
+        palavras = [p for p in palavras if p not in _PALAVRAS_VAZIAS] or palavras
+        if palavras:
+            for nid, r in linhas.items():
+                titulo = _normal(r["titulo"])
+                pontos[nid] += sum(1.0 for p in palavras if p in titulo)
         resultado = []
         for nid, valor in pontos.items():
             if nid not in linhas:

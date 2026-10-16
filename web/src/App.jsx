@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { chamar, manterVivo } from './api.js';
+import { chamar, manterVivo, ponteEmUso } from './api.js';
 import NovaMemoria from './NovaMemoria.jsx';
 import Procura from './Procura.jsx';
 import { FORMAS, Marca, ROTULOS, TIPOS_MEMORIA, TODOS_TIPOS, dataCurta, desenharForma, lerCores } from './tipos.jsx';
@@ -26,6 +26,13 @@ function comAlfa(cor, alfa) {
   if (!m) return cor;
   const n = parseInt(m[1], 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`;
+}
+
+function claro(cor) {
+  const m = /^#([0-9a-f]{6})$/i.exec(cor || '');
+  if (!m) return true;
+  const n = parseInt(m[1], 16);
+  return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 > 128;
 }
 
 function raio(no) {
@@ -93,6 +100,8 @@ export default function App() {
         const i = await chamar('inicio');
         if (!vivo) return;
         tempos.current.ponte = Math.round(performance.now());
+        tempos.current.via = await ponteEmUso();
+        document.documentElement.dataset.ponte = tempos.current.via;
         setInfo(i);
         await carregar();
         tempos.current.grafo = Math.round(performance.now());
@@ -351,10 +360,17 @@ export default function App() {
       ctx.lineWidth = 1.5 / escala;
       ctx.strokeStyle = cores.bg;
       ctx.stroke();
+      // O amarelo da lição tem pouco contraste no fundo claro: leva contorno.
+      if (no.tipo === 'licao' && claro(cores.bg)) {
+        desenharForma(ctx, forma, no.x, no.y, Math.max(r * 0.6, r - 0.5 / escala));
+        ctx.lineWidth = 1 / escala;
+        ctx.strokeStyle = comAlfa(cores.ink, 0.5);
+        ctx.stroke();
+      }
       if (ativo || corresponde) {
-        desenharForma(ctx, forma, no.x, no.y, r + 3 / escala);
-        ctx.lineWidth = 2 / escala;
-        ctx.strokeStyle = ativo ? cores.accent : cores.ink;
+        desenharForma(ctx, forma === 'anel' ? 'circulo' : forma, no.x, no.y, r + 3 / escala);
+        ctx.lineWidth = (ativo ? 2.5 : 1.5) / escala;
+        ctx.strokeStyle = ativo ? cores.ink : cores.muted;
         ctx.stroke();
       }
       const mostrar = ativo || corresponde || no.id === sobre || no.tipo === 'projeto' || escala > 2.4;
@@ -378,7 +394,8 @@ export default function App() {
   );
 
   const areaNo = useCallback((no, cor, ctx) => {
-    desenharForma(ctx, FORMAS[no.tipo] || 'circulo', no.x, no.y, raio(no) + 3);
+    const forma = FORMAS[no.tipo] === 'anel' ? 'circulo' : FORMAS[no.tipo] || 'circulo';
+    desenharForma(ctx, forma, no.x, no.y, raio(no) + 3);
     ctx.fillStyle = cor;
     ctx.fill();
   }, []);
@@ -394,6 +411,7 @@ export default function App() {
   const quandoDesenhado = useCallback(() => {
     if (prontoEnviado.current || !dados) return;
     prontoEnviado.current = true;
+    document.documentElement.dataset.pronto = String(grafoDados.nodes.length);
     chamar('pronto', { ...tempos.current, ms: Math.round(performance.now()), nos: grafoDados.nodes.length }).catch(() => {});
   }, [dados, grafoDados]);
 
@@ -401,6 +419,7 @@ export default function App() {
   useEffect(() => {
     if (dados && dados.nos.length === 0 && !prontoEnviado.current) {
       prontoEnviado.current = true;
+      document.documentElement.dataset.pronto = '0';
       requestAnimationFrame(() => chamar('pronto', { ms: Math.round(performance.now()), nos: 0 }).catch(() => {}));
     }
   }, [dados]);

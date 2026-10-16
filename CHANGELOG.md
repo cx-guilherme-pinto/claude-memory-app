@@ -2,6 +2,24 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [0.2.1] - 2026-10-16
+
+### Corrigido
+
+- Modo browser (o recurso do Windows sem WebView2) mostrava um grafo vazio: o URL impresso
+  não levava a chave da sessão e a página ficava à espera da ponte da janela.
+  Agora o URL é `http://127.0.0.1:<porta>/?t=<chave>`; a chave passa a um cookie de sessão
+  (HttpOnly, SameSite=Strict) e o servidor diz à página em que modo está.
+  Sem a chave, a página explica o que abrir. Na janela, se a ponte não aparecer, a página usa HTTP.
+
+### Alterado
+
+- Visual alinhado com a Arena e os slides (DESIGN.md do workshop): tokens de cor, cantos retos,
+  letra Bricolage Grotesque (local, licença OFL), botão principal azul.
+- Cores dos tipos da paleta de estado: lição amarelo, fazer verde, não fazer vermelho (desenhado
+  como anel, para não depender da cor), histórico neutro; nós de contexto em tons neutros.
+- Pesquisa: palavras no nome da memória contam mais (desempata o BM25 com poucas notas).
+
 ## [0.2.0] - 2026-10-16
 
 ### Adicionado

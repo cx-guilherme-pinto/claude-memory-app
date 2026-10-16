@@ -1,17 +1,22 @@
 // Ponte para o Python.
-// Janela nativa: window.pywebview.api (js_api do pywebview).
-// Browser: POST /api/<metodo> com o token de sessão do fragmento do URL (#t=...).
+// O servidor diz o modo em <meta name="memoria-modo">:
+// - "janela": usa window.pywebview.api (js_api do pywebview); se a ponte não
+//   aparecer, usa HTTP (o cookie de sessão já foi posto pelo servidor);
+// - "browser" (ou sem meta): POST /api/<metodo>, autenticado pelo cookie de sessão.
 
-const parametros = new URLSearchParams(window.location.hash.slice(1));
-const token = parametros.get('t');
+const meta = document.querySelector('meta[name="memoria-modo"]');
+const modoServidor = meta ? meta.getAttribute('content') : 'browser';
+// Compatibilidade com URLs antigos (#t=<chave>).
+const tokenFragmento = new URLSearchParams(window.location.hash.slice(1)).get('t');
 
-export const modo = token ? 'browser' : 'janela';
+function pywebviewPronto() {
+  return Boolean(window.pywebview && window.pywebview.api && typeof window.pywebview.api.inicio === 'function');
+}
 
 function esperarPywebview(limiteMs) {
   return new Promise((resolver, rejeitar) => {
-    const pronta = () => window.pywebview && window.pywebview.api && typeof window.pywebview.api.inicio === 'function';
-    if (pronta()) return resolver();
-    const fim = setTimeout(() => rejeitar(new Error('A ponte da janela não respondeu.')), limiteMs);
+    if (pywebviewPronto()) return resolver();
+    const fim = setTimeout(() => rejeitar(new Error('sem ponte')), limiteMs);
     window.addEventListener(
       'pywebviewready',
       () => {
@@ -23,22 +28,39 @@ function esperarPywebview(limiteMs) {
   });
 }
 
-const ponte = token ? Promise.resolve() : esperarPywebview(15000);
+async function escolherPonte() {
+  if (modoServidor !== 'janela') return 'http';
+  try {
+    await esperarPywebview(4000);
+    return 'pywebview';
+  } catch {
+    return 'http';
+  }
+}
+
+const ponte = escolherPonte();
+
+export async function ponteEmUso() {
+  return ponte;
+}
 
 async function viaHttp(metodo, args) {
+  const cabecalhos = { 'Content-Type': 'application/json' };
+  if (tokenFragmento) cabecalhos['X-Memoria-Token'] = tokenFragmento;
   const resposta = await fetch(`/api/${metodo}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Memoria-Token': token },
+    credentials: 'same-origin',
+    headers: cabecalhos,
     body: JSON.stringify({ args }),
   });
   const dados = await resposta.json().catch(() => ({}));
+  if (resposta.status === 403) throw new Error('Sessão inválida. Abre o endereço que a Memória mostrou no terminal.');
   if (!resposta.ok) throw new Error(dados.erro || `Erro ${resposta.status}`);
   return dados.resultado;
 }
 
 export async function chamar(metodo, ...args) {
-  if (token) return viaHttp(metodo, args);
-  await ponte;
+  if ((await ponte) === 'http') return viaHttp(metodo, args);
   try {
     return await window.pywebview.api[metodo](...args);
   } catch (erro) {
@@ -47,8 +69,8 @@ export async function chamar(metodo, ...args) {
 }
 
 // No browser, o servidor termina se a página deixar de dar sinal.
-export function manterVivo() {
-  if (!token) return;
+export async function manterVivo() {
+  if ((await ponte) !== 'http') return;
   chamar('batimento').catch(() => {});
   setInterval(() => chamar('batimento').catch(() => {}), 15000);
 }
