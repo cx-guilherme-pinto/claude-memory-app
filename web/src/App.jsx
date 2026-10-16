@@ -469,10 +469,10 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="coluna" aria-label="Memória">
+      <aside className="coluna" aria-label="Agent Memory">
         <header className="cabeca">
           <div className="cabeca-topo">
-            <h1>Memória</h1>
+            <h1>Agent Memory</h1>
             <select
               className="seletor seletor-lingua"
               aria-label={t('lingua.rotulo')}

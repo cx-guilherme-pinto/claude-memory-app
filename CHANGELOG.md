@@ -4,6 +4,13 @@
 
 All notable changes are listed here. Versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- The app is now called **Agent Memory** in every language (window, page title, menus, messages, shortcuts and docs). It was *Memória* until v0.4. The `memoria` command, the `memoria` MCP server and the `~/.memoria` folder keep their names.
+- The installers create `~/Applications/Agent Memory.app` (Mac) and "Agent Memory" in the Start menu (Windows), and remove the old *Memória* shortcut.
+
 ## [0.4.1] - 2026-10-16
 
 ### Changed

@@ -24,7 +24,7 @@ def verificar_base() -> bool:
     from memoria.service import Memoria
     from memoria.webui import pasta_ui
 
-    print(f"Memória {__version__} · Python {platform.python_version()} · {platform.system()} {platform.machine()}")
+    print(f"Agent Memory {__version__} · Python {platform.python_version()} · {platform.system()} {platform.machine()}")
     atual = i18n.lingua()
     print(f"  {t('st.lingua', nome=i18n.NOMES[atual], codigo=atual)}")
     resultados = []

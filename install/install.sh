@@ -1,5 +1,5 @@
 #!/bin/sh
-# Instalador da Memória para macOS (e Linux). Não precisa de admin.
+# Instalador da Agent Memory para macOS (e Linux). Não precisa de admin.
 #
 # Uso:
 #   curl -fsSL <repo>/releases/download/<versão>/install.sh | sh
@@ -8,7 +8,7 @@
 #   1. instala o uv (versão fixada) em ~/.local/bin, se faltar;
 #   2. descarrega o wheel e o constraints.txt desta versão e verifica o SHA-256;
 #   3. corre `uv tool install` com o Python 3.12 gerido pelo uv;
-#   4. cria ~/Applications/Memória.app (Mac) ou um atalho .desktop (Linux).
+#   4. cria ~/Applications/Agent Memory.app (Mac) ou um atalho .desktop (Linux).
 #
 # Repositório privado (só em desenvolvimento): exporta MEMORIA_DOWNLOAD_TOKEN.
 # O token vai para o curl pelo stdin e nunca é impresso.
@@ -80,7 +80,7 @@ tmp="$(mktemp -d 2>/dev/null || mktemp -d -t memoria)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 wheel="memoria-${MEMORY_APP_VERSION#v}-py3-none-any.whl"
 
-diz "Downloading Memória $MEMORY_APP_VERSION..."
+diz "Downloading Agent Memory $MEMORY_APP_VERSION..."
 baixar "$(url_asset SHA256SUMS)" "$tmp/SHA256SUMS"
 for f in "$wheel" constraints.txt; do
   baixar "$(url_asset "$f")" "$tmp/$f"
@@ -103,15 +103,18 @@ memoria="$bin/memoria"
 # --- 4. atalho -------------------------------------------------------------
 case "$(uname -s)" in
   Darwin)
-    app="$HOME/Applications/Memória.app"
+    app="$HOME/Applications/Agent Memory.app"
+    # O atalho antigo (Memória.app, ate a v0.4) sai, se for o nosso.
+    antigo="$HOME/Applications/Memória.app"
+    [ -f "$antigo/Contents/MacOS/memoria-app" ] && rm -r "$antigo"
     mkdir -p "$app/Contents/MacOS"
     cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Memória</string>
-  <key>CFBundleDisplayName</key><string>Memória</string>
+  <key>CFBundleName</key><string>Agent Memory</string>
+  <key>CFBundleDisplayName</key><string>Agent Memory</string>
   <key>CFBundleIdentifier</key><string>pt.workshop.memoria</string>
   <key>CFBundleExecutable</key><string>memoria-app</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -134,7 +137,7 @@ LAUNCHER
     cat > "$pasta/memoria.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Memória
+Name=Agent Memory
 Comment=Claude Code memories
 Exec="$memoria"
 Terminal=false
@@ -148,7 +151,7 @@ esac
 "$memoria" selftest >/dev/null || falha "selftest failed. Run: $memoria selftest"
 
 diz ""
-diz "Memória $MEMORY_APP_VERSION installed."
+diz "Agent Memory $MEMORY_APP_VERSION installed."
 diz "To connect it to Claude Code:"
 diz "  claude mcp add --scope user memoria -- \"$memoria\" mcp"
 case ":$PATH:" in

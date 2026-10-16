@@ -1,9 +1,11 @@
-# Memória
+# Agent Memory
 
 [English](README.md) · [Português](README.pt.md) · **हिन्दी** · [עברית](README.he.md)
 
-Memória वो सब Markdown फ़ाइलों में सेव करता है जो Claude Code सीखता है, आपके अपने कंप्यूटर पर।
+Agent Memory वो सब Markdown फ़ाइलों में सेव करता है जो Claude Code सीखता है, आपके अपने कंप्यूटर पर।
 यह इन notes को एक graph में दिखाता है और MCP server के ज़रिए Claude Code को वापस देता है।
+
+v0.4 तक इस ऐप का नाम *Memória* था। कमांड (`memoria`), MCP सर्वर (`memoria`) और डेटा फ़ोल्डर (`~/.memoria`) के नाम वही हैं।
 
 - **सबक** (lessons), नियम (**करें**, **न करें**) और टास्क की **हिस्ट्री**।
 - हर note किसी ticket (Jira, GitHub) और उसके epic से लिंक हो सकता है।
@@ -36,7 +38,7 @@ Installer ये करता है:
 2. wheel और `constraints.txt` डाउनलोड करके SHA-256 चेक करता है;
 3. uv वाले Python 3.12 के साथ ऐप इंस्टॉल करता है;
 4. Windows पर, WebView2 Runtime न हो तो उसे इंस्टॉल करता है (सिर्फ़ इस user के लिए);
-5. शॉर्टकट बनाता है: Mac पर `~/Applications/Memória.app`, Windows पर Start menu में "Memória"।
+5. शॉर्टकट बनाता है: Mac पर `~/Applications/Agent Memory.app`, Windows पर Start menu में "Agent Memory"।
 
 Commands `~/.local/bin` (Mac/Linux) या `%USERPROFILE%\.local\bin` (Windows) में रहते हैं।
 
@@ -105,7 +107,7 @@ Terminal सेशन का पता दिखाता है (`http://127.0.
 
 ## Claude की एक्टिविटी
 
-कॉलम के ऊपर **Claude की एक्टिविटी** बटन दिखाता है कि Claude ने MCP पर Memória से क्या माँगा:
+कॉलम के ऊपर **Claude की एक्टिविटी** बटन दिखाता है कि Claude ने MCP पर Agent Memory से क्या माँगा:
 
 - चार नंबर: आज की कॉल्स, कुल कॉल्स, कॉल्स प्रति मिनट (पिछले 10 मिनट का एवरेज) और रिकॉल हुई मेमोरी (यूनिक);
 - पिछली 100 रिकॉल हुई मेमोरी: समय, tool, टाइटल, प्रोजेक्ट और टास्क।

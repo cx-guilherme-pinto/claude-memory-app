@@ -1,4 +1,4 @@
-Memória {versao} (versão portátil para Windows 10/11)
+Agent Memory {versao} (versão portátil para Windows 10/11)
 
 Abrir
   Duplo clique em Memoria.exe. Não precisa de instalar nem de admin.
@@ -19,6 +19,6 @@ Atualizar
 Notas
   As memórias ficam em %USERPROFILE%\.memoria, fora desta pasta.
   Depois de ligar ao Claude Code, não movas esta pasta.
-  Se a janela não abrir (falta o WebView2), a Memória abre no browser.
+  Se a janela não abrir (falta o WebView2), a Agent Memory abre no browser.
 
 In English: README.txt.

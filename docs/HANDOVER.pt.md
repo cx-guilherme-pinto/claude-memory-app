@@ -1,4 +1,4 @@
-# Handover: Memória
+# Handover: Agent Memory
 
 [English](HANDOVER.md) · **Português**
 
@@ -62,7 +62,7 @@ Verificado:
 - **`cryptography` fixado em 46.0.3** (`constraints.in`): é a última versão com wheels para Mac Intel
   e Windows ARM. Vem do `mcp`, mas o servidor stdio não o usa.
 - **Atualizar no Windows com o Claude Code aberto.** O `memoria mcp` prende os ficheiros. O script de
-  troca espera até 3 minutos e pede para fechar a Memória e o Claude Code.
+  troca espera até 3 minutos e pede para fechar a Agent Memory e o Claude Code.
 - **Testes de canvas no Chromium headless.** Os animation frames nem sempre correm. Os testes usam
   o valor visto no momento do desenho (`tests/test_browser.py`, `_esperar_desenho`).
 
@@ -112,7 +112,7 @@ Para mudar só a versão no mesmo alojamento, passa o URL e o fornecedor atuais.
 **Atenção ao CI.** Uma tag `v*` enviada para o servidor dispara o `.github/workflows/release.yml`,
 que também publica. Escolhe um dos caminhos:
 - publicação local (passos 4 a 6): desliga as Actions do repositório, ou o workflow, antes do passo 6;
-- publicação pelo CI: depois do passo 3, cria e envia a tag (`git tag -a vX.Y.Z -m "Memória vX.Y.Z"`
+- publicação pelo CI: depois do passo 3, cria e envia a tag (`git tag -a vX.Y.Z -m "Agent Memory vX.Y.Z"`
   e `git push origin vX.Y.Z`) e não corras os passos 4 a 6. O runner precisa de acesso ao PyPI, ao npm
   e aos downloads do python-build-standalone.
 

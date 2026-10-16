@@ -2,8 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Memória</string>
-  <key>CFBundleDisplayName</key><string>Memória</string>
+  <key>CFBundleName</key><string>Agent Memory</string>
+  <key>CFBundleDisplayName</key><string>Agent Memory</string>
   <key>CFBundleIdentifier</key><string>pt.workshop.memoria</string>
   <key>CFBundleExecutable</key><string>memoria</string>
   <key>CFBundlePackageType</key><string>APPL</string>

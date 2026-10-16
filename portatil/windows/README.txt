@@ -1,4 +1,4 @@
-Memória {versao} (portable version for Windows 10/11)
+Agent Memory {versao} (portable version for Windows 10/11)
 
 Open
   Double-click Memoria.exe. No install and no admin rights needed.
@@ -19,6 +19,6 @@ Update
 Notes
   Memories live in %USERPROFILE%\.memoria, outside this folder.
   Once it's connected to Claude Code, don't move this folder.
-  If the window doesn't open (WebView2 is missing), Memória opens in the browser.
+  If the window doesn't open (WebView2 is missing), Agent Memory opens in the browser.
 
 Em português: LEIA-ME.txt.

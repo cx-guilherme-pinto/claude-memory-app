@@ -1,4 +1,4 @@
-# Memória: instructions for Claude
+# Agent Memory: instructions for Claude
 
 ## What it is
 

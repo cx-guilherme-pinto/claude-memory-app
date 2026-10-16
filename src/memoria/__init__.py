@@ -1,4 +1,4 @@
-"""Memória: notas locais do Claude Code em Markdown, com grafo e servidor MCP."""
+"""Agent Memory: notas locais do Claude Code em Markdown, com grafo e servidor MCP."""
 
 from importlib.metadata import PackageNotFoundError, version
 

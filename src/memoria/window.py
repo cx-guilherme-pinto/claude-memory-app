@@ -146,7 +146,7 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
 
     escuro = tema_escuro()
     janela = webview.create_window(
-        "Memória",
+        "Agent Memory",
         url=servidor.url(),
         js_api=api,
         width=1280,

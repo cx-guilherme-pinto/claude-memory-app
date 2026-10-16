@@ -4,6 +4,13 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [Por publicar]
+
+### Alterado
+
+- A app passa a chamar-se **Agent Memory** em todas as línguas (janela, título da página, menus, mensagens, atalhos e docs). Até à v0.4 chamava-se *Memória*. O comando `memoria`, o servidor MCP `memoria` e a pasta `~/.memoria` mantêm o nome.
+- Os instaladores criam `~/Applications/Agent Memory.app` (Mac) e "Agent Memory" no menu Iniciar (Windows), e removem o atalho antigo *Memória*.
+
 ## [0.4.1] - 2026-10-16
 
 ### Alterado

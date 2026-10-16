@@ -1,9 +1,11 @@
-# Memória
+# Agent Memory
 
 **English** · [Português](README.pt.md) · [हिन्दी](README.hi.md) · [עברית](README.he.md)
 
-Memória keeps what Claude Code learns as Markdown files on your computer.
+Agent Memory keeps what Claude Code learns as Markdown files on your computer.
 It shows those notes as a graph and gives them back to Claude Code through an MCP server.
+
+Until v0.4 the app was called *Memória*. The command (`memoria`), the MCP server (`memoria`) and the data folder (`~/.memoria`) keep their names.
 
 - **Lessons**, rules (**do**, **don't**) and task **history**.
 - Each note can be linked to a ticket (Jira, GitHub) and its epic.
@@ -36,7 +38,7 @@ The installer:
 2. downloads the wheel and `constraints.txt` and checks their SHA-256;
 3. installs the app with the uv-managed Python 3.12;
 4. on Windows, installs the WebView2 Runtime (per user) if it's missing;
-5. creates a shortcut: `~/Applications/Memória.app` on Mac, "Memória" in the Start menu on Windows.
+5. creates a shortcut: `~/Applications/Agent Memory.app` on Mac, "Agent Memory" in the Start menu on Windows.
 
 The commands go to `~/.local/bin` (Mac/Linux) or `%USERPROFILE%\.local\bin` (Windows).
 
@@ -105,7 +107,7 @@ The key is local and only works while the app is open.
 
 ## Claude activity
 
-The **Claude activity** button at the top of the column shows what Claude asked Memória for over MCP:
+The **Claude activity** button at the top of the column shows what Claude asked Agent Memory for over MCP:
 
 - four numbers: calls today, total calls, calls per minute (average of the last 10 minutes)
   and memories recalled (unique);

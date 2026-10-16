@@ -145,10 +145,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     ),
     # -------------------------------------------------------------------- CLI
     "cli.descricao": _m(
-        "Memória: notas locais do Claude Code, com grafo e servidor MCP. Sem argumentos, abre a janela.",
-        "Memória: local notes for Claude Code, with a graph and an MCP server. With no arguments, it opens the window.",
-        "Memória: Claude Code के लिए लोकल नोट्स, ग्राफ़ और MCP सर्वर के साथ। बिना आर्ग्युमेंट के यह विंडो खोलता है।",
-        "Memória: הערות מקומיות ל-Claude Code, עם גרף ושרת MCP. בלי ארגומנטים היא פותחת את החלון.",
+        "Agent Memory: notas locais do Claude Code, com grafo e servidor MCP. Sem argumentos, abre a janela.",
+        "Agent Memory: local notes for Claude Code, with a graph and an MCP server. With no arguments, it opens the window.",
+        "Agent Memory: Claude Code के लिए लोकल नोट्स, ग्राफ़ और MCP सर्वर के साथ। बिना आर्ग्युमेंट के यह विंडो खोलता है।",
+        "Agent Memory: הערות מקומיות ל-Claude Code, עם גרף ושרת MCP. בלי ארגומנטים היא פותחת את החלון.",
     ),
     "cli.browser": _m(
         "abrir a interface no browser em vez da janela",
@@ -414,10 +414,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "החלון לא נפתח: {erro}",
     ),
     "jan.browser_url": _m(
-        "Memória no browser: {url}",
-        "Memória in the browser: {url}",
-        "ब्राउज़र में Memória: {url}",
-        "Memória בדפדפן: {url}",
+        "Agent Memory no browser: {url}",
+        "Agent Memory in the browser: {url}",
+        "ब्राउज़र में Agent Memory: {url}",
+        "Agent Memory בדפדפן: {url}",
     ),
     "jan.browser_aberto": _m(
         "A página abriu no browser. Ctrl+C para terminar.",
@@ -446,10 +446,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     # --------------------------------------------------- página sem sessão
     "web.sem_sessao_titulo": _m("Sessão sem chave", "Session without a key", "बिना key का सेशन", "הפעלה ללא מפתח"),
     "web.sem_sessao_1": _m(
-        "Abre o endereço completo que a Memória mostrou no terminal. Começa por {base}?t=",
-        "Open the full address that Memória printed in the terminal. It starts with {base}?t=",
-        "वह पूरा पता खोलें जो Memória ने टर्मिनल में दिखाया था। यह {base}?t= से शुरू होता है।",
-        "פתחו את הכתובת המלאה ש-Memória הציגה בטרמינל. היא מתחילה ב-{base}?t=",
+        "Abre o endereço completo que a Agent Memory mostrou no terminal. Começa por {base}?t=",
+        "Open the full address that Agent Memory printed in the terminal. It starts with {base}?t=",
+        "वह पूरा पता खोलें जो Agent Memory ने टर्मिनल में दिखाया था। यह {base}?t= से शुरू होता है।",
+        "פתחו את הכתובת המלאה ש-Agent Memory הציגה בטרמינל. היא מתחילה ב-{base}?t=",
     ),
     "web.sem_sessao_2": _m(
         "Ou fecha esta página e corre de novo: memoria --browser",
@@ -571,24 +571,24 @@ MENSAGENS: dict[str, dict[str, str]] = {
     ),
     # Mensagens dos scripts PowerShell que o update lança no Windows.
     "ps.a_instalar": _m(
-        "A instalar a nova versão da Memória...",
-        "Installing the new version of Memória...",
-        "Memória का नया वर्ज़न इंस्टॉल हो रहा है...",
-        "מתקין את הגרסה החדשה של Memória...",
+        "A instalar a nova versão da Agent Memory...",
+        "Installing the new version of Agent Memory...",
+        "Agent Memory का नया वर्ज़न इंस्टॉल हो रहा है...",
+        "מתקין את הגרסה החדשה של Agent Memory...",
     ),
     "ps.uv_falhou": _m("uv tool install falhou.", "uv tool install failed.", "uv tool install फ़ेल।", "uv tool install נכשל."),
     "ps.enter": _m("Enter para fechar", "Press Enter to close", "बंद करने के लिए Enter दबाएँ", "Enter לסגירה"),
     "ps.atualizada": _m(
-        "Memória atualizada. As memórias não foram tocadas.",
-        "Memória updated. Your memories were not touched.",
-        "Memória अपडेट हो गई। आपकी मेमोरी में कोई बदलाव नहीं हुआ।",
-        "Memória עודכנה. הזיכרונות לא שונו.",
+        "Agent Memory atualizada. As memórias não foram tocadas.",
+        "Agent Memory updated. Your memories were not touched.",
+        "Agent Memory अपडेट हो गई। आपकी मेमोरी में कोई बदलाव नहीं हुआ।",
+        "Agent Memory עודכנה. הזיכרונות לא שונו.",
     ),
     "ps.fecha": _m(
-        "Fecha a Memória e o Claude Code para continuar...",
-        "Close Memória and Claude Code to continue...",
-        "जारी रखने के लिए Memória और Claude Code बंद करें...",
-        "סגרו את Memória ואת Claude Code כדי להמשיך...",
+        "Fecha a Agent Memory e o Claude Code para continuar...",
+        "Close Agent Memory and Claude Code to continue...",
+        "जारी रखने के लिए Agent Memory और Claude Code बंद करें...",
+        "סגרו את Agent Memory ואת Claude Code כדי להמשיך...",
     ),
     "ps.nao_substituiu": _m(
         "Não consegui substituir a pasta. Nada foi alterado.",
@@ -604,10 +604,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "גרסה {versao} נכשלה ב-selftest. שום דבר לא שונה.",
     ),
     "pt.copia_temporaria": _m(
-        "A Memória está a correr de uma cópia temporária do macOS. Move-a para Aplicações e tenta outra vez.",
-        "Memória is running from a temporary macOS copy. Move it to Applications and try again.",
-        "Memória macOS की एक अस्थायी कॉपी से चल रहा है। इसे Applications में ले जाएँ और फिर से कोशिश करें।",
-        "Memória רצה מעותק זמני של macOS. העבירו אותה לתיקיית Applications ונסו שוב.",
+        "A Agent Memory está a correr de uma cópia temporária do macOS. Move-a para Aplicações e tenta outra vez.",
+        "Agent Memory is running from a temporary macOS copy. Move it to Applications and try again.",
+        "Agent Memory macOS की एक अस्थायी कॉपी से चल रहा है। इसे Applications में ले जाएँ और फिर से कोशिश करें।",
+        "Agent Memory רצה מעותק זמני של macOS. העבירו אותה לתיקיית Applications ונסו שוב.",
     ),
     "pt.sha": _m(
         "SHA-256 não confere: {nome}. Nada foi alterado.",
@@ -635,9 +635,9 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "עודכן לגרסה {versao} ב-{pasta}. הזיכרונות לא שונו.",
     ),
     "pt.reabrir": _m(
-        "Fecha e volta a abrir a Memória e o Claude Code.",
-        "Close and reopen Memória and Claude Code.",
-        "Memória और Claude Code को बंद करके फिर से खोलें।",
-        "סגרו ופתחו מחדש את Memória ואת Claude Code.",
+        "Fecha e volta a abrir a Agent Memory e o Claude Code.",
+        "Close and reopen Agent Memory and Claude Code.",
+        "Agent Memory और Claude Code को बंद करके फिर से खोलें।",
+        "סגרו ופתחו מחדש את Agent Memory ואת Claude Code.",
     ),
 }

@@ -34,7 +34,8 @@ def test_ps1_requisitos_powershell_51():
         assert proibido not in re.sub(r"#.*", "", texto), proibido
     # 'exit' fecharia a janela de quem corre "irm | iex".
     assert not re.search(r"^\s*exit\b", texto, re.M)
-    assert "[char]0x00F3" in texto  # "Memória.lnk" sem caracteres não ASCII no ficheiro
+    assert "Agent Memory.lnk" in texto
+    assert "[char]0x00F3" in texto  # remove o atalho antigo "Memória.lnk" sem caracteres não ASCII no ficheiro
 
 
 def test_instaladores_em_sincronia_com_release_conf():

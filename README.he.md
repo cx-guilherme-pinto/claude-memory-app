@@ -1,9 +1,11 @@
-# Memória
+# Agent Memory
 
 [English](README.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md) · **עברית**
 
-Memória שומרת את מה ש-Claude Code לומד בקובצי Markdown, במחשב שלכם.
+Agent Memory שומרת את מה ש-Claude Code לומד בקובצי Markdown, במחשב שלכם.
 היא מציגה את ההערות כגרף ומחזירה אותן ל-Claude Code דרך שרת MCP.
+
+עד גרסה v0.4 האפליקציה נקראה *Memória*. הפקודה (`memoria`), שרת ה-MCP ‏(`memoria`) ותיקיית הנתונים (`~/.memoria`) שומרים על השם.
 
 - **לקחים**, כללים (**לעשות**, **לא לעשות**) ו**היסטוריה** של משימות.
 - כל הערה יכולה להיות מקושרת לטיקט (Jira, GitHub) ולאפיק שלו.
@@ -36,7 +38,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto
 2. מורידה את ה-wheel ואת `constraints.txt` ובודקת את ה-SHA-256;
 3. מתקינה את האפליקציה עם Python 3.12 שמנוהל על ידי uv;
 4. ב-Windows, מתקינה את WebView2 Runtime (למשתמש הנוכחי) אם הוא חסר;
-5. יוצרת קיצור דרך: `~/Applications/Memória.app` ב-Mac, ו-"Memória" בתפריט Start ב-Windows.
+5. יוצרת קיצור דרך: `~/Applications/Agent Memory.app` ב-Mac, ו-"Agent Memory" בתפריט Start ב-Windows.
 
 הפקודות נמצאות ב-`~/.local/bin` (Mac/Linux) או ב-`%USERPROFILE%\.local\bin` (Windows).
 
@@ -105,7 +107,7 @@ claude mcp add --scope user memoria -- "$HOME/.local/bin/memoria" mcp
 
 ## הפעילות של Claude
 
-הכפתור **הפעילות של Claude** בראש העמודה מראה מה Claude ביקש מ-Memória דרך MCP:
+הכפתור **הפעילות של Claude** בראש העמודה מראה מה Claude ביקש מ-Agent Memory דרך MCP:
 
 - ארבעה מספרים: קריאות היום, סה״כ קריאות, קריאות לדקה (ממוצע ב-10 הדקות האחרונות)
   וזיכרונות ששלף (בלי כפילויות);

@@ -1,9 +1,11 @@
-# Memória
+# Agent Memory
 
 [English](README.md) · **Português** · [हिन्दी](README.hi.md) · [עברית](README.he.md)
 
-A Memória guarda o que o Claude Code aprende, em ficheiros Markdown no teu computador.
+A Agent Memory guarda o que o Claude Code aprende, em ficheiros Markdown no teu computador.
 Mostra essas notas num grafo e dá-as ao Claude Code por um servidor MCP.
+
+Até à v0.4, a app chamava-se *Memória*. O comando (`memoria`), o servidor MCP (`memoria`) e a pasta dos dados (`~/.memoria`) mantêm o nome.
 
 - **Lições** e regras (**fazer**, **não fazer**) e **histórico** de tarefas.
 - Cada nota pode ficar ligada a um ticket (Jira, GitHub) e ao seu épico.
@@ -35,7 +37,7 @@ O instalador:
 2. descarrega o wheel e o `constraints.txt` e verifica o SHA-256;
 3. instala a app com o Python 3.12 gerido pelo uv;
 4. no Windows, instala o WebView2 Runtime (por utilizador), se faltar;
-5. cria um atalho: `~/Applications/Memória.app` no Mac, "Memória" no menu Iniciar no Windows.
+5. cria um atalho: `~/Applications/Agent Memory.app` no Mac, "Agent Memory" no menu Iniciar no Windows.
 
 Os comandos ficam em `~/.local/bin` (Mac/Linux) ou `%USERPROFILE%\.local\bin` (Windows).
 
@@ -102,7 +104,7 @@ A chave é local e só vale enquanto a app está aberta.
 
 ## Atividade do Claude
 
-O botão **Atividade do Claude**, no topo da coluna, mostra o que o Claude pediu à Memória pelo MCP:
+O botão **Atividade do Claude**, no topo da coluna, mostra o que o Claude pediu à Agent Memory pelo MCP:
 
 - quatro números: chamadas hoje, chamadas no total, chamadas por minuto (média dos últimos 10 minutos)
   e memórias recordadas (sem repetir);

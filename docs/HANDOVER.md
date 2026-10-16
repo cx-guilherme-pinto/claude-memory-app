@@ -1,4 +1,4 @@
-# Handover: Memória
+# Handover: Agent Memory
 
 **English** · [Português](HANDOVER.pt.md)
 
@@ -62,7 +62,7 @@ Verified:
 - **`cryptography` pinned to 46.0.3** (`constraints.in`): the last version with wheels for Intel Mac
   and Windows ARM. It comes from `mcp`; the stdio server doesn't use it.
 - **Updating on Windows with Claude Code open.** `memoria mcp` locks the files. The swap script waits up
-  to 3 minutes and asks to close Memória and Claude Code.
+  to 3 minutes and asks to close Agent Memory and Claude Code.
 - **Canvas tests in headless Chromium.** Animation frames don't always run. The tests use the value seen
   at drawing time (`tests/test_browser.py`, `_esperar_desenho`).
 
@@ -112,7 +112,7 @@ then run `python3 scripts/render_installers.py --escrever` and `uv lock`.
 **Watch out for CI.** A `v*` tag pushed to the server triggers `.github/workflows/release.yml`,
 which also publishes. Pick one path:
 - local publishing (steps 4 to 6): turn off the repository's Actions, or the workflow, before step 6;
-- CI publishing: after step 3, create and push the tag (`git tag -a vX.Y.Z -m "Memória vX.Y.Z"` and
+- CI publishing: after step 3, create and push the tag (`git tag -a vX.Y.Z -m "Agent Memory vX.Y.Z"` and
   `git push origin vX.Y.Z`) and skip steps 4 to 6. The runner needs access to PyPI, npm and the
   python-build-standalone downloads.
 

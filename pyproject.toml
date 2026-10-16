@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "memoria"
 version = "0.4.1"
-description = "Memória: local Markdown notes for Claude Code, with a graph view and an MCP server."
+description = "Agent Memory: local Markdown notes for Claude Code, with a graph view and an MCP server."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

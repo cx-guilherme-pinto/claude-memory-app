@@ -146,12 +146,15 @@ function Install-Memoria {
         # --- 5. atalho no menu Iniciar ------------------------------------
         $alvo = if (Test-Path $memoriaGui) { $memoriaGui } else { $memoria }
         $programs = [Environment]::GetFolderPath('Programs')
-        $lnkName = 'Mem' + [char]0x00F3 + 'ria.lnk'
+        # O atalho antigo ("Memoria" com acento, ate a v0.4) sai.
+        $antigo = Join-Path $programs ('Mem' + [char]0x00F3 + 'ria.lnk')
+        if (Test-Path -LiteralPath $antigo) { Remove-Item -LiteralPath $antigo -Force -ErrorAction SilentlyContinue }
+        $lnkName = 'Agent Memory.lnk'
         $shell = New-Object -ComObject WScript.Shell
         $lnk = $shell.CreateShortcut((Join-Path $programs $lnkName))
         $lnk.TargetPath = $alvo
         $lnk.WorkingDirectory = $env:USERPROFILE
-        $lnk.Description = 'Memorias do Claude Code'
+        $lnk.Description = 'Agent Memory (Claude Code memories)'
         $lnk.Save()
         Write-Host ('Shortcut: ' + (Join-Path $programs $lnkName))
 
@@ -160,7 +163,7 @@ function Install-Memoria {
         if ($LASTEXITCODE -ne 0) { throw ('selftest failed. Run: "' + $memoria + '" selftest') }
 
         Write-Host ''
-        Write-Host ('Memoria ' + $version + ' installed.')
+        Write-Host ('Agent Memory ' + $version + ' installed.')
         Write-Host 'To connect it to Claude Code:'
         Write-Host ('  claude mcp add --scope user memoria -- "' + $memoria + '" mcp')
         $pathUser = [Environment]::GetEnvironmentVariable('Path', 'User')

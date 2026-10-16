@@ -197,7 +197,7 @@ METODOS = {
 
 PAGINA_SEM_SESSAO = """<!doctype html>
 <html lang="{lingua}" dir="{direcao}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Memória</title>
+<title>Agent Memory</title>
 <style>
 body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif;
   background: #f2f2ef; color: #121614; }}

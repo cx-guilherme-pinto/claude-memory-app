@@ -197,7 +197,7 @@ done
 # Tag (git puro, igual em qualquer alojamento).
 if ! git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
   [ -z "$(git status --porcelain --untracked-files=no)" ] || falha "há alterações por gravar no git."
-  git tag -a "$VERSION" -m "Memória $VERSION"
+  git tag -a "$VERSION" -m "Agent Memory $VERSION"
   echo "Tag $VERSION criada em $(git rev-parse --short HEAD)."
 fi
 if ! git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
