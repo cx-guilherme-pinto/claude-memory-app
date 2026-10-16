@@ -13,6 +13,7 @@ import sys
 import time
 import webbrowser
 
+from memoria.i18n import t
 from memoria.service import Memoria
 from memoria.webui import Api, ServidorUI, pasta_ui
 
@@ -63,7 +64,7 @@ def janela_disponivel() -> tuple[bool, str]:
     if os.name == "nt":
         versao = versao_webview2()
         if not versao:
-            return False, "O WebView2 Runtime não está instalado."
+            return False, t("jan.sem_webview2")
         return True, f"WebView2 {versao}"
     if sys.platform == "darwin":
         return True, "WKWebView"
@@ -72,7 +73,7 @@ def janela_disponivel() -> tuple[bool, str]:
 
         return True, "GTK"
     except ImportError:
-        return False, "Sem GTK/Qt para a janela nativa."
+        return False, t("jan.sem_gtk")
 
 
 def tema_escuro() -> bool:
@@ -96,7 +97,7 @@ def tema_escuro() -> bool:
 def correr(browser: bool = False, selftest: bool = False, timeout: float = 60.0, t0: float | None = None) -> int:
     t0 = t0 or time.perf_counter()
     if not (pasta_ui() / "index.html").is_file():
-        _info(f"A UI não está no pacote ({pasta_ui()}). Corre scripts/build.sh.")
+        _info(t("jan.sem_ui", pasta=pasta_ui()))
         return 2
     mem = Memoria()
     mem.sincronizar(forcar=True)
@@ -113,10 +114,10 @@ def correr(browser: bool = False, selftest: bool = False, timeout: float = 60.0,
             finally:
                 servidor.parar()
         if selftest:
-            _info(f"selftest --gui: FALHOU. Janela nativa indisponível: {motivo}")
-            _info("Sem janela, a app abre a mesma interface no browser.")
+            _info(t("jan.selftest_sem_janela", motivo=motivo))
+            _info(t("jan.sem_janela_browser"))
             return 3
-        _info(f"Janela nativa indisponível ({motivo}). A abrir no browser.")
+        _info(t("jan.indisponivel", motivo=motivo))
     return _correr_browser(mem, selftest, timeout, t0)
 
 
@@ -128,7 +129,7 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
     try:
         import webview
     except Exception as erro:
-        raise _JanelaFalhou(f"pywebview não carregou: {erro}") from erro
+        raise _JanelaFalhou(t("jan.pywebview", erro=erro)) from erro
 
     gui = None
     if os.name == "nt":
@@ -137,11 +138,11 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
             from webview.platforms import winforms
 
             if getattr(winforms, "renderer", "") != "edgechromium":
-                raise _JanelaFalhou(f"o pywebview escolheu {winforms.renderer}, não o WebView2")
+                raise _JanelaFalhou(t("jan.renderer", renderer=winforms.renderer))
         except _JanelaFalhou:
             raise
         except Exception as erro:
-            raise _JanelaFalhou(f"WinForms/pythonnet falhou: {erro}") from erro
+            raise _JanelaFalhou(t("jan.winforms", erro=erro)) from erro
 
     escuro = tema_escuro()
     janela = webview.create_window(
@@ -158,19 +159,25 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
 
     def vigiar() -> None:
         if not api._pronto.wait(timeout):
-            _info(f"selftest --gui: FALHOU. A interface não respondeu em {timeout:.0f} s.")
+            _info(t("jan.sem_resposta", s=f"{timeout:.0f}"))
             resultado["codigo"] = 1
         else:
             info = api._info_pronto
             total_ms = (time.perf_counter() - t0) * 1000
             if info.get("erro"):
-                _info(f"selftest --gui: FALHOU. Erro na interface: {info['erro']}")
+                _info(t("jan.erro_ui", erro=info["erro"]))
                 resultado["codigo"] = 1
             else:
                 _info(
-                    f"selftest --gui: OK. {info.get('nos', '?')} nós; interface pronta em "
-                    f"{info.get('ms', '?')} ms (ponte {info.get('via', '?')} em {info.get('ponte', '?')} ms, dados {info.get('grafo', '?')} ms); "
-                    f"total desde o arranque {total_ms:.0f} ms."
+                    t(
+                        "jan.ok",
+                        nos=info.get("nos", "?"),
+                        ms=info.get("ms", "?"),
+                        via=info.get("via", "?"),
+                        ponte=info.get("ponte", "?"),
+                        grafo=info.get("grafo", "?"),
+                        total=f"{total_ms:.0f}",
+                    )
                 )
         time.sleep(0.2)
         janela.destroy()
@@ -183,7 +190,7 @@ def _correr_janela(api: Api, servidor: ServidorUI, selftest: bool, timeout: floa
     except Exception as erro:
         if api._pronto.is_set():
             return resultado["codigo"]
-        raise _JanelaFalhou(f"a janela não arrancou: {erro}") from erro
+        raise _JanelaFalhou(t("jan.nao_arrancou", erro=erro)) from erro
     return resultado["codigo"]
 
 
@@ -197,13 +204,13 @@ def _correr_browser(mem: Memoria, selftest: bool, timeout: float, t0: float) -> 
         # O URL leva a chave desta sessão (como o Jupyter): é local e só vale enquanto
         # este processo corre. Mostramo-lo sempre, para se poder abrir noutro browser.
         aberto = webbrowser.open(url)
-        _info(f"Memória no browser: {url}")
-        _info("A página abriu no browser. Ctrl+C para terminar." if aberto else "Abre este endereço no browser. Ctrl+C para terminar.")
+        _info(t("jan.browser_url", url=url))
+        _info(t("jan.browser_aberto") if aberto else t("jan.browser_abre"))
         if selftest:
             if api._pronto.wait(timeout) and not api._info_pronto.get("erro"):
-                _info(f"selftest: OK no browser em {api._info_pronto.get('ms', '?')} ms.")
+                _info(t("jan.browser_ok", ms=api._info_pronto.get("ms", "?")))
                 return 0
-            _info("selftest: FALHOU no browser.")
+            _info(t("jan.browser_falhou"))
             return 1
         inicio = time.monotonic()
         while True:

@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { useEffect, useMemo, useState } from 'react';
 import { chamar } from './api.js';
+import { dolares, t, tx } from './i18n.jsx';
 import { MOTIVOS, Marca, ROTULOS, TIPOS_MEMORIA, dataLonga } from './tipos.jsx';
 
 marked.setOptions({ gfm: true, breaks: false });
@@ -69,7 +70,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
         const alvo = await chamar('nota', decodeURIComponent(href.slice('#ligacao:'.length)));
         onAbrir(alvo.id);
       } catch {
-        setErro(`Ligação sem memória: ${a.textContent}`);
+        setErro(t('painel.ligacao_sem_memoria', { nome: a.textContent }));
       }
     } else if (/^https?:\/\//i.test(href)) {
       chamar('abrir_url', href).catch((er) => setErro(er.message));
@@ -105,7 +106,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
     try {
       const r = await chamar('guardar_ficheiro', no.id, editor.texto, editor.versao);
       setEditor(null);
-      setEstado(r.redigidos ? `Guardada. ${r.redigidos} segredo(s) redigido(s).` : 'Guardada.');
+      setEstado(r.redigidos ? t('painel.guardada_redigidos', { n: r.redigidos }) : t('painel.guardada'));
       setRecarga((n) => n + 1);
       onAlterada?.();
     } catch (e) {
@@ -127,10 +128,10 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
   };
 
   return (
-    <aside className={editor ? 'painel painel-editar' : 'painel'} aria-label="Detalhes">
+    <aside className={editor ? 'painel painel-editar' : 'painel'} aria-label={t('painel.detalhes')}>
       <div className="painel-topo">
-        <h2>{no.rotulo}</h2>
-        <button className="botao botao-icone" type="button" onClick={onFechar} aria-label="Fechar" title="Fechar (Esc)">
+        <h2 dir="auto">{no.rotulo}</h2>
+        <button className="botao botao-icone" type="button" onClick={onFechar} aria-label={t('painel.fechar')} title={t('painel.fechar_esc')}>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.6" />
           </svg>
@@ -146,7 +147,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
           }}
         >
           <p className="fraco pequeno">
-            O cabeçalho entre as linhas <code>---</code> tem o tipo, o título e o projeto. O texto vem depois.
+            {tx('editor.ajuda', {}, { codigo: <code>---</code> })}
           </p>
           <textarea
             className="campo editor-texto"
@@ -154,7 +155,8 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
             onChange={(e) => setEditor({ ...editor, texto: e.target.value })}
             onKeyDown={teclaEditor}
             spellCheck={false}
-            aria-label={`Conteúdo de ${editor.nome}`}
+            dir="auto"
+            aria-label={t('editor.conteudo', { nome: editor.nome })}
             autoFocus
           />
           {erro && (
@@ -164,18 +166,18 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
           )}
           <div className="acoes">
             <button className="botao botao-principal" type="submit" disabled={aGuardar}>
-              {aGuardar ? 'A guardar…' : 'Guardar'}
+              {aGuardar ? t('comum.a_guardar') : t('comum.guardar')}
             </button>
             <button className="botao" type="button" onClick={fecharEditor}>
-              Cancelar
+              {t('comum.cancelar')}
             </button>
-            <span className="fraco pequeno">{alterado ? `Alterações por guardar · ${ATALHO_GUARDAR}` : 'Sem alterações'}</span>
+            <span className="fraco pequeno">{alterado ? t('editor.alteracoes', { atalho: ATALHO_GUARDAR }) : t('editor.sem_alteracoes')}</span>
           </div>
         </form>
       ) : (
         <>
         <dl className="meta">
-          <dt>Tipo</dt>
+          <dt>{t('meta.tipo')}</dt>
           <dd>
             <span className="tipo-marca">
               <Marca tipo={no.tipo} />
@@ -184,19 +186,19 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
           </dd>
           {no.projeto && (
             <>
-              <dt>Projeto</dt>
+              <dt>{t('meta.projeto')}</dt>
               <dd>{no.projeto}</dd>
             </>
           )}
           {nota?.tarefa && (
             <>
-              <dt>Tarefa</dt>
+              <dt>{t('meta.tarefa')}</dt>
               <dd className="num">{nota.tarefa}</dd>
             </>
           )}
           {(nota?.epico || (!memoria && no.tipo === 'tarefa' && no.epico)) && (
             <>
-              <dt>Épico</dt>
+              <dt>{t('meta.epico')}</dt>
               <dd className="num">
                 {idEpico(nota?.epico || no.epico) ? (
                   <button className="ligacao-texto" type="button" onClick={() => onAbrir(idEpico(nota?.epico || no.epico))}>
@@ -210,7 +212,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
           )}
           {nota?.url && (
             <>
-              <dt>Ticket</dt>
+              <dt>{t('meta.ticket')}</dt>
               <dd>
                 <button className="ligacao-texto" type="button" onClick={() => chamar('abrir_url', nota.url).catch((e) => setErro(e.message))} title={nota.url}>
                   {nota.url.replace(/^https?:\/\//, '')}
@@ -220,21 +222,21 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
           )}
           {nota?.etiquetas?.length > 0 && (
             <>
-              <dt>Etiquetas</dt>
+              <dt>{t('meta.etiquetas')}</dt>
               <dd>{nota.etiquetas.join(', ')}</dd>
             </>
           )}
-          <dt>Data</dt>
+          <dt>{t('meta.data')}</dt>
           <dd className="num">{dataLonga(nota?.data || no.data)}</dd>
           {nota?.custo_usd != null && (
             <>
-              <dt>Custo</dt>
-              <dd className="num">US$ {Number(nota.custo_usd).toFixed(2)}</dd>
+              <dt>{t('meta.custo')}</dt>
+              <dd className="num">{dolares(nota.custo_usd)}</dd>
             </>
           )}
         </dl>
 
-        {memoria && !nota && !erro && <p className="fraco">A carregar…</p>}
+        {memoria && !nota && !erro && <p className="fraco">{t('comum.a_carregar')}</p>}
         {erro && <p className="erro">{erro}</p>}
         {estado && (
           <p className="estado" role="status">
@@ -249,11 +251,11 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
 
         {nota?.ficheiros?.length > 0 && (
           <section className="seccao">
-            <h3>Ficheiros</h3>
+            <h3>{t('painel.ficheiros')}</h3>
             <ul className="lista">
               {nota.ficheiros.map((f) => (
                 <li key={f}>
-                  <code>{f}</code>
+                  <code dir="ltr">{f}</code>
                 </li>
               ))}
             </ul>
@@ -262,13 +264,13 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
 
         {nota?.relacionadas?.length > 0 && (
           <section className="seccao">
-            <h3>Relacionadas</h3>
+            <h3>{t('painel.relacionadas')}</h3>
             <ul className="lista lista-motivos">
               {nota.relacionadas.map((r) => (
                 <li key={r.id}>
                   <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
                     <Marca tipo={r.tipo} />
-                    <span>{r.titulo}</span>
+                    <span dir="auto">{r.titulo}</span>
                     <span className="motivo">{motivos(r.motivos)}</span>
                   </button>
                 </li>
@@ -279,13 +281,13 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
 
         {!memoria && (
           <section className="seccao">
-            <h3>Memórias ({vizinhos.length})</h3>
+            <h3>{t('painel.memorias', { n: vizinhos.length })}</h3>
             <ul className="lista">
               {vizinhos.map((r) => (
                 <li key={r.id}>
                   <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
                     <Marca tipo={r.tipo} />
-                    <span>{r.rotulo}</span>
+                    <span dir="auto">{r.rotulo}</span>
                     <span className="motivo num">{dataLonga(r.data)}</span>
                   </button>
                 </li>
@@ -297,10 +299,10 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlt
         {nota && (
           <div className="acoes">
             <button className="botao" type="button" onClick={editar}>
-              Editar
+              {t('painel.editar')}
             </button>
             <span className="fraco pequeno">
-              <code>{nota.id}.md</code>
+              <code dir="ltr">{nota.id}.md</code>
             </span>
           </div>
         )}

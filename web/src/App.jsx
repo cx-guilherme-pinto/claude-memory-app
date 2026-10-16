@@ -3,19 +3,14 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { chamar, manterVivo, ponteEmUso } from './api.js';
 import NovaMemoria from './NovaMemoria.jsx';
 import Procura from './Procura.jsx';
+import { LINGUAS, aplicarLingua, lingua, t, tx } from './i18n.jsx';
 import { FORMAS, Marca, ROTULOS, TIPOS_MEMORIA, TODOS_TIPOS, dataLonga, desenharForma, lerCores } from './tipos.jsx';
 
 // O painel traz o marked e o DOMPurify: só carrega quando é preciso.
 const Painel = lazy(() => import('./Painel.jsx'));
 
-// [valor, texto curto, texto completo]
-const PERIODOS = [
-  ['tudo', 'Tudo', 'Todo o período'],
-  ['7', '7 d', 'Últimos 7 dias'],
-  ['30', '30 d', 'Últimos 30 dias'],
-  ['90', '90 d', 'Últimos 90 dias'],
-  ['365', '1 ano', 'Último ano'],
-];
+// Os textos de cada período vêm do catálogo: periodo.<valor> e periodo.<valor>.curto.
+const PERIODOS = ['tudo', '7', '30', '90', '365'];
 const RECENTES = 12;
 // Com o painel aberto, o grafo encolhe se sobrar espaço; senão o painel fica por cima.
 const LARGURA_PAINEL = 420;
@@ -54,7 +49,6 @@ function cortar(texto, n) {
   return texto.length > n ? `${texto.slice(0, n - 1)}…` : texto;
 }
 
-const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 export default function App() {
   const grafoRef = useRef(null);
@@ -65,6 +59,7 @@ export default function App() {
   const tempos = useRef({});
 
   const [info, setInfo] = useState(null);
+  const [linguaAtual, setLinguaAtual] = useState(lingua);
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState('');
   const [cores, setCores] = useState(lerCores);
@@ -110,6 +105,7 @@ export default function App() {
         tempos.current.via = await ponteEmUso();
         document.documentElement.dataset.ponte = tempos.current.via;
         setInfo(i);
+        setLinguaAtual(aplicarLingua(i.lingua));
         await carregar();
         tempos.current.grafo = Math.round(performance.now());
         manterVivo();
@@ -345,13 +341,18 @@ export default function App() {
   const guardada = useCallback(
     async (r) => {
       setNovaAberta(false);
-      setMensagem(r.redigidos ? `Memória guardada. ${r.redigidos} segredo(s) redigido(s).` : 'Memória guardada.');
+      setMensagem(r.redigidos ? t('guardada_redigidos', { n: r.redigidos }) : t('guardada'));
       setCursor(Infinity);
       await carregar();
       setSelecionado(r.id);
     },
     [carregar],
   );
+
+  const mudarLingua = (codigo) => {
+    setLinguaAtual(aplicarLingua(codigo));
+    chamar('definir_lingua', codigo).catch((e) => setMensagem(e.message));
+  };
 
   const alternarTipo = (tipo) => {
     setTiposAtivos((atual) => {
@@ -466,31 +467,56 @@ export default function App() {
     <div className="app">
       <aside className="coluna" aria-label="Memória">
         <header className="cabeca">
-          <h1>Memória</h1>
+          <div className="cabeca-topo">
+            <h1>Memória</h1>
+            <select
+              className="seletor seletor-lingua"
+              aria-label={t('lingua.rotulo')}
+              title={t('lingua.rotulo')}
+              value={linguaAtual}
+              onChange={(e) => mudarLingua(e.target.value)}
+            >
+              {LINGUAS.map((l) => (
+                <option key={l.codigo} value={l.codigo} lang={l.codigo} dir={l.direcao}>
+                  {l.nome}
+                </option>
+              ))}
+            </select>
+          </div>
           <p className="resumo">
             {dados
-              ? `${plural(dados.total, 'memória', 'memórias')} em ${plural(dados.projetos.length, 'projeto', 'projetos')}.`
-              : 'A abrir as memórias…'}
+              ? t('app.resumo', {
+                  memorias: t('plural.memorias', { n: dados.total }),
+                  projetos: t('plural.projetos', { n: dados.projetos.length }),
+                })
+              : t('app.a_abrir')}
           </p>
         </header>
 
         <Procura entradaRef={procuraRef} texto={texto} onTexto={setTexto} grupos={grupos} onEscolher={abrirRef} />
         {resultados && (
           <p className="contagem pequeno num" aria-live="polite">
-            {correspondencias.length} {correspondencias.length === 1 ? 'nó destacado no mapa' : 'nós destacados no mapa'}
+            {t('plural.nos_destacados', { n: correspondencias.length })}
           </p>
         )}
 
         <div className="filtros">
-          <div className="segmentos" role="group" aria-label="Período">
-            {PERIODOS.map(([v, curto, completo]) => (
-              <button key={v} type="button" aria-pressed={periodo === v} aria-label={completo} title={completo} onClick={() => setPeriodo(v)}>
-                {curto}
+          <div className="segmentos" role="group" aria-label={t('periodo.grupo')}>
+            {PERIODOS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={periodo === v}
+                aria-label={t(`periodo.${v}`)}
+                title={t(`periodo.${v}`)}
+                onClick={() => setPeriodo(v)}
+              >
+                {t(`periodo.${v}.curto`)}
               </button>
             ))}
           </div>
-          <select className="seletor" aria-label="Projeto" value={projeto} onChange={(e) => setProjeto(e.target.value)}>
-            <option value="">Todos os projetos</option>
+          <select className="seletor" aria-label={t('meta.projeto')} value={projeto} onChange={(e) => setProjeto(e.target.value)}>
+            <option value="">{t('filtro.todos_projetos')}</option>
             {(dados?.projetos || []).map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -500,14 +526,14 @@ export default function App() {
           {(dados?.epicos || []).length > 0 && (
             <select
               className="seletor"
-              aria-label="Épico"
+              aria-label={t('meta.epico')}
               value={epico}
               onChange={(e) => {
                 setEpico(e.target.value);
                 setTarefa('');
               }}
             >
-              <option value="">Todos os épicos</option>
+              <option value="">{t('filtro.todos_epicos')}</option>
               {dados.epicos.map((e) => (
                 <option key={e} value={e}>
                   {e}
@@ -516,8 +542,8 @@ export default function App() {
             </select>
           )}
           {tarefasDoFiltro.length > 0 && (
-            <select className="seletor" aria-label="Tarefa" value={tarefa} onChange={(e) => setTarefa(e.target.value)}>
-              <option value="">Todas as tarefas</option>
+            <select className="seletor" aria-label={t('meta.tarefa')} value={tarefa} onChange={(e) => setTarefa(e.target.value)}>
+              <option value="">{t('filtro.todas_tarefas')}</option>
               {tarefasDoFiltro.map((t) => (
                 <option key={t.chave} value={t.chave}>
                   {t.chave}
@@ -528,7 +554,7 @@ export default function App() {
         </div>
 
         {dados && (
-          <div className="tipos" role="group" aria-label="Tipos no mapa">
+          <div className="tipos" role="group" aria-label={t('tipos.grupo')}>
             {TODOS_TIPOS.map((tipo) => (
               <button key={tipo} type="button" aria-pressed={tiposAtivos.has(tipo)} onClick={() => alternarTipo(tipo)}>
                 <Marca tipo={tipo} />
@@ -541,16 +567,18 @@ export default function App() {
 
         {dados && dados.total > 0 && (
           <section className="recentes" aria-labelledby="titulo-recentes">
-            <h2 id="titulo-recentes">{noPassado ? `Até ${dataLonga(dataCursor)}` : 'Últimas memórias'}</h2>
+            <h2 id="titulo-recentes">{noPassado ? t('recentes.ate', { data: dataLonga(dataCursor) }) : t('recentes.titulo')}</h2>
             {recentes.length === 0 ? (
-              <p className="fraco">Nenhuma memória com estes filtros.</p>
+              <p className="fraco">{t('recentes.vazio')}</p>
             ) : (
               <ol>
                 {recentes.map((n, i) => (
                   <li key={n.id} style={{ '--i': i }}>
                     <button type="button" aria-current={n.id === selecionado ? 'true' : undefined} onClick={() => focar(n)}>
                       <Marca tipo={n.tipo} />
-                      <span className="titulo">{n.rotulo}</span>
+                      <span className="titulo" dir="auto">
+                        {n.rotulo}
+                      </span>
                       <span className="linha-meta">{[n.projeto, n.tarefa, dataLonga(n.data)].filter(Boolean).join(' · ')}</span>
                     </button>
                   </li>
@@ -568,11 +596,11 @@ export default function App() {
           )}
           {aviso && (
             <p className="aviso-versao" role="status">
-              Versão {String(aviso.ultima || '').replace(/^v/, '')} disponível. Atualiza com <code>memoria update</code>.
+              {tx('aviso.versao', { versao: String(aviso.ultima || '').replace(/^v/, '') }, { comando: <code>memoria update</code> })}
             </p>
           )}
           <button className="botao botao-principal botao-largo" type="button" onClick={() => setNovaAberta(true)}>
-            Nova memória
+            {t('nova.botao')}
           </button>
         </div>
       </aside>
@@ -608,13 +636,13 @@ export default function App() {
 
           {dados && dados.total === 0 && (
             <div className="vazio">
-              <p className="vazio-titulo">Ainda não há memórias.</p>
-              <p>Usa “Nova memória” ou deixa o Claude Code guardar as lições de cada tarefa.</p>
+              <p className="vazio-titulo">{t('vazio.titulo')}</p>
+              <p>{t('vazio.texto', { botao: t('nova.botao') })}</p>
             </div>
           )}
           {erro && (
             <div className="vazio">
-              <p className="vazio-titulo">Não foi possível abrir as memórias.</p>
+              <p className="vazio-titulo">{t('erro.abrir')}</p>
               <p>{erro}</p>
             </div>
           )}
@@ -639,7 +667,7 @@ export default function App() {
             <button
               className="botao botao-tempo"
               type="button"
-              aria-label={aReproduzir ? 'Parar' : 'Ver as memórias a crescer'}
+              aria-label={aReproduzir ? t('tempo.parar') : t('tempo.ver_crescer_aria')}
               onClick={() => {
                 if (!aReproduzir) setCursor(0);
                 setAReproduzir(!aReproduzir);
@@ -655,14 +683,14 @@ export default function App() {
                   <polygon points="3,2 10,6 3,10" fill="currentColor" />
                 </svg>
               )}
-              <span>{aReproduzir ? 'Parar' : 'Ver crescer'}</span>
+              <span>{aReproduzir ? t('tempo.parar') : t('tempo.ver_crescer')}</span>
             </button>
             <input
               type="range"
               min={0}
               max={maxCursor}
               value={cursorEfetivo}
-              aria-label="Linha temporal"
+              aria-label={t('tempo.linha')}
               aria-valuetext={dataLonga(dataCursor)}
               onChange={(e) => {
                 setAReproduzir(false);
@@ -671,7 +699,7 @@ export default function App() {
               }}
             />
             <span className="data num">{dataLonga(dataCursor)}</span>
-            <span className="num fraco">{plural(visivel.memorias, 'memória', 'memórias')}</span>
+            <span className="num fraco">{t('plural.memorias', { n: visivel.memorias })}</span>
           </div>
         )}
       </main>

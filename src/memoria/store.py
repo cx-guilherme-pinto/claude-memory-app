@@ -29,6 +29,8 @@ from pathlib import Path
 
 import yaml
 
+from memoria.i18n import t
+
 TIPOS = ("licao", "fazer", "nao_fazer", "historico")
 TIPOS_CONTEXTO = ("projeto", "epico", "tarefa", "ficheiro")
 
@@ -87,7 +89,7 @@ def chave_de_url(url: str) -> str:
 def validar_url(url: str) -> str:
     url = str(url or "").strip()
     if url and not re.match(r"^https?://\S+$", url):
-        raise ValueError("O url tem de começar por http:// ou https://.")
+        raise ValueError(t("erro.url"))
     return url
 
 
@@ -116,7 +118,7 @@ def normalizar_tipo(tipo: str) -> str:
         return _SINONIMOS[chave]
     if chave.replace("_", "") in _SINONIMOS:
         return _SINONIMOS[chave.replace("_", "")]
-    raise ValueError(f"Tipo inválido: {tipo!r}. Usa um destes: {', '.join(TIPOS)}.")
+    raise ValueError(t("erro.tipo_invalido", tipo=repr(tipo), tipos=", ".join(TIPOS)))
 
 
 def limpar_ligacao(nome: str) -> str:
@@ -213,7 +215,7 @@ def ler_nota(caminho: Path, home: Path) -> Nota:
     if m:
         dados = yaml.safe_load(m.group(1)) or {}
         if not isinstance(dados, dict):
-            raise ValueError("frontmatter não é um mapa YAML")
+            raise ValueError(t("erro.frontmatter_mapa"))
         meta = dados
         corpo = texto[m.end():]
     try:
@@ -286,9 +288,9 @@ def escrever_nota(
     titulo = " ".join(str(titulo or "").split())
     projeto = str(projeto or "").strip()
     if not titulo:
-        raise ValueError("Falta o título.")
+        raise ValueError(t("erro.falta_titulo"))
     if not projeto:
-        raise ValueError("Falta o projeto.")
+        raise ValueError(t("erro.falta_projeto"))
     agora = (agora or datetime.now()).astimezone()
     meta = {
         "tipo": tipo,
@@ -330,7 +332,7 @@ def escrever_nota(
             return destino.resolve()
         except FileExistsError:
             continue
-    raise RuntimeError(f"Demasiadas memórias com o nome {base}.")
+    raise RuntimeError(t("erro.demasiadas", base=base))
 
 
 # --- edição na app -------------------------------------------------------------
@@ -347,21 +349,22 @@ def versao_ficheiro(caminho: Path) -> str:
 def validar_texto(texto: str) -> None:
     """Confirma que o texto é uma nota: cabeçalho YAML (um mapa) com um tipo conhecido."""
     if len(texto.encode("utf-8")) > TAMANHO_MAXIMO:
-        raise ValueError("A nota é demasiado grande.")
+        raise ValueError(t("erro.nota_grande"))
     m = _FRONTMATTER.match(texto)
     if not m:
-        raise ValueError("Falta o cabeçalho no início: linhas '---' com tipo, titulo e projeto.")
+        raise ValueError(t("erro.falta_cabecalho"))
     try:
         dados = yaml.safe_load(m.group(1)) or {}
     except yaml.YAMLError as erro:
         linha = getattr(getattr(erro, "problem_mark", None), "line", None)
-        onde = f" (linha {linha + 2})" if linha is not None else ""
-        raise ValueError(f"O cabeçalho YAML tem um erro{onde}.") from None
+        if linha is None:
+            raise ValueError(t("erro.yaml")) from None
+        raise ValueError(t("erro.yaml_linha", linha=linha + 2)) from None
     if not isinstance(dados, dict):
-        raise ValueError("O cabeçalho tem de ser uma lista de 'chave: valor'.")
+        raise ValueError(t("erro.cabecalho_mapa"))
     normalizar_tipo(dados.get("tipo", ""))
     if not str(dados.get("titulo") or "").strip():
-        raise ValueError("Falta o titulo no cabeçalho.")
+        raise ValueError(t("erro.falta_titulo_cabecalho"))
 
 
 def gravar_atomico(caminho: Path, texto: str) -> None:

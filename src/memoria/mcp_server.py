@@ -10,12 +10,14 @@ from pydantic import Field
 from memoria import __version__
 from memoria.service import Memoria
 
+# Textos para o modelo (não para o participante): sempre em inglês, em qualquer língua da app.
+# O modelo responde ao participante na língua dele.
 INSTRUCOES = (
-    "Memória local do participante, em Markdown. "
-    "Antes de planear, usa memoria_procurar com o projeto atual (e a tarefa ou o épico, se houver). "
-    "Depois de uma tarefa, usa memoria_adicionar com uma lição curta e acionável. "
-    "Se houver um ticket (Jira, GitHub), indica sempre tarefa, epico e url: ficam pesquisáveis. "
-    "Tipos: licao, fazer, nao_fazer, historico. Nunca guardes segredos."
+    "The participant's local memory, stored as Markdown. "
+    "Before planning, call memoria_procurar with the current project (and the task or epic, if any). "
+    "After a task, call memoria_adicionar with one short, actionable lesson, written in the participant's language. "
+    "If there is a ticket (Jira, GitHub), always pass tarefa, epico and url: they become searchable. "
+    "Types: licao (lesson), fazer (do), nao_fazer (don't), historico (history). Never store secrets."
 )
 
 
@@ -36,19 +38,19 @@ def criar_servidor(memoria: Memoria | None = None):
     @servidor.tool(
         name="memoria_procurar",
         description=(
-            "Procura memórias no título, texto, projeto, tarefa, épico e etiquetas. "
-            "Uma chave de ticket (ex.: ABC-123) devolve tudo dessa tarefa e do seu épico. "
-            "Filtra por projeto, tipo, tarefa e épico."
+            "Search memories by title, body, project, task, epic and tags. "
+            "A ticket key (e.g. ABC-123) returns everything for that task and its epic. "
+            "Filters: project, type, task and epic."
         ),
         annotations=so_leitura,
     )
     def memoria_procurar(
-        texto: Annotated[str, Field(description="Palavras a procurar. Vazio devolve as mais recentes.")],
-        projeto: Annotated[str | None, Field(description="Só deste projeto.")] = None,
-        tipo: Annotated[str | None, Field(description="licao, fazer, nao_fazer ou historico.")] = None,
-        tarefa: Annotated[str | None, Field(description="Só desta tarefa, ex.: ABC-123 ou dono/repo#12.")] = None,
-        epico: Annotated[str | None, Field(description="Só deste épico (inclui as suas tarefas), ex.: ABC-100.")] = None,
-        limite: Annotated[int, Field(ge=1, le=100, description="Máximo de resultados.")] = 10,
+        texto: Annotated[str, Field(description="Words to search for. Empty returns the most recent.")],
+        projeto: Annotated[str | None, Field(description="Only this project.")] = None,
+        tipo: Annotated[str | None, Field(description="licao (lesson), fazer (do), nao_fazer (don't) or historico (history).")] = None,
+        tarefa: Annotated[str | None, Field(description="Only this task, e.g. ABC-123 or owner/repo#12.")] = None,
+        epico: Annotated[str | None, Field(description="Only this epic (includes its tasks), e.g. ABC-100.")] = None,
+        limite: Annotated[int, Field(ge=1, le=100, description="Maximum number of results.")] = 10,
     ) -> dict:
         try:
             resultados = mem.procurar(texto, projeto=projeto, tipo=tipo, limite=limite, tarefa=tarefa, epico=epico)
@@ -59,23 +61,23 @@ def criar_servidor(memoria: Memoria | None = None):
     @servidor.tool(
         name="memoria_adicionar",
         description=(
-            "Guarda uma memória em Markdown e devolve o caminho do ficheiro. "
-            "Os segredos (tokens, chaves, passwords) são redigidos antes de escrever."
+            "Save a memory as Markdown and return the file path. "
+            "Secrets (tokens, keys, passwords) are redacted before writing."
         ),
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False),
     )
     def memoria_adicionar(
-        tipo: Annotated[str, Field(description="licao, fazer, nao_fazer ou historico.")],
-        titulo: Annotated[str, Field(description="Título curto.")],
-        texto: Annotated[str, Field(description="Corpo em Markdown. Pode ter ligações [[nome]].")],
-        projeto: Annotated[str, Field(description="Nome do projeto, ex.: arena-de-seguranca.")],
-        tarefa: Annotated[str | None, Field(description="Chave do ticket, ex.: ABC-123 ou dono/repo#12.")] = None,
-        epico: Annotated[str | None, Field(description="Chave do épico ou do pai, ex.: ABC-100.")] = None,
-        url: Annotated[str | None, Field(description="Ligação para o ticket ou PR (http/https).")] = None,
-        ficheiros: Annotated[list[str] | None, Field(description="Caminhos de código relacionados.")] = None,
-        ligacoes: Annotated[list[str] | None, Field(description="Nomes ou ids de outras memórias.")] = None,
-        etiquetas: Annotated[list[str] | None, Field(description="Palavras para pesquisa, ex.: ['ci', 'cache'].")] = None,
-        custo_usd: Annotated[float | None, Field(ge=0, description="Custo da tarefa em dólares.")] = None,
+        tipo: Annotated[str, Field(description="licao (lesson), fazer (do), nao_fazer (don't) or historico (history).")],
+        titulo: Annotated[str, Field(description="Short title.")],
+        texto: Annotated[str, Field(description="Body in Markdown. May contain [[name]] links.")],
+        projeto: Annotated[str, Field(description="Project name, e.g. arena-de-seguranca.")],
+        tarefa: Annotated[str | None, Field(description="Ticket key, e.g. ABC-123 or owner/repo#12.")] = None,
+        epico: Annotated[str | None, Field(description="Epic or parent key, e.g. ABC-100.")] = None,
+        url: Annotated[str | None, Field(description="Link to the ticket or PR (http/https).")] = None,
+        ficheiros: Annotated[list[str] | None, Field(description="Related code paths.")] = None,
+        ligacoes: Annotated[list[str] | None, Field(description="Names or ids of other memories.")] = None,
+        etiquetas: Annotated[list[str] | None, Field(description="Search words, e.g. ['ci', 'cache'].")] = None,
+        custo_usd: Annotated[float | None, Field(ge=0, description="Task cost in US dollars.")] = None,
     ) -> str:
         try:
             resultado = mem.adicionar(
@@ -98,14 +100,14 @@ def criar_servidor(memoria: Memoria | None = None):
     @servidor.tool(
         name="memoria_relacionadas",
         description=(
-            "Memórias ligadas a uma memória, da relação mais forte para a mais fraca: "
-            "ligação explícita, mesma tarefa, mesmo épico, mesmo projeto, ficheiros partilhados."
+            "Memories related to a memory, strongest relation first: "
+            "explicit link, same task, same epic, same project, shared files."
         ),
         annotations=so_leitura,
     )
     def memoria_relacionadas(
-        id_ou_caminho: Annotated[str, Field(description="Id (projeto/AAAA-MM-DD-slug), nome, título ou caminho do .md.")],
-        limite: Annotated[int, Field(ge=1, le=100, description="Máximo de resultados.")] = 10,
+        id_ou_caminho: Annotated[str, Field(description="Id (project/YYYY-MM-DD-slug), name, title or path of the .md file.")],
+        limite: Annotated[int, Field(ge=1, le=100, description="Maximum number of results.")] = 10,
     ) -> dict:
         try:
             resultados = mem.relacionadas(id_ou_caminho, limite=limite)

@@ -260,8 +260,15 @@ def test_script_troca_windows(tmp_path: Path):
     assert "Zé d''Ávila" in texto and "d'Á" not in texto  # plicas escapadas para o PowerShell
     assert texto.count("Move-Item") == 2 and "reindex" in texto
     assert "\r\n" in texto
-    # Só os caminhos podem ter acentos; o resto é ASCII (PowerShell 5.1).
-    assert texto.replace("Zé d''Ávila", "").isascii()
+    # As mensagens seguem a língua da app (aqui pt); o ficheiro é gravado com BOM (UTF-8),
+    # que o PowerShell 5.1 lê bem. Os comandos em si são ASCII.
+    from memoria.i18n import t
+
+    assert f"Write-Host '{t('ps.atualizada')}'" in texto
+    comandos = texto.replace("Zé d''Ávila", "")
+    for chave in ("ps.atualizada", "ps.fecha", "ps.nao_substituiu", "ps.enter"):
+        comandos = comandos.replace(t(chave), "")
+    assert comandos.isascii()
 
 
 @pytest.mark.skipif(not shutil.which("pwsh"), reason="pwsh não instalado: análise do script só estática")

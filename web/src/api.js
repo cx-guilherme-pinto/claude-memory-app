@@ -1,3 +1,5 @@
+import { t } from './i18n.jsx';
+
 // Ponte para o Python.
 // O servidor diz o modo em <meta name="memoria-modo">:
 // - "janela": usa window.pywebview.api (js_api do pywebview); se a ponte não
@@ -54,7 +56,7 @@ async function viaHttp(metodo, args) {
     body: JSON.stringify({ args }),
   });
   const dados = await resposta.json().catch(() => ({}));
-  if (resposta.status === 403) throw new Error('Sessão inválida. Abre o endereço que a Memória mostrou no terminal.');
+  if (resposta.status === 403) throw new Error(t('sessao.invalida'));
   if (!resposta.ok) throw new Error(dados.erro || `Erro ${resposta.status}`);
   return dados.resultado;
 }

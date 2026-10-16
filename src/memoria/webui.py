@@ -31,7 +31,8 @@ from importlib import resources
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from memoria import __version__, store
+from memoria import __version__, i18n, store
+from memoria.i18n import t
 from memoria.service import Memoria
 
 TIPOS_MIME = {
@@ -93,7 +94,13 @@ class Api:
             "modo": self._modo,
             "tipos": list(store.TIPOS),
             "selftest": self._selftest,
+            **i18n.info(),
         }
+
+    def definir_lingua(self, codigo: str) -> dict:
+        """Seletor de línguas da interface: muda já e fica guardado para as próximas vezes."""
+        i18n.definir_lingua(str(codigo or ""))
+        return i18n.info()
 
     def grafo(self) -> dict:
         return self._mem.grafo()
@@ -101,7 +108,7 @@ class Api:
     def nota(self, ref: str) -> dict:
         nota = self._mem.nota(ref)
         if not nota:
-            raise LookupError(f"Memória não encontrada: {ref}")
+            raise LookupError(t("erro.memoria_nao_encontrada", ref=ref))
         nota["relacionadas"] = self._mem.relacionadas(nota["id"], limite=12)
         return nota
 
@@ -111,7 +118,7 @@ class Api:
 
     def adicionar(self, dados: dict) -> dict:
         if not isinstance(dados, dict):
-            raise ValueError("Dados inválidos.")
+            raise ValueError(t("erro.dados_invalidos"))
         def lista(chave: str) -> list[str]:
             valor = dados.get(chave) or []
             if isinstance(valor, str):
@@ -147,7 +154,7 @@ class Api:
         from urllib.parse import urlsplit
 
         if urlsplit(str(url)).scheme not in ("http", "https"):
-            raise ValueError("Só ligações http/https.")
+            raise ValueError(t("erro.so_http"))
         return bool(webbrowser.open(str(url)))
 
     def verificar_atualizacao(self) -> dict:
@@ -176,13 +183,13 @@ class Api:
 
 
 METODOS = {
-    "inicio", "grafo", "nota", "procurar", "adicionar", "ficheiro", "guardar_ficheiro", "abrir_ficheiro", "abrir_url",
+    "inicio", "definir_lingua", "grafo", "nota", "procurar", "adicionar", "ficheiro", "guardar_ficheiro", "abrir_ficheiro", "abrir_url",
     "verificar_atualizacao", "pronto", "batimento",
 }
 
 
 PAGINA_SEM_SESSAO = """<!doctype html>
-<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="{lingua}" dir="{direcao}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Memória</title>
 <style>
 body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif;
@@ -192,9 +199,9 @@ p {{ line-height: 1.5; }}
 @media (prefers-color-scheme: dark) {{ body {{ background: #0f1311; color: #e8ede9; }} }}
 </style></head>
 <body><main>
-<h1>Sessão sem chave</h1>
-<p>Abre o endereço completo que a Memória mostrou no terminal. Começa por {base}?t=</p>
-<p>Ou fecha esta página e corre de novo: memoria --browser</p>
+<h1>{titulo}</h1>
+<p>{texto1}</p>
+<p>{texto2}</p>
 </main></body></html>
 """
 
@@ -327,14 +334,27 @@ class ServidorUI:
                 if servidor.modo != "janela" and not self._autenticado():
                     return self._sem_sessao()
                 texto = (servidor.raiz / "index.html").read_text("utf-8")
-                meta = f'<meta name="memoria-modo" content="{html.escape(servidor.modo)}">'
+                lingua = i18n.lingua()
+                meta = (
+                    f'<meta name="memoria-modo" content="{html.escape(servidor.modo)}">'
+                    f'<meta name="memoria-lingua" content="{lingua}">'
+                )
                 cabeca = re.search(r"<head[^>]*>", texto, re.I) or re.search(r"<!doctype[^>]*>", texto, re.I)
                 posicao = cabeca.end() if cabeca else 0
                 texto = f"{texto[:posicao]}\n    {meta}{texto[posicao:]}"
+                # Língua e direção já no HTML: o hebraico abre em RTL sem saltos.
+                texto = re.sub(r"<html[^>]*>", f'<html lang="{lingua}" dir="{i18n.direcao(lingua)}">', texto, count=1, flags=re.I)
                 self._enviar(HTTPStatus.OK, "text/html; charset=utf-8", texto.encode("utf-8"), {"Cache-Control": "no-store"})
 
             def _sem_sessao(self) -> None:
-                corpo = PAGINA_SEM_SESSAO.format(base=html.escape(servidor.base)).encode("utf-8")
+                lingua = i18n.lingua()
+                corpo = PAGINA_SEM_SESSAO.format(
+                    lingua=lingua,
+                    direcao=i18n.direcao(lingua),
+                    titulo=html.escape(t("web.sem_sessao_titulo")),
+                    texto1=html.escape(t("web.sem_sessao_1", base=servidor.base)),
+                    texto2=html.escape(t("web.sem_sessao_2")),
+                ).encode("utf-8")
                 self._enviar(HTTPStatus.FORBIDDEN, "text/html; charset=utf-8", corpo, {"Cache-Control": "no-store"})
 
             def do_POST(self) -> None:  # noqa: N802

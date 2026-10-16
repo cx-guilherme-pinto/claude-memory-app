@@ -69,13 +69,15 @@ def release_conf() -> dict[str, str]:
 
 
 def config_utilizador() -> dict[str, str]:
+    from memoria.i18n import t
+
     caminho = config_path()
     try:
         dados = json.loads(caminho.read_text("utf-8"))
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as erro:
-        print(f"Aviso: {caminho} inválido ({erro}). A ignorar.", file=sys.stderr)
+        print(t("aviso.config_invalido", caminho=caminho, erro=erro), file=sys.stderr)
         return {}
     if not isinstance(dados, dict):
         return {}
@@ -107,34 +109,37 @@ def partes_repo(repo_url: str) -> dict[str, str]:
 
 
 def expandir(padrao: str, repo_url: str, **extra: str) -> str:
+    from memoria.i18n import t
+
     valores = partes_repo(repo_url)
     valores.update(extra)
     resultado = padrao
     for chave, valor in valores.items():
         resultado = resultado.replace("{" + chave + "}", valor)
     if "{" in resultado:
-        raise ValueError(f"Marcador desconhecido no padrão: {padrao}")
+        raise ValueError(t("erro.marcador", padrao=padrao))
     return resultado
 
 
 def url_asset(cfg: dict[str, str], versao: str, ficheiro: str) -> str:
+    from memoria.i18n import t
+
     repo = cfg.get("MEMORY_APP_REPO_URL", "")
     padrao = cfg.get("RELEASE_DOWNLOAD_URL", "")
     if not repo or not padrao:
-        raise ValueError(
-            "Falta MEMORY_APP_REPO_URL ou RELEASE_DOWNLOAD_URL "
-            f"em {config_path()} e no release.conf do pacote."
-        )
+        raise ValueError(t("erro.falta_urls", caminho=config_path()))
     url = expandir(padrao, repo, version=versao, file=ficheiro)
     validar_url(url)
     return url
 
 
 def validar_url(url: str) -> None:
+    from memoria.i18n import t
+
     """Só HTTPS. HTTP apenas para 127.0.0.1/localhost (testes)."""
     partes = urlsplit(url)
     if partes.scheme == "https" and partes.hostname:
         return
     if partes.scheme == "http" and partes.hostname in ("127.0.0.1", "localhost"):
         return
-    raise ValueError(f"URL recusado (só https): {url}")
+    raise ValueError(t("erro.url_recusado", url=url))

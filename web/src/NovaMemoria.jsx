@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { chamar } from './api.js';
+import { t } from './i18n.jsx';
 import { ROTULOS, TIPOS_MEMORIA } from './tipos.jsx';
 
 const lista = (texto) =>
@@ -33,7 +34,7 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
     e.preventDefault();
     setErro('');
     if (!projeto.trim() || !texto.trim()) {
-      setErro('Preenche o projeto e o texto.');
+      setErro(t('nova.preenche'));
       return;
     }
     setAGuardar(true);
@@ -64,10 +65,10 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
       }}
     >
       <form className="dialogo" role="dialog" aria-modal="true" aria-labelledby="titulo-nova" onSubmit={guardar}>
-        <h2 id="titulo-nova">Nova memória</h2>
+        <h2 id="titulo-nova">{t('nova.botao')}</h2>
         <div className="grelha">
           <label className="rotulo">
-            Tipo
+            {t('meta.tipo')}
             <select ref={primeiro} className="seletor" value={tipo} onChange={(e) => setTipo(e.target.value)}>
               {TIPOS_MEMORIA.map((t) => (
                 <option key={t} value={t}>
@@ -77,8 +78,8 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
             </select>
           </label>
           <label className="rotulo">
-            Projeto
-            <input className="campo" list="lista-projetos" value={projeto} onChange={(e) => setProjeto(e.target.value)} required />
+            {t('meta.projeto')}
+            <input className="campo" list="lista-projetos" value={projeto} dir="auto" onChange={(e) => setProjeto(e.target.value)} required />
             <datalist id="lista-projetos">
               {projetos.map((p) => (
                 <option key={p} value={p} />
@@ -86,20 +87,20 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
             </datalist>
           </label>
           <label className="rotulo inteiro">
-            Título (opcional: por omissão, a primeira linha do texto)
-            <input className="campo" value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={140} />
+            {t('nova.titulo')}
+            <input className="campo" value={titulo} dir="auto" onChange={(e) => setTitulo(e.target.value)} maxLength={140} />
           </label>
           <label className="rotulo inteiro">
-            Texto (Markdown; podes ligar com [[nome]])
-            <textarea className="campo" value={texto} onChange={(e) => setTexto(e.target.value)} required />
+            {t('nova.texto')}
+            <textarea className="campo" value={texto} dir="auto" onChange={(e) => setTexto(e.target.value)} required />
           </label>
           <label className="rotulo">
-            Tarefa ou ticket (opcional)
-            <input className="campo" value={tarefa} onChange={(e) => setTarefa(e.target.value)} placeholder="ABC-123" />
+            {t('nova.tarefa')}
+            <input className="campo" value={tarefa} onChange={(e) => setTarefa(e.target.value)} placeholder="ABC-123" dir="ltr" />
           </label>
           <label className="rotulo">
-            Épico (opcional)
-            <input className="campo" list="lista-epicos" value={epico} onChange={(e) => setEpico(e.target.value)} placeholder="ABC-100" />
+            {t('nova.epico')}
+            <input className="campo" list="lista-epicos" value={epico} onChange={(e) => setEpico(e.target.value)} placeholder="ABC-100" dir="ltr" />
             <datalist id="lista-epicos">
               {epicos.map((e) => (
                 <option key={e} value={e} />
@@ -107,16 +108,16 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
             </datalist>
           </label>
           <label className="rotulo">
-            Ligação do ticket ou PR (opcional)
-            <input className="campo" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
+            {t('nova.url')}
+            <input className="campo" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" dir="ltr" />
           </label>
           <label className="rotulo">
-            Etiquetas (separadas por vírgulas)
-            <input className="campo" value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} />
+            {t('nova.etiquetas')}
+            <input className="campo" value={etiquetas} dir="auto" onChange={(e) => setEtiquetas(e.target.value)} />
           </label>
           <label className="rotulo inteiro">
-            Ligações a outras memórias (separadas por vírgulas)
-            <input className="campo" list="lista-memorias" value={ligacoes} onChange={(e) => setLigacoes(e.target.value)} />
+            {t('nova.ligacoes')}
+            <input className="campo" list="lista-memorias" value={ligacoes} dir="auto" onChange={(e) => setLigacoes(e.target.value)} />
             <datalist id="lista-memorias">
               {memorias.slice(-300).map((m) => (
                 <option key={m.id} value={m.rotulo} />
@@ -124,14 +125,14 @@ export default function NovaMemoria({ projetos, memorias, epicos, projetoAtual, 
             </datalist>
           </label>
         </div>
-        <p className="pequeno fraco">Tokens, chaves e passwords são redigidos antes de gravar.</p>
+        <p className="pequeno fraco">{t('nova.redacao')}</p>
         {erro && <p className="erro">{erro}</p>}
         <div className="acoes">
           <button className="botao botao-principal" type="submit" disabled={aGuardar}>
-            {aGuardar ? 'A guardar…' : 'Guardar'}
+            {aGuardar ? t('comum.a_guardar') : t('comum.guardar')}
           </button>
           <button className="botao" type="button" onClick={onCancelar}>
-            Cancelar
+            {t('comum.cancelar')}
           </button>
         </div>
       </form>

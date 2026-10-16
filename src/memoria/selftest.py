@@ -10,11 +10,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from memoria import __version__, config
+from memoria import __version__, config, i18n
+from memoria.i18n import t
 
 
 def _linha(ok: bool, texto: str) -> bool:
-    print(f"  [{'OK' if ok else 'FALHOU'}] {texto}")
+    print(f"  [{t('st.ok') if ok else t('st.falhou')}] {texto}")
     return ok
 
 
@@ -24,11 +25,13 @@ def verificar_base() -> bool:
     from memoria.webui import pasta_ui
 
     print(f"Memória {__version__} · Python {platform.python_version()} · {platform.system()} {platform.machine()}")
+    atual = i18n.lingua()
+    print(f"  {t('st.lingua', nome=i18n.NOMES[atual], codigo=atual)}")
     resultados = []
 
     try:
         verificar_fts5()
-        resultados.append(_linha(True, f"SQLite {sqlite3.sqlite_version} com FTS5"))
+        resultados.append(_linha(True, t("st.sqlite", versao=sqlite3.sqlite_version)))
     except FTS5Indisponivel as erro:
         resultados.append(_linha(False, str(erro)))
         return False
@@ -46,28 +49,28 @@ def verificar_base() -> bool:
             )
             mem.adicionar(tipo="fazer", titulo="Segunda nota", texto="Outra nota.", projeto="selftest", tarefa="TESTE-3", epico="TESTE-1")
             conteudo = Path(a["caminho"]).read_text("utf-8")
-            resultados.append(_linha("sk-ant-" not in conteudo and "[REDIGIDO:" in conteudo, "Redação de segredos"))
+            resultados.append(_linha("sk-ant-" not in conteudo and "[REDIGIDO:" in conteudo, t("st.redacao")))
             achados = mem.procurar("arranque")
-            resultados.append(_linha(bool(achados) and achados[0]["id"] == a["id"], "Pesquisa FTS5"))
+            resultados.append(_linha(bool(achados) and achados[0]["id"] == a["id"], t("st.fts")))
             rel = mem.relacionadas(a["id"])
-            resultados.append(_linha(bool(rel) and rel[0]["motivos"].get("ligacao") == 1, "Arestas e relacionadas"))
+            resultados.append(_linha(bool(rel) and rel[0]["motivos"].get("ligacao") == 1, t("st.arestas")))
             por_chave = {r["titulo"] for r in mem.procurar("TESTE-2")}
-            resultados.append(_linha(por_chave == {"Teste de arranque", "Segunda nota"}, "Pesquisa por tarefa e épico"))
+            resultados.append(_linha(por_chave == {"Teste de arranque", "Segunda nota"}, t("st.chave")))
             estado = mem.reindexar()
-            resultados.append(_linha(estado["total"] == 2, "Reindex a partir do Markdown"))
-            resultados.append(_linha(_mcp_ok(mem), "Servidor MCP (3 ferramentas)"))
+            resultados.append(_linha(estado["total"] == 2, t("st.reindex")))
+            resultados.append(_linha(_mcp_ok(mem), t("st.mcp")))
         except Exception as erro:
-            resultados.append(_linha(False, f"Operações básicas: {type(erro).__name__}: {erro}"))
+            resultados.append(_linha(False, t("st.basicas", erro=f"{type(erro).__name__}: {erro}")))
 
-    resultados.append(_linha((pasta_ui() / "index.html").is_file(), "Interface incluída no pacote"))
+    resultados.append(_linha((pasta_ui() / "index.html").is_file(), t("st.ui")))
 
     cfg = config.definicoes()
     try:
         url = config.url_asset(cfg, "v0.0.0", "SHA256SUMS")
-        resultados.append(_linha(True, f"URLs de atualização ({config.partes_repo(cfg['MEMORY_APP_REPO_URL'])['host']})"))
+        resultados.append(_linha(True, t("st.urls_ok", host=config.partes_repo(cfg["MEMORY_APP_REPO_URL"])["host"])))
     except (ValueError, KeyError) as erro:
         url = None
-        resultados.append(_linha(False, f"URLs de atualização: {erro}"))
+        resultados.append(_linha(False, t("st.urls_erro", erro=erro)))
     del url
 
     home = config.memoria_home()
@@ -75,17 +78,17 @@ def verificar_base() -> bool:
         home.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=home, prefix=".selftest-"):
             pass
-        resultados.append(_linha(True, f"Pasta das memórias: {home}"))
+        resultados.append(_linha(True, t("st.pasta", pasta=home)))
     except OSError as erro:
-        resultados.append(_linha(False, f"Sem escrita em {home}: {erro}"))
+        resultados.append(_linha(False, t("st.sem_escrita", pasta=home, erro=erro)))
 
     from memoria import portatil
 
     dados = portatil.info()
     if dados and portatil.translocada():
-        resultados.append(_linha(False, "A app corre de uma cópia temporária do macOS. Move-a para Aplicações."))
+        resultados.append(_linha(False, t("st.copia_temporaria")))
     elif dados:
-        resultados.append(_linha(True, f"Versão portátil {dados['plataforma']}: {portatil.raiz()}"))
+        resultados.append(_linha(True, t("st.portatil", plataforma=dados["plataforma"], raiz=portatil.raiz())))
 
     return all(resultados)
 
@@ -107,14 +110,14 @@ def _mcp_ok(mem) -> bool:
 def correr(gui: bool = False, timeout: float = 60.0, t0: float | None = None) -> int:
     ok = verificar_base()
     if not gui:
-        print("selftest: OK" if ok else "selftest: FALHOU")
+        print(t("st.resultado", estado=t("st.ok") if ok else t("st.falhou")))
         from memoria import portatil
 
         if ok and portatil.info():
-            print(f"Para ligar ao Claude Code:\n  {portatil.comando_claude()}")
+            print(f"{t('st.ligar')}\n  {portatil.comando_claude()}")
         return 0 if ok else 1
     if not ok:
-        print("selftest: FALHOU (antes da janela)")
+        print(t("st.antes_janela", estado=t("st.falhou")))
         return 1
     from memoria import window
 

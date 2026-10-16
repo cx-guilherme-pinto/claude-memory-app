@@ -140,3 +140,94 @@ def test_janela_sem_pywebview_usa_http(home: Path, navegador):
         pagina.close()
     finally:
         servidor.parar()
+
+
+# ---------------------------------------------------------------------- línguas
+def _abrir(home: Path, navegador, monkeypatch, lingua: str | None):
+    from memoria import i18n
+
+    if lingua:
+        monkeypatch.setenv("MEMORIA_LANG", lingua)
+    else:
+        monkeypatch.delenv("MEMORIA_LANG", raising=False)
+        monkeypatch.setattr(i18n, "lingua_sistema", lambda: "pt")
+    i18n.repor()
+    servidor = ServidorUI(Api(Memoria(home), modo="browser"))
+    servidor.csp = True
+    servidor.iniciar()
+    contexto = navegador.new_context(viewport={"width": 1280, "height": 800}, bypass_csp=True)
+    pagina = contexto.new_page()
+    pagina.goto(servidor.url())
+    _esperar_desenho(pagina)
+    return servidor, contexto, pagina
+
+
+RETANGULOS = """() => {
+  const r = (s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left, w: b.width }; };
+  return { coluna: r('.coluna'), area: r('.area'), painel: r('.painel') };
+}"""
+
+
+def test_hebraico_em_rtl(home: Path, navegador, monkeypatch):
+    gerar(home, 40)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, "he")
+    try:
+        raiz = pagina.evaluate("() => [document.documentElement.lang, document.documentElement.dir]")
+        assert raiz == ["he", "rtl"]
+        assert pagina.locator(".recentes h2").inner_text() == "הזיכרונות האחרונים"
+        assert pagina.get_by_role("button", name="זיכרון חדש").count() == 1
+        caixas = pagina.evaluate(RETANGULOS)
+        assert caixas["coluna"]["x"] > caixas["area"]["x"]  # a coluna fica à direita
+        # O painel abre do lado de dentro (à esquerda do mapa) e o grafo continua desenhado.
+        pagina.locator(".recentes li button").first.click()
+        pagina.wait_for_selector(".painel h2")
+        caixas = pagina.evaluate(RETANGULOS)
+        assert abs(caixas["painel"]["x"] - caixas["area"]["x"]) < 2
+        assert pagina.locator(".painel dt").first.inner_text() == "סוג"
+        assert pagina.evaluate(PIXEIS_DESENHADOS) > 300
+        assert pagina.evaluate(
+            "() => [...document.fonts].some((f) => f.family.includes('Noto Sans Hebrew') && f.status === 'loaded')"
+        )
+    finally:
+        contexto.close()
+        servidor.parar()
+
+
+def test_hindi_com_fonte_devanagari(home: Path, navegador, monkeypatch):
+    gerar(home, 20)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, "hi")
+    try:
+        assert pagina.evaluate("() => [document.documentElement.lang, document.documentElement.dir]") == ["hi", "ltr"]
+        assert pagina.locator(".recentes h2").inner_text() == "हाल की मेमोरी"
+        pagina.wait_for_function(
+            "() => [...document.fonts].some((f) => f.family.includes('Noto Sans Devanagari') && f.status === 'loaded')",
+            timeout=10000,
+        )
+    finally:
+        contexto.close()
+        servidor.parar()
+
+
+def test_seletor_muda_e_guarda_a_lingua(home: Path, navegador, monkeypatch):
+    import json as _json
+
+    gerar(home, 10)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, None)
+    try:
+        assert pagina.evaluate("() => document.documentElement.lang") == "pt"
+        assert pagina.locator(".recentes h2").inner_text() == "Últimas memórias"
+        pagina.select_option(".seletor-lingua", "en")
+        pagina.wait_for_function("() => document.querySelector('.recentes h2').textContent === 'Latest memories'")
+        pagina.wait_for_function("() => document.documentElement.lang === 'en'")
+        # Guardado no disco e usado na próxima abertura (o servidor já manda lang="en").
+        fim = time.monotonic() + 5
+        while time.monotonic() < fim and not (home / "preferencias.json").exists():
+            time.sleep(0.1)
+        assert _json.loads((home / "preferencias.json").read_text("utf-8"))["lingua"] == "en"
+        resposta = pagina.reload()
+        assert '<html lang="en" dir="ltr">' in resposta.text()
+        _esperar_desenho(pagina)
+        assert pagina.locator(".recentes h2").inner_text() == "Latest memories"
+    finally:
+        contexto.close()
+        servidor.parar()

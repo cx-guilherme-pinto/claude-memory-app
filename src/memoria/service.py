@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from memoria import config, store
+from memoria.i18n import t
 from memoria.index import Indice
 from memoria.redact import redigir, redigir_valor
 
@@ -110,7 +111,7 @@ class Memoria:
         """Caminho de uma memória, garantindo que fica dentro de MEMORIA_HOME."""
         nota = self.nota(ref)
         if not nota:
-            raise LookupError(f"Memória não encontrada: {ref}")
+            raise LookupError(t("erro.memoria_nao_encontrada", ref=ref))
         caminho = Path(nota["caminho"]).resolve()
         caminho.relative_to(self.home.resolve())  # ValueError se estiver fora
         return caminho
@@ -133,7 +134,7 @@ class Memoria:
         """
         caminho = self.caminho_seguro(ref)
         if versao and versao != store.versao_ficheiro(caminho):
-            raise ValueError("O ficheiro mudou no disco entretanto. Cancela e volta a abrir para editar.")
+            raise ValueError(t("erro.ficheiro_mudou"))
         texto = str(texto or "").replace("\r\n", "\n")
         if not texto.endswith("\n"):
             texto += "\n"

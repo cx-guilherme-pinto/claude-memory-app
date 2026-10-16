@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { t } from './i18n.jsx';
 import { Marca, ROTULOS } from './tipos.jsx';
 
 // Caixa de procura com resultados agrupados: Memórias, Projetos, Tarefas e épicos.
@@ -59,7 +60,9 @@ export default function Procura({ entradaRef, texto, onTexto, grupos, onEscolher
               onClick={() => escolher(item)}
             >
               <Marca tipo={item.tipo} />
-              <span className="nome">{item.nome}</span>
+              <span className="nome" dir="auto">
+                {item.nome}
+              </span>
               <span className="lado num">{item.lado}</span>
             </li>
           ))}
@@ -74,10 +77,10 @@ export default function Procura({ entradaRef, texto, onTexto, grupos, onEscolher
         ref={entradaRef}
         className="campo campo-procura"
         type="search"
-        placeholder="Procurar memória ou ticket"
+        placeholder={t('procura.placeholder')}
         aria-keyshortcuts="/"
-        title="Procurar (tecla /)"
-        aria-label="Procurar memórias, projetos, tarefas e épicos"
+        title={t('procura.titulo')}
+        aria-label={t('procura.aria')}
         role="combobox"
         aria-expanded={Boolean(mostrar)}
         aria-controls="lista-resultados"
@@ -93,11 +96,14 @@ export default function Procura({ entradaRef, texto, onTexto, grupos, onEscolher
         onKeyDown={tecla}
       />
       {mostrar && (
-        <div className="resultados" id="lista-resultados" role="listbox" aria-label="Resultados">
-          {itens.length === 0 && <p className="vazio-lista">Sem resultados.</p>}
-          {secao('memorias', grupos.total_memorias > grupos.memorias.length ? `Memórias (${grupos.total_memorias})` : 'Memórias')}
-          {secao('projetos', 'Projetos')}
-          {secao('chaves', 'Tarefas e épicos')}
+        <div className="resultados" id="lista-resultados" role="listbox" aria-label={t('procura.resultados')}>
+          {itens.length === 0 && <p className="vazio-lista">{t('procura.sem_resultados')}</p>}
+          {secao(
+            'memorias',
+            grupos.total_memorias > grupos.memorias.length ? t('procura.memorias_n', { n: grupos.total_memorias }) : t('procura.memorias'),
+          )}
+          {secao('projetos', t('procura.projetos'))}
+          {secao('chaves', t('procura.chaves'))}
         </div>
       )}
     </div>

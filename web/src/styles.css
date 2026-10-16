@@ -24,6 +24,25 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Devanagari e hebraico: Noto Sans (OFL), só os subconjuntos de cada escrita.
+   O browser só os descarrega quando a página tem esses carateres. */
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("./fonts/noto-sans-devanagari-devanagari-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF;
+}
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  src: url("./fonts/noto-sans-hebrew-hebrew-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
 :root {
   color-scheme: light;
   --bg: #f2f2ef;
@@ -43,7 +62,7 @@
   --tipo-tarefa: #8f9792;
   --tipo-ficheiro: #b6bab4;
 
-  --fonte: "Bricolage Grotesque", system-ui, sans-serif;
+  --fonte: "Bricolage Grotesque", "Noto Sans Devanagari", "Noto Sans Hebrew", system-ui, sans-serif;
   --fonte-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* taste-skill-ignore: só para código real */
   --t-pequeno: 0.875rem;
   --t-base: 1.0625rem;
@@ -177,7 +196,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   min-height: 36px;
 }
 .campo::placeholder { color: var(--muted); }
-.seletor { padding-right: 6px; width: 100%; min-width: 0; }
+.seletor { padding-inline-end: 6px; width: 100%; min-width: 0; }
 
 .botao {
   background: var(--surface-2);
@@ -217,7 +236,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
 .resultados {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  inset-inline-start: 0;
   width: 100%;
   max-height: min(60vh, 520px);
   overflow-y: auto;
@@ -283,7 +302,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   grid-template-columns: 14px 1fr auto;
   gap: 8px;
   align-items: center;
-  text-align: left;
+  text-align: start;
   border: 0;
   background: transparent;
   padding: 4px 6px;
@@ -316,7 +335,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 2px 10px;
-  text-align: left;
+  text-align: start;
   border: 0;
   background: transparent;
   padding: 8px;
@@ -380,7 +399,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   font-weight: 600;
 }
 .tempo input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--ink); }
-.tempo .data { font-weight: 600; min-width: 8ch; text-align: right; }
+.tempo .data { font-weight: 600; min-width: 8ch; text-align: end; }
 .tempo .fraco { font-size: var(--t-pequeno); white-space: nowrap; min-width: 11ch; }
 
 .vazio {
@@ -405,7 +424,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
 .painel {
   position: absolute;
   top: 0;
-  right: 0;
+  inset-inline-end: 0;
   bottom: 0;
   width: min(420px, 100%);
   background: var(--surface);
@@ -438,7 +457,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   border: 0;
   padding: 0;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   text-decoration: underline;
   text-decoration-color: var(--muted);
   text-underline-offset: 3px;
@@ -449,7 +468,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
 .markdown :first-child { margin-top: 0; }
 .markdown h1, .markdown h2, .markdown h3 { font-size: var(--t-base); margin: 14px 0 6px; }
 .markdown p, .markdown ul, .markdown ol { margin: 0 0 10px; }
-.markdown ul, .markdown ol { padding-left: 20px; }
+.markdown ul, .markdown ol { padding-inline-start: 20px; }
 .markdown code { background: var(--surface-2); padding: 1px 4px; }
 .markdown pre { background: var(--bg); padding: 10px; overflow-x: auto; }
 .markdown pre code { background: transparent; padding: 0; }
@@ -466,7 +485,7 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   grid-template-columns: 14px 1fr auto;
   gap: 8px;
   align-items: center;
-  text-align: left;
+  text-align: start;
   border: 0;
   background: transparent;
   padding: 5px 6px;
@@ -523,7 +542,8 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
 textarea.campo { min-height: 140px; resize: vertical; line-height: 1.5; }
 .erro { color: var(--ink); background: var(--bg); padding: 8px 10px; margin-top: 12px; }
 
-@keyframes entrar { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* --sentido inverte o deslize do painel em RTL. */
+@keyframes entrar { from { transform: translateX(calc(24px * var(--sentido, 1))); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes subir { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 
@@ -540,3 +560,27 @@ textarea.campo { min-height: 140px; resize: vertical; line-height: 1.5; }
   .tempo .fraco { display: none; }
   .grelha { grid-template-columns: 1fr; }
 }
+
+/* ---------------------------------------------------------------- línguas */
+:root[dir="rtl"] { --sentido: -1; }
+/* O devanágari tem a barra superior e marcas acima e abaixo: precisa de mais altura
+   de linha e de espaçamento normal. O hebraico também não usa tracking negativo. */
+:lang(hi) .cabeca h1, :lang(hi) .resumo, :lang(hi) h2, :lang(hi) h3,
+:lang(he) .cabeca h1, :lang(he) .resumo, :lang(he) h2, :lang(he) h3 { letter-spacing: normal; }
+:lang(hi) .resumo, :lang(hi) h2, :lang(hi) .painel h2 { line-height: 1.45; }
+:lang(hi) body { line-height: 1.65; }
+
+.cabeca-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.seletor-lingua {
+  width: auto;
+  min-height: 32px;
+  font-size: var(--t-pequeno);
+}
+/* Conteúdo das notas (pode estar noutra língua): cada parágrafo segue a sua própria direção. */
+.markdown :is(p, li, h1, h2, h3, h4, blockquote, td, th) { unicode-bidi: plaintext; text-align: start; }
+

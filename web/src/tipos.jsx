@@ -1,19 +1,14 @@
 // Tipos de nó, rótulos e formas. As cores vêm dos tokens CSS --tipo-*.
 
+import { t } from './i18n.jsx';
+
 export const TIPOS_MEMORIA = ['licao', 'fazer', 'nao_fazer', 'historico'];
 export const TIPOS_CONTEXTO = ['projeto', 'epico', 'tarefa', 'ficheiro'];
 export const TODOS_TIPOS = [...TIPOS_MEMORIA, ...TIPOS_CONTEXTO];
 
-export const ROTULOS = {
-  licao: 'Lição',
-  fazer: 'Fazer',
-  nao_fazer: 'Não fazer',
-  historico: 'Histórico',
-  projeto: 'Projeto',
-  epico: 'Épico',
-  tarefa: 'Tarefa',
-  ficheiro: 'Ficheiro',
-};
+// Rótulos traduzidos na hora (getters): `tipo in ROTULOS` continua a funcionar.
+export const ROTULOS = {};
+for (const tipo of TODOS_TIPOS) Object.defineProperty(ROTULOS, tipo, { enumerable: true, get: () => t(`tipo.${tipo}`) });
 
 // Forma: identidade nunca só pela cor.
 export const FORMAS = {
@@ -27,13 +22,9 @@ export const FORMAS = {
   ficheiro: 'triangulo',
 };
 
-export const MOTIVOS = {
-  ligacao: 'ligação',
-  tarefa: 'mesma tarefa',
-  epico: 'mesmo épico',
-  projeto: 'mesmo projeto',
-  ficheiro: 'ficheiro partilhado',
-};
+export const MOTIVOS = {};
+for (const motivo of ['ligacao', 'tarefa', 'epico', 'projeto', 'ficheiro'])
+  Object.defineProperty(MOTIVOS, motivo, { enumerable: true, get: () => t(`motivo.${motivo}`) });
 
 export function lerCores() {
   const estilo = getComputedStyle(document.documentElement);
@@ -102,14 +93,4 @@ export function Marca({ tipo, tamanho = 12 }) {
   );
 }
 
-// Meses à mão: o Intl de cada browser abrevia de maneira diferente ("21/06", "21 jun.").
-const MESES = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
-
-// "21 jun." neste ano, "21 jun. 2025" nos outros. Usa a data escrita na nota, sem fuso.
-export function dataLonga(iso) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-  if (!m) return '';
-  const texto = `${Number(m[3])} ${MESES[Number(m[2]) - 1]}`;
-  return Number(m[1]) === new Date().getFullYear() ? texto : `${texto} ${m[1]}`;
-}
-
+export { dataLonga } from './i18n.jsx';

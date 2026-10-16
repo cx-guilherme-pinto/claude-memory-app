@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Iterable, Protocol
 
 from memoria import store
+from memoria.i18n import t
 
 VERSAO_ESQUEMA = 2
 NOME_FICHEIRO = f"memoria-v{VERSAO_ESQUEMA}.sqlite"
@@ -75,12 +76,7 @@ def verificar_fts5() -> None:
         finally:
             con.close()
     except sqlite3.Error as erro:
-        raise FTS5Indisponivel(
-            "O SQLite deste Python não tem FTS5 "
-            f"(sqlite {sqlite3.sqlite_version}, erro: {erro}). "
-            "Reinstala com o Python gerido pelo uv: "
-            "uv tool install --force --managed-python --python 3.12 <wheel>"
-        ) from erro
+        raise FTS5Indisponivel(t("erro.fts5", versao=sqlite3.sqlite_version, erro=erro)) from erro
     _FTS5_OK = True
 
 
@@ -268,7 +264,7 @@ class Indice:
                 self._refazer_arestas(con)
             total = con.execute("SELECT count(*) FROM notas").fetchone()[0]
         for erro in erros:
-            print(f"Aviso: memória ignorada: {erro}", file=sys.stderr)
+            print(t("aviso.memoria_ignorada", erro=erro), file=sys.stderr)
         return {
             "total": total,
             "alteradas": alteradas,
@@ -556,7 +552,7 @@ class Indice:
     def relacionadas(self, ref: str, limite: int = 10) -> list[dict]:
         nid = self.resolver(ref)
         if not nid:
-            raise LookupError(f"Memória não encontrada: {ref}")
+            raise LookupError(t("erro.memoria_nao_encontrada", ref=ref))
         limite = max(1, min(int(limite or 10), 200))
         with self.ligar() as con:
             minhas = con.execute(

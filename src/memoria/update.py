@@ -29,6 +29,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from memoria import __version__, config
+from memoria.i18n import t
 
 _TAG = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 _AMBIENTE_GIT = {"GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "never", "GIT_ASKPASS": "", "SSH_ASKPASS": ""}
@@ -59,12 +60,12 @@ def tags_de_ls_remote(saida: str) -> list[str]:
 def _git() -> str:
     git = shutil.which("git")
     if not git:
-        raise ErroUpdate("O git não está instalado. É preciso para descobrir as versões.")
+        raise ErroUpdate(t("up.sem_git"))
     if sys.platform == "darwin" and git == "/usr/bin/git":
         # Sem as Command Line Tools, /usr/bin/git abre um diálogo de instalação.
         r = subprocess.run(["xcode-select", "-p"], capture_output=True)
         if r.returncode != 0:
-            raise ErroUpdate("O git não está instalado (faltam as Command Line Tools do Xcode).")
+            raise ErroUpdate(t("up.sem_clt"))
     return git
 
 
@@ -79,9 +80,9 @@ def ultima_tag(repo_url: str, timeout: float = 30) -> str | None:
             stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired as erro:
-        raise ErroUpdate(f"O git demorou mais de {timeout:.0f} s a responder.") from erro
+        raise ErroUpdate(t("up.git_lento", s=f"{timeout:.0f}")) from erro
     if r.returncode != 0:
-        raise ErroUpdate(f"git ls-remote falhou: {r.stderr.strip()[:300]}")
+        raise ErroUpdate(t("up.ls_remote", erro=r.stderr.strip()[:300]))
     tags = tags_de_ls_remote(r.stdout)
     return tags[-1] if tags else None
 
@@ -166,17 +167,17 @@ class Descarregador:
             return
         except urllib.error.HTTPError as erro:
             if erro.code not in (401, 403, 404) or self._tentou_token:
-                raise ErroUpdate(f"Download falhou ({erro.code}): {url}") from None
+                raise ErroUpdate(t("up.download_falhou", codigo=erro.code, url=url)) from None
         except urllib.error.URLError as erro:
-            raise ErroUpdate(f"Sem ligação a {urlsplit(url).hostname}: {erro.reason}") from None
+            raise ErroUpdate(t("up.sem_ligacao", host=urlsplit(url).hostname, motivo=erro.reason)) from None
         self._tentou_token = True
         self._token = os.environ.get("MEMORIA_DOWNLOAD_TOKEN") or _token_git(url)
         if not self._token:
-            raise ErroUpdate(f"Download recusado e não há credenciais: {url}")
+            raise ErroUpdate(t("up.sem_credenciais", url=url))
         try:
             descarregar(url, destino, self._token)
         except urllib.error.HTTPError as erro:
-            raise ErroUpdate(f"Download falhou ({erro.code}): {url}") from None
+            raise ErroUpdate(t("up.download_falhou", codigo=erro.code, url=url)) from None
 
 
 def encontrar_uv(cfg: dict[str, str]) -> str:
@@ -187,7 +188,7 @@ def encontrar_uv(cfg: dict[str, str]) -> str:
     for c in candidatos:
         if c and Path(c).is_file():
             return c
-    raise ErroUpdate("Não encontrei o uv. Instala-o primeiro (ver README).")
+    raise ErroUpdate(t("up.sem_uv"))
 
 
 def comando_uv(uv: str, wheel: Path, constraints: Path, python: str) -> list[str]:
@@ -222,21 +223,21 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
     cfg = config.definicoes()
     repo = cfg.get("MEMORY_APP_REPO_URL")
     if not repo:
-        raise ErroUpdate(f"Falta MEMORY_APP_REPO_URL em {config.config_path()} e no release.conf do pacote.")
+        raise ErroUpdate(t("up.falta_repo", caminho=config.config_path()))
     tag = versao or ultima_tag(repo)
     if not tag:
-        raise ErroUpdate("Não encontrei nenhuma versão (tags vX.Y.Z) no repositório.")
+        raise ErroUpdate(t("up.sem_versoes"))
     atual = versao_tuplo(__version__) or (0, 0, 0)
     nova = versao_tuplo(tag)
     if not nova:
-        raise ErroUpdate(f"Versão inválida: {tag}")
+        raise ErroUpdate(t("up.versao_invalida", tag=tag))
     if not tag.startswith("v"):
         tag = "v" + tag
-    _info(f"Versão instalada: {__version__}. Última: {tag.lstrip('v')}.")
+    _info(t("up.versoes", atual=__version__, ultima=tag.lstrip("v")))
     if so_verificar:
         return 0
     if nova <= atual and not forcar:
-        _info("Já tens a versão mais recente.")
+        _info(t("up.ja_recente"))
         return 0
 
     from memoria import portatil
@@ -255,25 +256,25 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
         ficheiros = {}
         for nome in (nome_wheel(tag), "constraints.txt"):
             if nome not in somas:
-                raise ErroUpdate(f"{nome} não está no SHA256SUMS da versão {tag}.")
+                raise ErroUpdate(t("up.falta_soma", nome=nome, tag=tag))
             destino = pasta / nome
-            _info(f"A descarregar {nome}…")
+            _info(t("up.a_descarregar", nome=nome))
             baixar.obter(config.url_asset(cfg, tag, nome), destino)
             if sha256(destino) != somas[nome]:
-                raise ErroUpdate(f"SHA-256 não confere: {nome}. Nada foi instalado.")
+                raise ErroUpdate(t("up.sha_instalado", nome=nome))
             ficheiros[nome] = destino
         cmd = comando_uv(uv, ficheiros[nome_wheel(tag)], ficheiros["constraints.txt"], python)
         if os.name == "nt":
             return _instalar_depois_de_sair(cmd, pasta)
-        _info("A instalar com o uv…")
+        _info(t("up.a_instalar"))
         r = subprocess.run(cmd, stdin=subprocess.DEVNULL)
         if r.returncode != 0:
-            raise ErroUpdate(f"uv tool install falhou (código {r.returncode}).")
+            raise ErroUpdate(t("up.uv_falhou", codigo=r.returncode))
     finally:
         if os.name != "nt":
             shutil.rmtree(pasta, ignore_errors=True)
     reindexar_com_nova_versao()
-    _info(f"Atualizado para {tag.lstrip('v')}. As memórias não foram tocadas.")
+    _info(t("up.atualizado", versao=tag.lstrip("v")))
     return 0
 
 
@@ -291,7 +292,7 @@ def reindexar_com_nova_versao() -> None:
     cmd = [exe, "reindex"] if exe else [sys.executable, "-m", "memoria", "reindex"]
     r = subprocess.run(cmd, stdin=subprocess.DEVNULL)
     if r.returncode != 0:
-        _info("Aviso: o reindex falhou. Corre `memoria reindex` à mão.")
+        _info(t("up.reindex_falhou"))
 
 
 def _instalar_depois_de_sair(cmd: list[str], pasta: Path) -> int:
@@ -308,12 +309,12 @@ def _instalar_depois_de_sair(cmd: list[str], pasta: Path) -> int:
     linhas = [
         "$ErrorActionPreference = 'Stop'",
         f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue",
-        "Write-Host 'A instalar a nova versao da Memoria...'",
+        f"Write-Host {ps(t('ps.a_instalar'))}",
         "& " + " ".join(ps(c) for c in cmd),
-        "if ($LASTEXITCODE -ne 0) { Write-Host 'uv tool install falhou.'; Read-Host 'Enter para fechar'; exit 1 }",
+        f"if ($LASTEXITCODE -ne 0) {{ Write-Host {ps(t('ps.uv_falhou'))}; Read-Host {ps(t('ps.enter'))}; exit 1 }}",
         f"& {ps(exe)} reindex",
         f"Remove-Item -Recurse -Force {ps(str(pasta))} -ErrorAction SilentlyContinue",
-        "Write-Host 'Memoria atualizada. As memorias nao foram tocadas.'",
+        f"Write-Host {ps(t('ps.atualizada'))}",
         "Start-Sleep -Seconds 3",
     ]
     script = pasta / "instalar.ps1"
@@ -324,5 +325,5 @@ def _instalar_depois_de_sair(cmd: list[str], pasta: Path) -> int:
         creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
         close_fds=True,
     )
-    _info("A atualização continua numa nova janela, depois de esta terminar.")
+    _info(t("up.nova_janela"))
     return 0

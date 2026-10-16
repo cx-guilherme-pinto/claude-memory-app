@@ -18,6 +18,11 @@ def isolar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("USERPROFILE", str(casa))
     monkeypatch.setenv("MEMORIA_HOME", str(home))
     monkeypatch.setenv("MEMORIA_SEM_UPDATE", "1")
+    # Os testes antigos verificam mensagens em português; os de i18n mudam a língua.
+    monkeypatch.setenv("MEMORIA_LANG", "pt")
+    from memoria import i18n
+
+    i18n.repor()
     for chave in CHAVES_CONFIG:
         monkeypatch.delenv(chave, raising=False)
     return home
