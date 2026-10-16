@@ -130,6 +130,13 @@ class Api:
             ligacoes=lista("ligacoes"),
         )
 
+    def ficheiro(self, ref: str) -> dict:
+        """Markdown da memória para o editor da app."""
+        return self._mem.ler_ficheiro(str(ref))
+
+    def guardar_ficheiro(self, ref: str, texto: str, versao: str | None = None) -> dict:
+        return self._mem.guardar_ficheiro(str(ref), str(texto or ""), str(versao) if versao else None)
+
     def abrir_ficheiro(self, ref: str) -> bool:
         abrir_com_sistema(self._mem.caminho_seguro(ref))
         return True
@@ -169,7 +176,7 @@ class Api:
 
 
 METODOS = {
-    "inicio", "grafo", "nota", "procurar", "adicionar", "abrir_ficheiro", "abrir_url",
+    "inicio", "grafo", "nota", "procurar", "adicionar", "ficheiro", "guardar_ficheiro", "abrir_ficheiro", "abrir_url",
     "verificar_atualizacao", "pronto", "batimento",
 }
 

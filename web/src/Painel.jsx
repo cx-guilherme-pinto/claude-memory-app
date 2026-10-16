@@ -28,10 +28,17 @@ function motivos(m) {
     .join(', ');
 }
 
-export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
+const ATALHO_GUARDAR = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘S' : 'Ctrl+S';
+
+export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico, onAlterada }) {
   const memoria = TIPOS_MEMORIA.includes(no.tipo) || !(no.tipo in ROTULOS);
   const [nota, setNota] = useState(null);
   const [erro, setErro] = useState('');
+  // Editor do ficheiro, dentro da app: { texto, original, versao, nome } ou null.
+  const [editor, setEditor] = useState(null);
+  const [aGuardar, setAGuardar] = useState(false);
+  const [estado, setEstado] = useState('');
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
     if (!memoria) return undefined;
@@ -42,7 +49,13 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
     return () => {
       vivo = false;
     };
-  }, [no.id, memoria]);
+  }, [no.id, memoria, recarga]);
+
+  useEffect(() => {
+    if (!estado) return undefined;
+    const t = setTimeout(() => setEstado(''), 4000);
+    return () => clearTimeout(t);
+  }, [estado]);
 
   const html = useMemo(() => (nota ? renderizar(nota.corpo) : ''), [nota]);
 
@@ -63,10 +76,58 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
     }
   };
 
-  const abrirFicheiro = () => chamar('abrir_ficheiro', no.id).catch((e) => setErro(e.message));
+  const editar = async () => {
+    setErro('');
+    setEstado('');
+    try {
+      const f = await chamar('ficheiro', no.id);
+      setEditor({ texto: f.texto, original: f.texto, versao: f.versao, nome: f.nome });
+    } catch (e) {
+      setErro(e.message);
+    }
+  };
+
+  const alterado = Boolean(editor) && editor.texto !== editor.original;
+
+  const fecharEditor = () => {
+    setEditor(null);
+    setErro('');
+  };
+
+  const guardar = async () => {
+    if (!editor || aGuardar) return;
+    if (!alterado) {
+      fecharEditor();
+      return;
+    }
+    setAGuardar(true);
+    setErro('');
+    try {
+      const r = await chamar('guardar_ficheiro', no.id, editor.texto, editor.versao);
+      setEditor(null);
+      setEstado(r.redigidos ? `Guardada. ${r.redigidos} segredo(s) redigido(s).` : 'Guardada.');
+      setRecarga((n) => n + 1);
+      onAlterada?.();
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setAGuardar(false);
+    }
+  };
+
+  const teclaEditor = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      guardar();
+    } else if (e.key === 'Escape') {
+      // Não fecha o painel por engano; sem alterações, sai do editor.
+      e.stopPropagation();
+      if (!alterado) fecharEditor();
+    }
+  };
 
   return (
-    <aside className="painel" aria-label="Detalhes">
+    <aside className={editor ? 'painel painel-editar' : 'painel'} aria-label="Detalhes">
       <div className="painel-topo">
         <h2>{no.rotulo}</h2>
         <button className="botao botao-icone" type="button" onClick={onFechar} aria-label="Fechar" title="Fechar (Esc)">
@@ -76,132 +137,174 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
         </button>
       </div>
 
-      <dl className="meta">
-        <dt>Tipo</dt>
-        <dd>
-          <span className="tipo-marca">
-            <Marca tipo={no.tipo} />
-            {ROTULOS[no.tipo] || no.tipo}
-          </span>
-        </dd>
-        {no.projeto && (
-          <>
-            <dt>Projeto</dt>
-            <dd>{no.projeto}</dd>
-          </>
-        )}
-        {nota?.tarefa && (
-          <>
-            <dt>Tarefa</dt>
-            <dd className="num">{nota.tarefa}</dd>
-          </>
-        )}
-        {(nota?.epico || (!memoria && no.tipo === 'tarefa' && no.epico)) && (
-          <>
-            <dt>Épico</dt>
-            <dd className="num">
-              {idEpico(nota?.epico || no.epico) ? (
-                <button className="ligacao-texto" type="button" onClick={() => onAbrir(idEpico(nota?.epico || no.epico))}>
-                  {nota?.epico || no.epico}
+      {editor ? (
+        <form
+          className="editor"
+          onSubmit={(e) => {
+            e.preventDefault();
+            guardar();
+          }}
+        >
+          <p className="fraco pequeno">
+            O cabeçalho entre as linhas <code>---</code> tem o tipo, o título e o projeto. O texto vem depois.
+          </p>
+          <textarea
+            className="campo editor-texto"
+            value={editor.texto}
+            onChange={(e) => setEditor({ ...editor, texto: e.target.value })}
+            onKeyDown={teclaEditor}
+            spellCheck={false}
+            aria-label={`Conteúdo de ${editor.nome}`}
+            autoFocus
+          />
+          {erro && (
+            <p className="erro" role="alert">
+              {erro}
+            </p>
+          )}
+          <div className="acoes">
+            <button className="botao botao-principal" type="submit" disabled={aGuardar}>
+              {aGuardar ? 'A guardar…' : 'Guardar'}
+            </button>
+            <button className="botao" type="button" onClick={fecharEditor}>
+              Cancelar
+            </button>
+            <span className="fraco pequeno">{alterado ? `Alterações por guardar · ${ATALHO_GUARDAR}` : 'Sem alterações'}</span>
+          </div>
+        </form>
+      ) : (
+        <>
+        <dl className="meta">
+          <dt>Tipo</dt>
+          <dd>
+            <span className="tipo-marca">
+              <Marca tipo={no.tipo} />
+              {ROTULOS[no.tipo] || no.tipo}
+            </span>
+          </dd>
+          {no.projeto && (
+            <>
+              <dt>Projeto</dt>
+              <dd>{no.projeto}</dd>
+            </>
+          )}
+          {nota?.tarefa && (
+            <>
+              <dt>Tarefa</dt>
+              <dd className="num">{nota.tarefa}</dd>
+            </>
+          )}
+          {(nota?.epico || (!memoria && no.tipo === 'tarefa' && no.epico)) && (
+            <>
+              <dt>Épico</dt>
+              <dd className="num">
+                {idEpico(nota?.epico || no.epico) ? (
+                  <button className="ligacao-texto" type="button" onClick={() => onAbrir(idEpico(nota?.epico || no.epico))}>
+                    {nota?.epico || no.epico}
+                  </button>
+                ) : (
+                  nota?.epico || no.epico
+                )}
+              </dd>
+            </>
+          )}
+          {nota?.url && (
+            <>
+              <dt>Ticket</dt>
+              <dd>
+                <button className="ligacao-texto" type="button" onClick={() => chamar('abrir_url', nota.url).catch((e) => setErro(e.message))} title={nota.url}>
+                  {nota.url.replace(/^https?:\/\//, '')}
                 </button>
-              ) : (
-                nota?.epico || no.epico
-              )}
-            </dd>
-          </>
+              </dd>
+            </>
+          )}
+          {nota?.etiquetas?.length > 0 && (
+            <>
+              <dt>Etiquetas</dt>
+              <dd>{nota.etiquetas.join(', ')}</dd>
+            </>
+          )}
+          <dt>Data</dt>
+          <dd className="num">{dataLonga(nota?.data || no.data)}</dd>
+          {nota?.custo_usd != null && (
+            <>
+              <dt>Custo</dt>
+              <dd className="num">US$ {Number(nota.custo_usd).toFixed(2)}</dd>
+            </>
+          )}
+        </dl>
+
+        {memoria && !nota && !erro && <p className="fraco">A carregar…</p>}
+        {erro && <p className="erro">{erro}</p>}
+        {estado && (
+          <p className="estado" role="status">
+            {estado}
+          </p>
         )}
-        {nota?.url && (
-          <>
-            <dt>Ticket</dt>
-            <dd>
-              <button className="ligacao-texto" type="button" onClick={() => chamar('abrir_url', nota.url).catch((e) => setErro(e.message))} title={nota.url}>
-                {nota.url.replace(/^https?:\/\//, '')}
-              </button>
-            </dd>
-          </>
+
+        {nota && (
+          // eslint-disable-next-line react/no-danger
+          <div className="markdown" onClick={clicarCorpo} dangerouslySetInnerHTML={{ __html: html }} />
         )}
-        {nota?.etiquetas?.length > 0 && (
-          <>
-            <dt>Etiquetas</dt>
-            <dd>{nota.etiquetas.join(', ')}</dd>
-          </>
+
+        {nota?.ficheiros?.length > 0 && (
+          <section className="seccao">
+            <h3>Ficheiros</h3>
+            <ul className="lista">
+              {nota.ficheiros.map((f) => (
+                <li key={f}>
+                  <code>{f}</code>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-        <dt>Data</dt>
-        <dd className="num">{dataLonga(nota?.data || no.data)}</dd>
-        {nota?.custo_usd != null && (
-          <>
-            <dt>Custo</dt>
-            <dd className="num">US$ {Number(nota.custo_usd).toFixed(2)}</dd>
-          </>
+
+        {nota?.relacionadas?.length > 0 && (
+          <section className="seccao">
+            <h3>Relacionadas</h3>
+            <ul className="lista lista-motivos">
+              {nota.relacionadas.map((r) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
+                    <Marca tipo={r.tipo} />
+                    <span>{r.titulo}</span>
+                    <span className="motivo">{motivos(r.motivos)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </dl>
 
-      {memoria && !nota && !erro && <p className="fraco">A carregar…</p>}
-      {erro && <p className="erro">{erro}</p>}
+        {!memoria && (
+          <section className="seccao">
+            <h3>Memórias ({vizinhos.length})</h3>
+            <ul className="lista">
+              {vizinhos.map((r) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
+                    <Marca tipo={r.tipo} />
+                    <span>{r.rotulo}</span>
+                    <span className="motivo num">{dataLonga(r.data)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      {nota && (
-        // eslint-disable-next-line react/no-danger
-        <div className="markdown" onClick={clicarCorpo} dangerouslySetInnerHTML={{ __html: html }} />
-      )}
-
-      {nota?.ficheiros?.length > 0 && (
-        <section className="seccao">
-          <h3>Ficheiros</h3>
-          <ul className="lista">
-            {nota.ficheiros.map((f) => (
-              <li key={f}>
-                <code>{f}</code>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {nota?.relacionadas?.length > 0 && (
-        <section className="seccao">
-          <h3>Relacionadas</h3>
-          <ul className="lista lista-motivos">
-            {nota.relacionadas.map((r) => (
-              <li key={r.id}>
-                <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
-                  <Marca tipo={r.tipo} />
-                  <span>{r.titulo}</span>
-                  <span className="motivo">{motivos(r.motivos)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {!memoria && (
-        <section className="seccao">
-          <h3>Memórias ({vizinhos.length})</h3>
-          <ul className="lista">
-            {vizinhos.map((r) => (
-              <li key={r.id}>
-                <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
-                  <Marca tipo={r.tipo} />
-                  <span>{r.rotulo}</span>
-                  <span className="motivo num">{dataLonga(r.data)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {nota && (
-        <div className="acoes">
-          <button className="botao" type="button" onClick={abrirFicheiro}>
-            Abrir ficheiro
-          </button>
-        </div>
-      )}
-      {nota && (
-        <p className="fraco">
-          <code>{nota.id}.md</code>
-        </p>
+        {nota && (
+          <div className="acoes">
+            <button className="botao" type="button" onClick={editar}>
+              Editar
+            </button>
+            <span className="fraco pequeno">
+              <code>{nota.id}.md</code>
+            </span>
+          </div>
+        )}
+        </>
       )}
     </aside>
   );

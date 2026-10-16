@@ -2,6 +2,19 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [Por publicar]
+
+### Adicionado
+
+- Editar uma memória dentro da app: o botão "Editar" no painel abre o ficheiro Markdown
+  (cabeçalho e texto) num editor da própria janela. Guardar com o botão ou ⌘S / Ctrl+S.
+  Antes de gravar, confirma o cabeçalho, redige segredos e não escreve por cima de uma edição
+  feita entretanto (por exemplo, pelo Claude Code). O índice e o mapa atualizam logo.
+
+### Alterado
+
+- O painel deixa de abrir o editor externo do sistema.
+
 ## [0.2.2] - 2026-10-16
 
 ### Adicionado

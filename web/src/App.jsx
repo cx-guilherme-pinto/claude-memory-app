@@ -627,6 +627,7 @@ export default function App() {
                 vizinhos={vizinhos}
                 onFechar={() => setSelecionado(null)}
                 onAbrir={abrirRef}
+                onAlterada={carregar}
                 idEpico={(chave) => dados?.nos.find((n) => n.tipo === 'epico' && n.epico === chave)?.id}
               />
             </Suspense>

@@ -114,3 +114,32 @@ class Memoria:
         caminho = Path(nota["caminho"]).resolve()
         caminho.relative_to(self.home.resolve())  # ValueError se estiver fora
         return caminho
+
+    def ler_ficheiro(self, ref: str) -> dict:
+        """O Markdown de uma memória, tal como está no disco (para editar na app)."""
+        caminho = self.caminho_seguro(ref)
+        return {
+            "id": store.id_de(caminho, self.home),
+            "nome": caminho.name,
+            "texto": caminho.read_text("utf-8-sig"),
+            "versao": store.versao_ficheiro(caminho),
+        }
+
+    def guardar_ficheiro(self, ref: str, texto: str, versao: str | None = None) -> dict:
+        """Grava o Markdown editado na app: confirma o cabeçalho, redige segredos e reindexa.
+
+        `versao` é a que `ler_ficheiro` devolveu. Se o ficheiro mudou entretanto
+        (por exemplo, o Claude Code escreveu nele), não grava por cima.
+        """
+        caminho = self.caminho_seguro(ref)
+        if versao and versao != store.versao_ficheiro(caminho):
+            raise ValueError("O ficheiro mudou no disco entretanto. Cancela e volta a abrir para editar.")
+        texto = str(texto or "").replace("\r\n", "\n")
+        if not texto.endswith("\n"):
+            texto += "\n"
+        texto, redigidos = redigir(texto)
+        store.validar_texto(texto)
+        with self._trinco:
+            store.gravar_atomico(caminho, texto)
+        self.sincronizar(forcar=True)
+        return {"id": store.id_de(caminho, self.home), "redigidos": redigidos, "versao": store.versao_ficheiro(caminho)}
