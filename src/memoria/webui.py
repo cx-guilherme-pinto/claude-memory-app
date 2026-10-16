@@ -144,6 +144,12 @@ class Api:
     def guardar_ficheiro(self, ref: str, texto: str, versao: str | None = None) -> dict:
         return self._mem.guardar_ficheiro(str(ref), str(texto or ""), str(versao) if versao else None)
 
+    def atividade(self, limite: int = 100) -> dict:
+        """O que o Claude chamou pelo MCP: números do topo e as últimas memórias recordadas."""
+        from memoria.registo import Registo
+
+        return Registo(self._mem.home).resumo(limite=limite)
+
     def abrir_ficheiro(self, ref: str) -> bool:
         abrir_com_sistema(self._mem.caminho_seguro(ref))
         return True
@@ -183,7 +189,8 @@ class Api:
 
 
 METODOS = {
-    "inicio", "definir_lingua", "grafo", "nota", "procurar", "adicionar", "ficheiro", "guardar_ficheiro", "abrir_ficheiro", "abrir_url",
+    "inicio", "definir_lingua", "grafo", "atividade", "nota", "procurar", "adicionar", "ficheiro", "guardar_ficheiro",
+    "abrir_ficheiro", "abrir_url",
     "verificar_atualizacao", "pronto", "batimento",
 }
 

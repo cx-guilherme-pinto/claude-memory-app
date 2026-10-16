@@ -1,9 +1,18 @@
 {
   "app.a_abrir": "Opening your memories…",
   "app.resumo": "{memorias} in {projetos}.",
-  "plural.memorias": { "one": "{n} memory", "other": "{n} memories" },
-  "plural.projetos": { "one": "{n} project", "other": "{n} projects" },
-  "plural.nos_destacados": { "one": "{n} node highlighted on the map", "other": "{n} nodes highlighted on the map" },
+  "plural.memorias": {
+    "one": "{n} memory",
+    "other": "{n} memories"
+  },
+  "plural.projetos": {
+    "one": "{n} project",
+    "other": "{n} projects"
+  },
+  "plural.nos_destacados": {
+    "one": "{n} node highlighted on the map",
+    "other": "{n} nodes highlighted on the map"
+  },
   "lingua.rotulo": "Language",
   "periodo.grupo": "Period",
   "periodo.tudo.curto": "All",
@@ -34,13 +43,19 @@
   "tempo.ver_crescer_aria": "Watch your memories grow",
   "tempo.linha": "Timeline",
   "guardada": "Memory saved.",
-  "guardada_redigidos": { "one": "Memory saved. {n} secret redacted.", "other": "Memory saved. {n} secrets redacted." },
+  "guardada_redigidos": {
+    "one": "Memory saved. {n} secret redacted.",
+    "other": "Memory saved. {n} secrets redacted."
+  },
   "painel.detalhes": "Details",
   "painel.fechar": "Close",
   "painel.fechar_esc": "Close (Esc)",
   "painel.ligacao_sem_memoria": "Link without a memory: {nome}",
   "painel.guardada": "Saved.",
-  "painel.guardada_redigidos": { "one": "Saved. {n} secret redacted.", "other": "Saved. {n} secrets redacted." },
+  "painel.guardada_redigidos": {
+    "one": "Saved. {n} secret redacted.",
+    "other": "Saved. {n} secrets redacted."
+  },
   "painel.ficheiros": "Files",
   "painel.relacionadas": "Related",
   "painel.memorias": "Memories ({n})",
@@ -91,5 +106,29 @@
   "motivo.tarefa": "same task",
   "motivo.epico": "same epic",
   "motivo.projeto": "same project",
-  "motivo.ficheiro": "shared file"
+  "motivo.ficheiro": "shared file",
+  "vista.grupo": "View",
+  "vista.mapa": "Map",
+  "vista.atividade": "Claude activity",
+  "atividade.titulo": "What Claude called over MCP",
+  "atividade.atualiza": "Updates on its own.",
+  "atividade.atualizado": "Updates on its own. Last call: {quando}.",
+  "atividade.hoje": "Calls today",
+  "atividade.total": "Total calls",
+  "atividade.por_minuto": "Calls per minute",
+  "atividade.por_minuto_nota": "average over the last 10 min",
+  "atividade.distintas": "Memories recalled",
+  "atividade.distintas_nota": "unique",
+  "atividade.lista": "Last {n} memories recalled",
+  "atividade.col.hora": "Time",
+  "atividade.col.ferramenta": "Tool",
+  "atividade.col.memoria": "Memory",
+  "atividade.sem_resultados": "No results",
+  "atividade.pesquisa": "Query: {texto}",
+  "atividade.abrir": "Open the memory",
+  "atividade.vazio_titulo": "Claude hasn't used Memória yet.",
+  "atividade.vazio_texto": "When Claude Code calls the MCP tools, the calls show up here.",
+  "ferramenta.memoria_procurar": "Search",
+  "ferramenta.memoria_relacionadas": "Related",
+  "ferramenta.memoria_adicionar": "Saved"
 }

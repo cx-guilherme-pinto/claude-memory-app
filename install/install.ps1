@@ -17,11 +17,11 @@
 
 # >>> config: gerado a partir de release.conf por scripts/render_installers.py. Nao editar a mao.
 $MemoryAppRepoUrl = 'https://gitea.guilhermepinto.pt/guilherme/claude-memory-app.git'
-$MemoryAppVersion = 'v0.3.0'
+$MemoryAppVersion = 'v0.4.0'
 $ReleaseDownloadUrl = '{repo}/releases/download/{version}/{file}'
 $UvVersion = '0.13.1'
 $PythonVersion = '3.12'
-$BuildVersion = 'v0.3.0'
+$BuildVersion = 'v0.4.0'
 $WheelSha256 = ''
 # <<< config
 

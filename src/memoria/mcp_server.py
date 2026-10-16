@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from typing import Annotated
 
 from pydantic import Field
@@ -21,6 +22,10 @@ INSTRUCOES = (
 )
 
 
+def _ms(inicio: float) -> int:
+    return int((time.perf_counter() - inicio) * 1000)
+
+
 def _compacto(itens: list[dict]) -> list[dict]:
     """Tira campos vazios: menos tokens para o modelo."""
     return [{k: v for k, v in i.items() if v not in (None, "", [], {})} for i in itens]
@@ -31,7 +36,10 @@ def criar_servidor(memoria: Memoria | None = None):
     from mcp.server.mcpserver.exceptions import ToolError
     from mcp.types import ToolAnnotations
 
+    from memoria.registo import Registo
+
     mem = memoria or Memoria()
+    registo = Registo(mem.home)  # o que o Claude chama, para a vista "Atividade" da app
     servidor = MCPServer(name="memoria", version=__version__, instructions=INSTRUCOES)
     so_leitura = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 
@@ -52,10 +60,14 @@ def criar_servidor(memoria: Memoria | None = None):
         epico: Annotated[str | None, Field(description="Only this epic (includes its tasks), e.g. ABC-100.")] = None,
         limite: Annotated[int, Field(ge=1, le=100, description="Maximum number of results.")] = 10,
     ) -> dict:
+        inicio = time.perf_counter()
+        filtros = {"projeto": projeto, "tipo": tipo, "tarefa": tarefa, "epico": epico}
         try:
             resultados = mem.procurar(texto, projeto=projeto, tipo=tipo, limite=limite, tarefa=tarefa, epico=epico)
         except ValueError as erro:
+            registo.gravar("memoria_procurar", texto=texto, filtros=filtros, erro=str(erro), duracao_ms=_ms(inicio))
             raise ToolError(str(erro)) from erro
+        registo.gravar("memoria_procurar", texto=texto, filtros=filtros, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "resultados": _compacto(resultados)}
 
     @servidor.tool(
@@ -94,7 +106,15 @@ def criar_servidor(memoria: Memoria | None = None):
                 custo_usd=custo_usd,
             )
         except ValueError as erro:
+            registo.gravar("memoria_adicionar", texto=titulo, filtros={"projeto": projeto, "tarefa": tarefa}, erro=str(erro))
             raise ToolError(str(erro)) from erro
+        nova = mem.nota(resultado["id"]) or {"id": resultado["id"], "titulo": titulo, "projeto": projeto}
+        registo.gravar(
+            "memoria_adicionar",
+            texto=nova.get("titulo", ""),
+            filtros={"projeto": projeto, "tipo": tipo, "tarefa": tarefa, "epico": epico},
+            memorias=[nova],
+        )
         return resultado["caminho"]
 
     @servidor.tool(
@@ -109,10 +129,15 @@ def criar_servidor(memoria: Memoria | None = None):
         id_ou_caminho: Annotated[str, Field(description="Id (project/YYYY-MM-DD-slug), name, title or path of the .md file.")],
         limite: Annotated[int, Field(ge=1, le=100, description="Maximum number of results.")] = 10,
     ) -> dict:
+        inicio = time.perf_counter()
+        # No registo fica o id da memória de partida (não o caminho completo do disco).
+        origem = mem.indice.resolver(id_ou_caminho) or id_ou_caminho
         try:
             resultados = mem.relacionadas(id_ou_caminho, limite=limite)
         except LookupError as erro:
+            registo.gravar("memoria_relacionadas", texto=origem, erro=str(erro), duracao_ms=_ms(inicio))
             raise ToolError(str(erro)) from erro
+        registo.gravar("memoria_relacionadas", texto=origem, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "resultados": _compacto(resultados)}
 
     return servidor

@@ -163,7 +163,12 @@ def _abrir(home: Path, navegador, monkeypatch, lingua: str | None):
 
 
 RETANGULOS = """() => {
-  const r = (s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left, w: b.width }; };
+  const r = (s) => {
+    const e = document.querySelector(s);
+    if (!e) return null;
+    const b = e.getBoundingClientRect();
+    return { x: b.left, w: b.width };
+  };
   return { coluna: r('.coluna'), area: r('.area'), painel: r('.painel') };
 }"""
 
@@ -181,6 +186,7 @@ def test_hebraico_em_rtl(home: Path, navegador, monkeypatch):
         # O painel abre do lado de dentro (à esquerda do mapa) e o grafo continua desenhado.
         pagina.locator(".recentes li button").first.click()
         pagina.wait_for_selector(".painel h2")
+        pagina.wait_for_timeout(600)  # o painel entra a deslizar (240 ms); mede no fim
         caixas = pagina.evaluate(RETANGULOS)
         assert abs(caixas["painel"]["x"] - caixas["area"]["x"]) < 2
         assert pagina.locator(".painel dt").first.inner_text() == "סוג"
@@ -228,6 +234,48 @@ def test_seletor_muda_e_guarda_a_lingua(home: Path, navegador, monkeypatch):
         assert '<html lang="en" dir="ltr">' in resposta.text()
         _esperar_desenho(pagina)
         assert pagina.locator(".recentes h2").inner_text() == "Latest memories"
+    finally:
+        contexto.close()
+        servidor.parar()
+
+
+def test_atividade_do_claude(home: Path, navegador, monkeypatch):
+    """O que o Claude chamou pelo MCP aparece na vista "Atividade" e abre a memória."""
+    import asyncio
+
+    from mcp import Client
+
+    from memoria.mcp_server import criar_servidor
+
+    gerar(home, 15)
+    mem = Memoria(home)
+
+    async def chamadas():
+        async with Client(criar_servidor(mem)) as c:
+            await c.call_tool("memoria_procurar", {"texto": "cache", "limite": 3})
+            await c.call_tool("memoria_procurar", {"texto": "coisa que não existe"})
+
+    # O Playwright síncrono já tem um event loop nesta thread: as chamadas MCP vão noutra.
+    import threading
+
+    fio = threading.Thread(target=lambda: asyncio.run(chamadas()))
+    fio.start()
+    fio.join(60)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, "pt")
+    try:
+        pagina.get_by_role("button", name="Atividade do Claude").click()
+        pagina.wait_for_selector(".atividade .registo-linha:not(.registo-cabeca)")
+        valores = pagina.locator(".numero-valor").all_inner_texts()
+        assert valores[:2] == ["2", "2"]  # hoje e no total
+        assert pagina.locator(".numero-rotulo").first.inner_text() == "Chamadas hoje"
+        linhas = pagina.locator(".atividade .registo-linha:not(.registo-cabeca)")
+        assert linhas.count() == 4  # 3 memórias + 1 pesquisa sem resultados
+        assert "Sem resultados" in linhas.first.inner_text()
+        titulo = pagina.locator(".atividade .registo-memoria .ligacao-texto").first.inner_text()
+        pagina.locator(".atividade .registo-memoria .ligacao-texto").first.click()
+        pagina.wait_for_selector(".painel h2")
+        assert pagina.locator(".atividade").count() == 0  # voltou ao mapa
+        assert pagina.locator(".painel h2").inner_text() == titulo
     finally:
         contexto.close()
         servidor.parar()

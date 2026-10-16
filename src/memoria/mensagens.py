@@ -22,7 +22,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "erro.ficheiro_mudou": _m(
         "O ficheiro mudou no disco entretanto. Cancela e volta a abrir para editar.",
         "The file changed on disk in the meantime. Cancel and open it again to edit.",
-        "इस बीच डिस्क पर फ़ाइल बदल गई। रद्द करें और संपादित करने के लिए फिर से खोलें।",
+        "इस बीच डिस्क पर फ़ाइल बदल गई। कैंसल करें और एडिट करने के लिए फिर से खोलें।",
         "הקובץ השתנה בדיסק בינתיים. בטלו ופתחו אותו שוב כדי לערוך.",
     ),
     "erro.url": _m(
@@ -34,7 +34,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "erro.tipo_invalido": _m(
         "Tipo inválido: {tipo}. Usa um destes: {tipos}.",
         "Invalid type: {tipo}. Use one of: {tipos}.",
-        "अमान्य प्रकार: {tipo}। इनमें से एक चुनें: {tipos}।",
+        "इनवैलिड टाइप: {tipo}। इनमें से कोई एक इस्तेमाल करें: {tipos}।",
         "סוג לא תקין: {tipo}. השתמשו באחד מאלה: {tipos}.",
     ),
     "erro.frontmatter_mapa": _m(
@@ -43,7 +43,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "frontmatter एक YAML मैपिंग नहीं है",
         "ה-frontmatter אינו מיפוי YAML",
     ),
-    "erro.falta_titulo": _m("Falta o título.", "The title is missing.", "शीर्षक नहीं दिया गया।", "חסרה כותרת."),
+    "erro.falta_titulo": _m("Falta o título.", "The title is missing.", "टाइटल नहीं दिया गया।", "חסרה כותרת."),
     "erro.falta_projeto": _m("Falta o projeto.", "The project is missing.", "प्रोजेक्ट नहीं दिया गया।", "חסר פרויקט."),
     "erro.demasiadas": _m(
         "Demasiadas memórias com o nome {base}.",
@@ -55,25 +55,25 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "erro.falta_cabecalho": _m(
         "Falta o cabeçalho no início: linhas '---' com tipo, titulo e projeto.",
         "The header is missing at the top: '---' lines with tipo, titulo and projeto.",
-        "शुरुआत में हेडर नहीं है: '---' पंक्तियाँ, जिनमें tipo, titulo और projeto हों।",
+        "शुरुआत में हेडर नहीं है: '---' लाइनें, जिनमें tipo, titulo और projeto हों।",
         "חסרה כותרת עליונה בהתחלה: שורות '---' עם tipo, titulo ו-projeto.",
     ),
     "erro.yaml": _m(
         "O cabeçalho YAML tem um erro.",
         "The YAML header has an error.",
-        "YAML हेडर में एक त्रुटि है।",
+        "YAML हेडर में एक एरर है।",
         "בכותרת ה-YAML יש שגיאה.",
     ),
     "erro.yaml_linha": _m(
         "O cabeçalho YAML tem um erro (linha {linha}).",
         "The YAML header has an error (line {linha}).",
-        "YAML हेडर में एक त्रुटि है (पंक्ति {linha})।",
+        "YAML हेडर में एक एरर है (लाइन {linha})।",
         "בכותרת ה-YAML יש שגיאה (שורה {linha}).",
     ),
     "erro.cabecalho_mapa": _m(
         "O cabeçalho tem de ser uma lista de 'chave: valor'.",
         "The header must be a list of 'key: value' lines.",
-        "हेडर 'key: value' पंक्तियों की सूची होना चाहिए।",
+        "हेडर 'key: value' लाइनों की सूची होना चाहिए।",
         "הכותרת העליונה חייבת להיות רשימה של שורות 'key: value'.",
     ),
     "erro.falta_titulo_cabecalho": _m(
@@ -82,12 +82,12 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "हेडर में titulo नहीं है।",
         "בכותרת העליונה חסר titulo.",
     ),
-    "erro.dados_invalidos": _m("Dados inválidos.", "Invalid data.", "अमान्य डेटा।", "נתונים לא תקינים."),
-    "erro.so_http": _m("Só ligações http/https.", "Only http/https links.", "केवल http/https लिंक।", "רק קישורי http/https."),
+    "erro.dados_invalidos": _m("Dados inválidos.", "Invalid data.", "इनवैलिड डेटा।", "נתונים לא תקינים."),
+    "erro.so_http": _m("Só ligações http/https.", "Only http/https links.", "सिर्फ़ http/https लिंक।", "רק קישורי http/https."),
     "erro.lingua": _m(
         "Língua não suportada: {codigo}. Usa uma destas: {linguas}.",
         "Unsupported language: {codigo}. Use one of: {linguas}.",
-        "असमर्थित भाषा: {codigo}। इनमें से एक चुनें: {linguas}।",
+        "यह भाषा सपोर्टेड नहीं है: {codigo}। इनमें से कोई एक इस्तेमाल करें: {linguas}।",
         "שפה לא נתמכת: {codigo}. השתמשו באחת מאלה: {linguas}.",
     ),
     "erro.marcador": _m(
@@ -105,7 +105,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "erro.url_recusado": _m(
         "URL recusado (só https): {url}",
         "URL refused (https only): {url}",
-        "URL अस्वीकार (केवल https): {url}",
+        "URL रिजेक्ट (सिर्फ़ https): {url}",
         "כתובת URL נדחתה (רק https): {url}",
     ),
     "erro.fts5": _m(
@@ -113,7 +113,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "Reinstala com o Python gerido pelo uv: uv tool install --force --managed-python --python 3.12 <wheel>",
         "This Python's SQLite has no FTS5 (sqlite {versao}, error: {erro}). "
         "Reinstall with the uv-managed Python: uv tool install --force --managed-python --python 3.12 <wheel>",
-        "इस Python के SQLite में FTS5 नहीं है (sqlite {versao}, त्रुटि: {erro})। "
+        "इस Python के SQLite में FTS5 नहीं है (sqlite {versao}, एरर: {erro})। "
         "uv द्वारा प्रबंधित Python के साथ फिर से इंस्टॉल करें: uv tool install --force --managed-python --python 3.12 <wheel>",
         "ל-SQLite של Python הזה אין FTS5 (sqlite {versao}, שגיאה: {erro}). "
         "התקינו מחדש עם Python שמנוהל על ידי uv: uv tool install --force --managed-python --python 3.12 <wheel>",
@@ -134,13 +134,13 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "aviso.config_invalido": _m(
         "Aviso: {caminho} inválido ({erro}). A ignorar.",
         "Warning: {caminho} is invalid ({erro}). Ignoring it.",
-        "चेतावनी: {caminho} अमान्य है ({erro})। इसे अनदेखा किया जा रहा है।",
+        "वॉर्निंग: {caminho} इनवैलिड है ({erro})। इसे इग्नोर कर रहे हैं।",
         "אזהרה: {caminho} לא תקין ({erro}). מתעלמים ממנו.",
     ),
     "aviso.memoria_ignorada": _m(
         "Aviso: memória ignorada: {erro}",
         "Warning: memory skipped: {erro}",
-        "चेतावनी: मेमोरी छोड़ दी गई: {erro}",
+        "वॉर्निंग: मेमोरी स्किप की गई: {erro}",
         "אזהרה: זיכרון דולג: {erro}",
     ),
     # -------------------------------------------------------------------- CLI
@@ -172,7 +172,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "cli.add.titulo": _m(
         "título curto (por omissão, a primeira linha do texto)",
         "short title (by default, the first line of the text)",
-        "छोटा शीर्षक (डिफ़ॉल्ट रूप से, टेक्स्ट की पहली पंक्ति)",
+        "छोटा टाइटल (डिफ़ॉल्ट रूप से, टेक्स्ट की पहली लाइन)",
         "כותרת קצרה (כברירת מחדל, השורה הראשונה של הטקסט)",
     ),
     "cli.add.projeto": _m("nome do projeto", "project name", "प्रोजेक्ट का नाम", "שם הפרויקט"),
@@ -186,7 +186,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "chave do ticket, ex.: ABC-123 ou dono/repo#12",
         "ticket key, e.g. ABC-123 or owner/repo#12",
         "टिकट की key, जैसे ABC-123 या owner/repo#12",
-        "מפתח הכרטיס, למשל ABC-123 או owner/repo#12",
+        "מפתח הטיקט, למשל ABC-123 או owner/repo#12",
     ),
     "cli.add.epico": _m(
         "chave do épico ou do pai, ex.: ABC-100",
@@ -194,7 +194,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "एपिक या पैरेंट की key, जैसे ABC-100",
         "מפתח האפיק או ההורה, למשל ABC-100",
     ),
-    "cli.add.url": _m("ligação para o ticket ou PR", "link to the ticket or PR", "टिकट या PR का लिंक", "קישור לכרטיס או ל-PR"),
+    "cli.add.url": _m("ligação para o ticket ou PR", "link to the ticket or PR", "टिकट या PR का लिंक", "קישור לטיקט או ל-PR"),
     "cli.add.etiqueta": _m(
         "palavra para pesquisa (pode repetir)",
         "search word (can be repeated)",
@@ -221,17 +221,17 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "Markdown फ़ाइलों से इंडेक्स फिर से बनाएँ",
         "לבנות מחדש את האינדקס מקובצי ה-Markdown",
     ),
-    "cli.update": _m("instalar a versão mais recente", "install the latest version", "नवीनतम संस्करण इंस्टॉल करें", "להתקין את הגרסה האחרונה"),
+    "cli.update": _m("instalar a versão mais recente", "install the latest version", "लेटेस्ट वर्ज़न इंस्टॉल करें", "להתקין את הגרסה האחרונה"),
     "cli.update.verificar": _m(
         "só mostrar se há versão nova",
         "only show whether there is a new version",
-        "केवल दिखाएँ कि नया संस्करण है या नहीं",
+        "सिर्फ़ दिखाएँ कि नया वर्ज़न है या नहीं",
         "רק להציג אם יש גרסה חדשה",
     ),
     "cli.update.forcar": _m(
         "reinstalar mesmo que seja a mesma versão",
         "reinstall even if it is the same version",
-        "वही संस्करण होने पर भी फिर से इंस्टॉल करें",
+        "वही वर्ज़न होने पर भी फिर से इंस्टॉल करें",
         "להתקין מחדש גם אם זו אותה גרסה",
     ),
     "cli.update.versao": _m(
@@ -269,28 +269,28 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "cli.ignorados": _m(
         "Aviso: {n} ficheiro(s) ignorado(s) (ver acima).",
         "Warning: {n} file(s) skipped (see above).",
-        "चेतावनी: {n} फ़ाइल छोड़ी गई (ऊपर देखें)।",
+        "वॉर्निंग: {n} फ़ाइल स्किप हुईं (ऊपर देखें)।",
         "אזהרה: {n} קבצים דולגו (ראו למעלה).",
     ),
     "cli.redigidos": _m(
         "Aviso: {n} segredo(s) redigido(s).",
         "Warning: {n} secret(s) redacted.",
-        "चेतावनी: {n} सीक्रेट छिपाए गए।",
+        "वॉर्निंग: {n} secrets मास्क किए गए।",
         "אזהרה: {n} סודות הוסתרו.",
     ),
     # --------------------------------------------------------------- selftest
     "st.ok": _m("OK", "OK", "OK", "OK"),
-    "st.falhou": _m("FALHOU", "FAILED", "विफल", "נכשל"),
+    "st.falhou": _m("FALHOU", "FAILED", "फ़ेल", "נכשל"),
     "st.sqlite": _m(
         "SQLite {versao} com FTS5",
         "SQLite {versao} with FTS5",
         "FTS5 के साथ SQLite {versao}",
         "SQLite {versao} עם FTS5",
     ),
-    "st.redacao": _m("Redação de segredos", "Secret redaction", "सीक्रेट छिपाना", "הסתרת סודות"),
-    "st.fts": _m("Pesquisa FTS5", "FTS5 search", "FTS5 खोज", "חיפוש FTS5"),
-    "st.arestas": _m("Arestas e relacionadas", "Edges and related memories", "किनारे और संबंधित मेमोरी", "קשתות וזיכרונות קשורים"),
-    "st.chave": _m("Pesquisa por tarefa e épico", "Search by task and epic", "टास्क और एपिक से खोज", "חיפוש לפי משימה ואפיק"),
+    "st.redacao": _m("Redação de segredos", "Secret redaction", "Secrets मास्क करना", "הסתרת סודות"),
+    "st.fts": _m("Pesquisa FTS5", "FTS5 search", "FTS5 सर्च", "חיפוש FTS5"),
+    "st.arestas": _m("Arestas e relacionadas", "Edges and related memories", "एजेस और रिलेटेड मेमोरी", "קשתות וזיכרונות קשורים"),
+    "st.chave": _m("Pesquisa por tarefa e épico", "Search by task and epic", "टास्क और एपिक से सर्च", "חיפוש לפי משימה ואפיק"),
     "st.reindex": _m("Reindex a partir do Markdown", "Reindex from Markdown", "Markdown से रीइंडेक्स", "בניית אינדקס מחדש מ-Markdown"),
     "st.mcp": _m("Servidor MCP (3 ferramentas)", "MCP server (3 tools)", "MCP सर्वर (3 टूल)", "שרת MCP (3 כלים)"),
     "st.basicas": _m("Operações básicas: {erro}", "Basic operations: {erro}", "बुनियादी काम: {erro}", "פעולות בסיסיות: {erro}"),
@@ -313,7 +313,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "st.portatil": _m(
         "Versão portátil {plataforma}: {raiz}",
         "Portable version {plataforma}: {raiz}",
-        "पोर्टेबल संस्करण {plataforma}: {raiz}",
+        "पोर्टेबल वर्ज़न {plataforma}: {raiz}",
         "גרסה ניידת {plataforma}: {raiz}",
     ),
     "st.lingua": _m(
@@ -352,7 +352,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "jan.selftest_sem_janela": _m(
         "selftest --gui: FALHOU. Janela nativa indisponível: {motivo}",
         "selftest --gui: FAILED. Native window unavailable: {motivo}",
-        "selftest --gui: विफल। नेटिव विंडो उपलब्ध नहीं: {motivo}",
+        "selftest --gui: फ़ेल। नेटिव विंडो उपलब्ध नहीं: {motivo}",
         "selftest --gui: נכשל. החלון המקורי אינו זמין: {motivo}",
     ),
     "jan.sem_janela_browser": _m(
@@ -370,13 +370,13 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "jan.sem_resposta": _m(
         "selftest --gui: FALHOU. A interface não respondeu em {s} s.",
         "selftest --gui: FAILED. The interface did not respond within {s} s.",
-        "selftest --gui: विफल। इंटरफ़ेस ने {s} s में जवाब नहीं दिया।",
+        "selftest --gui: फ़ेल। इंटरफ़ेस ने {s} s में जवाब नहीं दिया।",
         "selftest --gui: נכשל. הממשק לא הגיב תוך {s} שניות.",
     ),
     "jan.erro_ui": _m(
         "selftest --gui: FALHOU. Erro na interface: {erro}",
         "selftest --gui: FAILED. Interface error: {erro}",
-        "selftest --gui: विफल। इंटरफ़ेस में त्रुटि: {erro}",
+        "selftest --gui: फ़ेल। इंटरफ़ेस में एरर: {erro}",
         "selftest --gui: נכשל. שגיאה בממשק: {erro}",
     ),
     "jan.ok": _m(
@@ -404,7 +404,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "jan.winforms": _m(
         "WinForms/pythonnet falhou: {erro}",
         "WinForms/pythonnet failed: {erro}",
-        "WinForms/pythonnet विफल: {erro}",
+        "WinForms/pythonnet फ़ेल: {erro}",
         "WinForms/pythonnet נכשל: {erro}",
     ),
     "jan.nao_arrancou": _m(
@@ -440,7 +440,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "jan.browser_falhou": _m(
         "selftest: FALHOU no browser.",
         "selftest: FAILED in the browser.",
-        "selftest: ब्राउज़र में विफल।",
+        "selftest: ब्राउज़र में फ़ेल।",
         "selftest: נכשל בדפדפן.",
     ),
     # --------------------------------------------------- página sem sessão
@@ -461,7 +461,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.sem_git": _m(
         "O git não está instalado. É preciso para descobrir as versões.",
         "git is not installed. It is needed to find the versions.",
-        "git इंस्टॉल नहीं है। संस्करण खोजने के लिए इसकी ज़रूरत है।",
+        "git इंस्टॉल नहीं है। वर्ज़न खोजने के लिए इसकी ज़रूरत है।",
         "git אינו מותקן. הוא נדרש כדי למצוא את הגרסאות.",
     ),
     "up.sem_clt": _m(
@@ -479,13 +479,13 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.ls_remote": _m(
         "git ls-remote falhou: {erro}",
         "git ls-remote failed: {erro}",
-        "git ls-remote विफल: {erro}",
+        "git ls-remote फ़ेल: {erro}",
         "git ls-remote נכשל: {erro}",
     ),
     "up.download_falhou": _m(
         "O download falhou ({codigo}): {url}",
         "Download failed ({codigo}): {url}",
-        "डाउनलोड विफल ({codigo}): {url}",
+        "डाउनलोड फ़ेल ({codigo}): {url}",
         "ההורדה נכשלה ({codigo}): {url}",
     ),
     "up.sem_ligacao": _m(
@@ -497,7 +497,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.sem_credenciais": _m(
         "Download recusado e não há credenciais: {url}",
         "Download refused and there are no credentials: {url}",
-        "डाउनलोड अस्वीकार हुआ और कोई क्रेडेंशियल नहीं है: {url}",
+        "डाउनलोड रिजेक्ट हुआ और कोई क्रेडेंशियल नहीं है: {url}",
         "ההורדה נדחתה ואין פרטי גישה: {url}",
     ),
     "up.sem_uv": _m(
@@ -515,26 +515,26 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.sem_versoes": _m(
         "Não encontrei nenhuma versão (tags vX.Y.Z) no repositório.",
         "No version (vX.Y.Z tags) was found in the repository.",
-        "रिपॉज़िटरी में कोई संस्करण (vX.Y.Z टैग) नहीं मिला।",
+        "रिपॉज़िटरी में कोई वर्ज़न (vX.Y.Z टैग) नहीं मिला।",
         "לא נמצאה אף גרסה (תגי vX.Y.Z) במאגר.",
     ),
-    "up.versao_invalida": _m("Versão inválida: {tag}", "Invalid version: {tag}", "अमान्य संस्करण: {tag}", "גרסה לא תקינה: {tag}"),
+    "up.versao_invalida": _m("Versão inválida: {tag}", "Invalid version: {tag}", "इनवैलिड वर्ज़न: {tag}", "גרסה לא תקינה: {tag}"),
     "up.versoes": _m(
         "Versão instalada: {atual}. Última: {ultima}.",
         "Installed version: {atual}. Latest: {ultima}.",
-        "इंस्टॉल संस्करण: {atual}। नवीनतम: {ultima}।",
+        "इंस्टॉल वर्ज़न: {atual}। लेटेस्ट: {ultima}।",
         "הגרסה המותקנת: {atual}. האחרונה: {ultima}.",
     ),
     "up.ja_recente": _m(
         "Já tens a versão mais recente.",
         "You already have the latest version.",
-        "आपके पास पहले से नवीनतम संस्करण है।",
+        "आपके पास पहले से लेटेस्ट वर्ज़न है।",
         "הגרסה האחרונה כבר מותקנת.",
     ),
     "up.falta_soma": _m(
         "{nome} não está no SHA256SUMS da versão {tag}.",
         "{nome} is not in the SHA256SUMS of version {tag}.",
-        "{nome} संस्करण {tag} की SHA256SUMS में नहीं है।",
+        "{nome} वर्ज़न {tag} की SHA256SUMS में नहीं है।",
         "{nome} לא מופיע ב-SHA256SUMS של גרסה {tag}.",
     ),
     "up.a_descarregar": _m("A descarregar {nome}…", "Downloading {nome}…", "{nome} डाउनलोड हो रहा है…", "מוריד את {nome}…"),
@@ -548,7 +548,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.uv_falhou": _m(
         "uv tool install falhou (código {codigo}).",
         "uv tool install failed (code {codigo}).",
-        "uv tool install विफल (कोड {codigo})।",
+        "uv tool install फ़ेल (कोड {codigo})।",
         "uv tool install נכשל (קוד {codigo}).",
     ),
     "up.atualizado": _m(
@@ -560,7 +560,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "up.reindex_falhou": _m(
         "Aviso: o reindex falhou. Corre `memoria reindex` à mão.",
         "Warning: the reindex failed. Run `memoria reindex` yourself.",
-        "चेतावनी: reindex विफल। `memoria reindex` खुद चलाएँ।",
+        "वॉर्निंग: reindex फ़ेल। `memoria reindex` खुद चलाएँ।",
         "אזהרה: בניית האינדקס נכשלה. הריצו `memoria reindex` ידנית.",
     ),
     "up.nova_janela": _m(
@@ -573,10 +573,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "ps.a_instalar": _m(
         "A instalar a nova versão da Memória...",
         "Installing the new version of Memória...",
-        "Memória का नया संस्करण इंस्टॉल हो रहा है...",
+        "Memória का नया वर्ज़न इंस्टॉल हो रहा है...",
         "מתקין את הגרסה החדשה של Memória...",
     ),
-    "ps.uv_falhou": _m("uv tool install falhou.", "uv tool install failed.", "uv tool install विफल।", "uv tool install נכשל."),
+    "ps.uv_falhou": _m("uv tool install falhou.", "uv tool install failed.", "uv tool install फ़ेल।", "uv tool install נכשל."),
     "ps.enter": _m("Enter para fechar", "Press Enter to close", "बंद करने के लिए Enter दबाएँ", "Enter לסגירה"),
     "ps.atualizada": _m(
         "Memória atualizada. As memórias não foram tocadas.",
@@ -600,7 +600,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "pt.selftest_falhou": _m(
         "A versão {versao} falhou o selftest. Nada foi alterado.",
         "Version {versao} failed the selftest. Nothing was changed.",
-        "संस्करण {versao} selftest में विफल रहा। कुछ भी नहीं बदला।",
+        "वर्ज़न {versao} selftest में फ़ेल रहा। कुछ भी नहीं बदला।",
         "גרסה {versao} נכשלה ב-selftest. שום דבר לא שונה.",
     ),
     "pt.copia_temporaria": _m(
@@ -624,10 +624,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "pt.plataforma": _m(
         "{nome} não tem a versão portátil esperada ({plataforma}). Nada foi alterado.",
         "{nome} does not contain the expected portable version ({plataforma}). Nothing was changed.",
-        "{nome} में अपेक्षित पोर्टेबल संस्करण ({plataforma}) नहीं है। कुछ भी नहीं बदला।",
+        "{nome} में अपेक्षित पोर्टेबल वर्ज़न ({plataforma}) नहीं है। कुछ भी नहीं बदला।",
         "{nome} אינו מכיל את הגרסה הניידת הצפויה ({plataforma}). שום דבר לא שונה.",
     ),
-    "pt.a_verificar": _m("A verificar a nova versão…", "Checking the new version…", "नए संस्करण की जाँच हो रही है…", "בודק את הגרסה החדשה…"),
+    "pt.a_verificar": _m("A verificar a nova versão…", "Checking the new version…", "नए वर्ज़न की चेक हो रहा है…", "בודק את הגרסה החדשה…"),
     "pt.atualizado": _m(
         "Atualizado para {versao} em {pasta}. As memórias não foram tocadas.",
         "Updated to {versao} in {pasta}. Your memories were not touched.",

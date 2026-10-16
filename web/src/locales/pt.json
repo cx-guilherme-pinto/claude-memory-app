@@ -1,9 +1,18 @@
 {
   "app.a_abrir": "A abrir as memórias…",
   "app.resumo": "{memorias} em {projetos}.",
-  "plural.memorias": { "one": "{n} memória", "other": "{n} memórias" },
-  "plural.projetos": { "one": "{n} projeto", "other": "{n} projetos" },
-  "plural.nos_destacados": { "one": "{n} nó destacado no mapa", "other": "{n} nós destacados no mapa" },
+  "plural.memorias": {
+    "one": "{n} memória",
+    "other": "{n} memórias"
+  },
+  "plural.projetos": {
+    "one": "{n} projeto",
+    "other": "{n} projetos"
+  },
+  "plural.nos_destacados": {
+    "one": "{n} nó destacado no mapa",
+    "other": "{n} nós destacados no mapa"
+  },
   "lingua.rotulo": "Língua",
   "periodo.grupo": "Período",
   "periodo.tudo.curto": "Tudo",
@@ -34,13 +43,19 @@
   "tempo.ver_crescer_aria": "Ver as memórias a crescer",
   "tempo.linha": "Linha temporal",
   "guardada": "Memória guardada.",
-  "guardada_redigidos": { "one": "Memória guardada. {n} segredo redigido.", "other": "Memória guardada. {n} segredos redigidos." },
+  "guardada_redigidos": {
+    "one": "Memória guardada. {n} segredo redigido.",
+    "other": "Memória guardada. {n} segredos redigidos."
+  },
   "painel.detalhes": "Detalhes",
   "painel.fechar": "Fechar",
   "painel.fechar_esc": "Fechar (Esc)",
   "painel.ligacao_sem_memoria": "Ligação sem memória: {nome}",
   "painel.guardada": "Guardada.",
-  "painel.guardada_redigidos": { "one": "Guardada. {n} segredo redigido.", "other": "Guardada. {n} segredos redigidos." },
+  "painel.guardada_redigidos": {
+    "one": "Guardada. {n} segredo redigido.",
+    "other": "Guardada. {n} segredos redigidos."
+  },
   "painel.ficheiros": "Ficheiros",
   "painel.relacionadas": "Relacionadas",
   "painel.memorias": "Memórias ({n})",
@@ -91,5 +106,29 @@
   "motivo.tarefa": "mesma tarefa",
   "motivo.epico": "mesmo épico",
   "motivo.projeto": "mesmo projeto",
-  "motivo.ficheiro": "ficheiro partilhado"
+  "motivo.ficheiro": "ficheiro partilhado",
+  "vista.grupo": "Vista",
+  "vista.mapa": "Mapa",
+  "vista.atividade": "Atividade do Claude",
+  "atividade.titulo": "O que o Claude chamou pelo MCP",
+  "atividade.atualiza": "Atualiza sozinha.",
+  "atividade.atualizado": "Atualiza sozinha. Última chamada: {quando}.",
+  "atividade.hoje": "Chamadas hoje",
+  "atividade.total": "Chamadas no total",
+  "atividade.por_minuto": "Chamadas por minuto",
+  "atividade.por_minuto_nota": "média dos últimos 10 min",
+  "atividade.distintas": "Memórias recordadas",
+  "atividade.distintas_nota": "sem repetir",
+  "atividade.lista": "Últimas {n} memórias recordadas",
+  "atividade.col.hora": "Hora",
+  "atividade.col.ferramenta": "Ferramenta",
+  "atividade.col.memoria": "Memória",
+  "atividade.sem_resultados": "Sem resultados",
+  "atividade.pesquisa": "Pesquisa: {texto}",
+  "atividade.abrir": "Abrir a memória",
+  "atividade.vazio_titulo": "O Claude ainda não usou a Memória.",
+  "atividade.vazio_texto": "Quando o Claude Code chamar as ferramentas MCP, as chamadas aparecem aqui.",
+  "ferramenta.memoria_procurar": "Procurou",
+  "ferramenta.memoria_relacionadas": "Relacionadas",
+  "ferramenta.memoria_adicionar": "Guardou"
 }

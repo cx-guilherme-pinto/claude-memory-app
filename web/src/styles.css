@@ -572,9 +572,10 @@ textarea.campo { min-height: 140px; resize: vertical; line-height: 1.5; }
 
 .cabeca-topo {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
 }
 .seletor-lingua {
   width: auto;
@@ -583,4 +584,59 @@ textarea.campo { min-height: 140px; resize: vertical; line-height: 1.5; }
 }
 /* Conteúdo das notas (pode estar noutra língua): cada parágrafo segue a sua própria direção. */
 .markdown :is(p, li, h1, h2, h3, h4, blockquote, td, th) { unicode-bidi: plaintext; text-align: start; }
+
+/* ------------------------------------------------------- atividade do Claude
+ * Cobre a área do mapa (o grafo fica montado por baixo e não perde as posições).
+ * Quatro números em blocos de tom e um registo simples, sem gráficos.
+ */
+.segmentos-vista { grid-template-columns: 1fr 1fr; }
+.atividade {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--bg);
+  overflow-y: auto;
+  padding: 22px clamp(16px, 3vw, 40px) 32px;
+  animation: aparecer 160ms var(--ease) both;
+}
+.atividade-cabeca h2 { font-size: var(--t-titulo); font-weight: 650; margin: 0; }
+.atividade-cabeca p { margin: 4px 0 0; }
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 20px 0 28px;
+}
+.numero {
+  background: var(--surface);
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.numero-valor { font-size: var(--t-display); font-weight: 700; line-height: 1; }
+.numero-rotulo { font-weight: 600; }
+.numero-nota { color: var(--muted); font-size: var(--t-pequeno); }
+.atividade-lista-titulo { font-size: var(--t-base); font-weight: 650; margin: 0 0 8px; }
+.registo { display: grid; font-size: var(--t-pequeno); }
+.registo-linha {
+  display: grid;
+  grid-template-columns: 9ch 12ch minmax(0, 2.4fr) minmax(0, 1fr) 11ch;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 8px;
+}
+.registo-linha:nth-child(even) { background: var(--surface); }
+.registo-cabeca { color: var(--muted); font-weight: 600; background: transparent !important; padding-bottom: 4px; }
+.registo-linha > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.registo-linha > .registo-memoria { white-space: normal; }
+.registo-memoria { display: grid; gap: 1px; }
+.registo-memoria .ligacao-texto { font-size: var(--t-base); }
+.registo-pesquisa { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atividade-vazio { padding: 24px 0; color: var(--muted); max-width: 52ch; }
+.atividade-vazio .vazio-titulo { color: var(--ink); }
+@media (max-width: 900px) {
+  .registo-linha { grid-template-columns: 8ch minmax(0, 1fr); }
+  .registo-linha > span:nth-child(2), .registo-linha > span:nth-child(4), .registo-linha > span:nth-child(5) { display: none; }
+}
 

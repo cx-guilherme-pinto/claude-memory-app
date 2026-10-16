@@ -17,13 +17,13 @@ Não precisa de permissões de administrador.
 **macOS** (Intel e Apple Silicon) e Linux, no Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.3.0/install.sh | sh
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.sh | sh
 ```
 
 **Windows 10/11**, no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.3.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -98,6 +98,21 @@ No Windows, se o WebView2 faltar, a interface abre no browser, em `127.0.0.1`.
 O terminal mostra o endereço da sessão (`http://127.0.0.1:<porta>/?t=<chave>`).
 A chave é local e só vale enquanto a app está aberta.
 
+## Atividade do Claude
+
+O botão **Atividade do Claude**, no topo da coluna, mostra o que o Claude pediu à Memória pelo MCP:
+
+- quatro números: chamadas hoje, chamadas no total, chamadas por minuto (média dos últimos 10 minutos)
+  e memórias recordadas (sem repetir);
+- as últimas 100 memórias recordadas, com a hora, a ferramenta, o título, o projeto e a tarefa.
+  Uma pesquisa sem resultados também aparece, com o texto procurado. Clica no título para abrir a memória.
+
+A vista atualiza-se sozinha. Não separa por sessão.
+
+O registo fica em `~/.memoria/.indice/registo.sqlite`, no teu computador, separado do índice
+(o `memoria reindex` não o apaga). O texto pesquisado passa pela mesma redação de segredos e é cortado.
+Nunca guarda o conteúdo das notas. As linhas mais antigas saem sozinhas; o total de chamadas mantém-se.
+
 ## Línguas
 
 A app fala português, inglês, hindi e hebraico. Por omissão, segue a língua do sistema:
@@ -124,6 +139,8 @@ Em `~/.memoria` (ou na pasta indicada por `MEMORIA_HOME`):
   <projeto>/<AAAA-MM-DD>-<slug>.md   uma nota por ficheiro
   config.json                        URLs de atualização (opcional)
   .indice/memoria-v2.sqlite          índice; pode ser apagado
+  .indice/registo.sqlite             registo das chamadas MCP (vista "Atividade do Claude")
+  preferencias.json                  língua escolhida no seletor
 ```
 
 Cada nota tem um cabeçalho YAML:

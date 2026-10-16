@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { chamar, manterVivo, ponteEmUso } from './api.js';
+import Atividade from './Atividade.jsx';
 import NovaMemoria from './NovaMemoria.jsx';
 import Procura from './Procura.jsx';
 import { LINGUAS, aplicarLingua, lingua, t, tx } from './i18n.jsx';
@@ -81,6 +82,8 @@ export default function App() {
   const [novaAberta, setNovaAberta] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [aviso, setAviso] = useState(null);
+  // 'mapa' ou 'atividade' (o que o Claude chamou pelo MCP).
+  const [vista, setVista] = useState('mapa');
 
   // ------------------------------------------------------------ carregar
   const carregar = useCallback(async () => {
@@ -307,6 +310,7 @@ export default function App() {
   // -------------------------------------------------------------- ações
   const focar = useCallback((no) => {
     if (!no) return;
+    setVista('mapa');
     setSelecionado(no.id);
     const centrar = (tentativas) => {
       const fg = grafoRef.current;
@@ -493,6 +497,14 @@ export default function App() {
           </p>
         </header>
 
+        <div className="segmentos segmentos-vista" role="group" aria-label={t('vista.grupo')}>
+          {['mapa', 'atividade'].map((v) => (
+            <button key={v} type="button" aria-pressed={vista === v} onClick={() => setVista(v)}>
+              {t(`vista.${v}`)}
+            </button>
+          ))}
+        </div>
+
         <Procura entradaRef={procuraRef} texto={texto} onTexto={setTexto} grupos={grupos} onEscolher={abrirRef} />
         {resultados && (
           <p className="contagem pequeno num" aria-live="polite">
@@ -661,6 +673,15 @@ export default function App() {
             </Suspense>
           )}
         </div>
+
+        {vista === 'atividade' && (
+          <Atividade
+            onAbrir={(id) => {
+              setVista('mapa');
+              abrirRef(id);
+            }}
+          />
+        )}
 
         {dados && memoriasOrdenadas.length > 1 && (
           <div className="tempo">

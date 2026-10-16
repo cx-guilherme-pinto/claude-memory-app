@@ -153,6 +153,8 @@ def test_chaves_web_usadas_existem():
         usadas |= set(re.findall(r"""\btx?\(\s*'([\w.]+)'""", f.read_text("utf-8")))
     dinamicas = {f"tipo.{t}" for t in ("licao", "fazer", "nao_fazer", "historico", "projeto", "epico", "tarefa", "ficheiro")}
     dinamicas |= {f"motivo.{m}" for m in ("ligacao", "tarefa", "epico", "projeto", "ficheiro")}
+    dinamicas |= {"vista.mapa", "vista.atividade"}
+    dinamicas |= {f"ferramenta.memoria_{f}" for f in ("procurar", "relacionadas", "adicionar")}
     periodos = ("tudo", "7", "30", "90", "365")
     dinamicas |= {f"periodo.{p}" for p in periodos} | {f"periodo.{p}.curto" for p in periodos}
     assert usadas, "nenhuma chave encontrada"
@@ -163,7 +165,7 @@ def test_chaves_web_usadas_existem():
 # ---------------------------------------------------------- mensagens na CLI
 @pytest.mark.parametrize(
     "lingua,trecho",
-    [("pt", "Tipo inválido"), ("en", "Invalid type"), ("hi", "अमान्य प्रकार"), ("he", "סוג לא תקין")],
+    [("pt", "Tipo inválido"), ("en", "Invalid type"), ("hi", "इनवैलिड टाइप"), ("he", "סוג לא תקין")],
 )
 def test_erros_na_lingua(monkeypatch, capsys, lingua, trecho):
     monkeypatch.setenv("MEMORIA_LANG", lingua)

@@ -2,6 +2,21 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [0.4.0] - 2026-10-16
+
+### Adicionado
+
+- Vista **Atividade do Claude**: o que o Claude chamou pelo MCP. Quatro números (chamadas hoje, no total,
+  por minuto e memórias recordadas sem repetir) e as últimas 100 memórias recordadas, com hora, ferramenta,
+  título, projeto e tarefa. Clicar abre a memória no mapa. Atualiza-se sozinha.
+- Registo local das chamadas MCP em `$MEMORIA_HOME/.indice/registo.sqlite`, com limite.
+  O texto pesquisado é redigido e cortado; o conteúdo das notas nunca é guardado. O `reindex` não o apaga.
+
+### Alterado
+
+- Hindi e hebraico revistos para o registo de quem programa: termos técnicos em inglês
+  (tokens, MCP, ticket, versão, etc.), como se diz no dia a dia.
+
 ## [0.3.0] - 2026-10-16
 
 ### Adicionado
