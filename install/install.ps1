@@ -16,12 +16,12 @@
 # Este ficheiro tem de ser so ASCII (o PowerShell 5.1 le ficheiros sem BOM como ANSI).
 
 # >>> config: gerado a partir de release.conf por scripts/render_installers.py. Nao editar a mao.
-$MemoryAppRepoUrl = 'https://gitea.guilhermepinto.pt/guilherme/claude-memory-app.git'
-$MemoryAppVersion = 'v0.4.0'
+$MemoryAppRepoUrl = 'https://github.com/cx-guilherme-pinto/claude-memory-app.git'
+$MemoryAppVersion = 'v0.4.1'
 $ReleaseDownloadUrl = '{repo}/releases/download/{version}/{file}'
 $UvVersion = '0.13.1'
 $PythonVersion = '3.12'
-$BuildVersion = 'v0.4.0'
+$BuildVersion = 'v0.4.1'
 $WheelSha256 = ''
 # <<< config
 

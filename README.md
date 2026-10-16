@@ -20,13 +20,13 @@ No administrator rights needed.
 **macOS** (Intel and Apple Silicon) and Linux, in Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.sh | sh
+curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.sh | sh
 ```
 
 **Windows 10/11**, in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 

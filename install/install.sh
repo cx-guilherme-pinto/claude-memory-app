@@ -15,12 +15,12 @@
 set -eu
 
 # >>> config: gerado a partir de release.conf por scripts/render_installers.py. Não editar à mão.
-[ -n "${MEMORY_APP_REPO_URL:-}" ] || MEMORY_APP_REPO_URL='https://gitea.guilhermepinto.pt/guilherme/claude-memory-app.git'
-[ -n "${MEMORY_APP_VERSION:-}" ] || MEMORY_APP_VERSION='v0.4.0'
+[ -n "${MEMORY_APP_REPO_URL:-}" ] || MEMORY_APP_REPO_URL='https://github.com/cx-guilherme-pinto/claude-memory-app.git'
+[ -n "${MEMORY_APP_VERSION:-}" ] || MEMORY_APP_VERSION='v0.4.1'
 [ -n "${RELEASE_DOWNLOAD_URL:-}" ] || RELEASE_DOWNLOAD_URL='{repo}/releases/download/{version}/{file}'
 [ -n "${UV_VERSION:-}" ] || UV_VERSION='0.13.1'
 [ -n "${PYTHON_VERSION:-}" ] || PYTHON_VERSION='3.12'
-BUILD_VERSION='v0.4.0'
+BUILD_VERSION='v0.4.1'
 WHEEL_SHA256=''
 # <<< config
 

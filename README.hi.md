@@ -20,13 +20,13 @@ Admin rights की ज़रूरत नहीं।
 **macOS** (Intel और Apple Silicon) और Linux, Terminal में:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.sh | sh
+curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.sh | sh
 ```
 
 **Windows 10/11**, PowerShell में:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 

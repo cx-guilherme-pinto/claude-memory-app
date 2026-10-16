@@ -4,6 +4,12 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [0.4.1] - 2026-10-16
+
+### Alterado
+
+- Publicação em github.com.
+
 ## [0.4.0] - 2026-10-16
 
 ### Adicionado

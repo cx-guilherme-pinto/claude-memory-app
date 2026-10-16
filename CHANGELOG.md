@@ -4,6 +4,12 @@
 
 All notable changes are listed here. Versions follow [SemVer](https://semver.org/).
 
+## [0.4.1] - 2026-10-16
+
+### Changed
+
+- Published on github.com.
+
 ## [0.4.0] - 2026-10-16
 
 ### Added

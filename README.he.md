@@ -20,13 +20,13 @@ Memória שומרת את מה ש-Claude Code לומד בקובצי Markdown, ב�
 **macOS** (Intel ו-Apple Silicon) ו-Linux, ב-Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.sh | sh
+curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.sh | sh
 ```
 
 **Windows 10/11**, ב-PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.4.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
