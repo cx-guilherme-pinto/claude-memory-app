@@ -17,13 +17,13 @@ Não precisa de permissões de administrador.
 **macOS** (Intel e Apple Silicon) e Linux, no Terminal:
 
 ```bash
-curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.3/install.sh | sh
+curl -fsSL https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.3.0/install.sh | sh
 ```
 
 **Windows 10/11**, no PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.2.3/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://gitea.guilhermepinto.pt/guilherme/claude-memory-app/releases/download/v0.3.0/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -86,6 +86,7 @@ Ferramentas MCP:
 | `memoria reindex` | Reconstrói o índice a partir dos Markdown. |
 | `memoria update` | Instala a versão mais recente. |
 | `memoria selftest [--gui]` | Verifica a instalação. Com `--gui`, abre e fecha a janela. |
+| `memoria lingua [pt\|en\|hi\|he]` | Mostra ou escolhe a língua. |
 | `memoria mcp` | Servidor MCP (usado pelo Claude Code). |
 
 Na janela, clica num nó para ver a nota. Usa `/` para procurar e `Esc` para fechar.
@@ -96,6 +97,23 @@ O botão de reprodução da linha temporal mostra o grafo a crescer.
 No Windows, se o WebView2 faltar, a interface abre no browser, em `127.0.0.1`.
 O terminal mostra o endereço da sessão (`http://127.0.0.1:<porta>/?t=<chave>`).
 A chave é local e só vale enquanto a app está aberta.
+
+## Línguas
+
+A app fala português, inglês, hindi e hebraico. Por omissão, segue a língua do sistema:
+
+- **macOS:** a primeira língua suportada em Definições › Geral › Idioma e região;
+- **Windows:** a língua da interface do Windows;
+- **outros:** `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` ou `LANG`.
+
+Se nenhuma for suportada, usa inglês.
+O seletor no topo da coluna muda a língua na hora e guarda a escolha em `~/.memoria/preferencias.json`.
+Na linha de comandos: `memoria lingua he`. A variável `MEMORIA_LANG` sobrepõe-se a tudo.
+
+- O hebraico abre da direita para a esquerda. O texto de cada nota segue a sua própria direção.
+- O hindi e o hebraico usam Noto Sans Devanagari e Noto Sans Hebrew, incluídas na app.
+- As descrições das ferramentas MCP ficam em inglês, porque são lidas pelo modelo.
+  O Claude responde na língua do participante.
 
 ## Onde ficam as memórias
 
@@ -208,5 +226,5 @@ As versões seguem [SemVer](https://semver.org/lang/pt-PT/). Ver o [CHANGELOG](C
 ## Licença
 
 MIT. Ver [LICENSE](LICENSE).
-A letra Bricolage Grotesque vai incluída na interface com a licença SIL OFL 1.1
-(`web/public/fonts/OFL.txt`).
+As letras Bricolage Grotesque, Noto Sans Devanagari e Noto Sans Hebrew vão incluídas na interface
+com a licença SIL OFL 1.1 (`web/public/fonts/`).

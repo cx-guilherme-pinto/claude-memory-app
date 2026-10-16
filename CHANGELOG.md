@@ -2,6 +2,24 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [0.3.0] - 2026-10-16
+
+### Adicionado
+
+- Línguas: português, inglês, hindi e hebraico. A app segue a língua do sistema
+  (macOS: AppleLanguages; Windows: língua da interface; reserva: inglês).
+- Seletor de línguas no topo da coluna; a escolha fica em `$MEMORIA_HOME/preferencias.json`.
+  `memoria lingua [pt|en|hi|he]` faz o mesmo na linha de comandos. `MEMORIA_LANG` sobrepõe-se.
+- Hebraico da direita para a esquerda; o conteúdo de cada nota segue a sua própria direção.
+- Noto Sans Devanagari e Noto Sans Hebrew (OFL), locais, para o hindi e o hebraico.
+- Mensagens da linha de comandos, do selftest, do update e dos erros nas quatro línguas.
+
+### Alterado
+
+- As descrições das ferramentas MCP e as instruções do servidor passam a inglês
+  (são lidas pelo modelo). Os nomes das ferramentas e dos parâmetros não mudam.
+- O texto do selftest segue a língua da app. O resultado continua no código de saída.
+
 ## [0.2.3] - 2026-10-16
 
 ### Adicionado
