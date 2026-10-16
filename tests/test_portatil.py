@@ -331,3 +331,30 @@ def test_lancador_macos():
         assert subprocess.run(["sh", "-n", str(lancador)]).returncode == 0
     plist = (MODELOS / "macos" / "Info.plist").read_text("utf-8")
     assert "<key>CFBundleExecutable</key><string>memoria</string>" in plist
+
+
+def test_sign_macos_sem_credenciais():
+    script = RAIZ / "scripts" / "sign-macos.sh"
+    texto = script.read_text("utf-8")
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    assert "--keychain-profile" in texto and "--options runtime" in texto and "stapler staple" in texto
+    # Nunca recebe nem guarda segredos: só o nome do perfil do Keychain.
+    for proibido in ("--password", "--apple-id", "app-specific", "set -x"):
+        assert proibido not in texto.replace("# ", "#").split("set -euo pipefail", 1)[1], proibido
+    # Não faz parte do build normal.
+    assert "sign-macos" not in (RAIZ / "scripts" / "build.sh").read_text("utf-8")
+
+
+@pytest.mark.skipif(sys.platform != "darwin" or not shutil.which("clang"), reason="só no Mac com clang")
+def test_lancador_compilado(tmp_path: Path):
+    exe = tmp_path / "Memoria.app" / "Contents" / "MacOS" / "memoria"
+    exe.parent.mkdir(parents=True)
+    r = subprocess.run(["clang", "-O2", "-Wall", "-Werror", "-o", str(exe), str(MODELOS / "macos" / "lancador.c")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    # Um "python3" falso que mostra os argumentos que recebeu.
+    python = tmp_path / "Memoria.app" / "Contents" / "Resources" / "python" / "bin" / "python3"
+    python.parent.mkdir(parents=True)
+    python.write_text('#!/bin/sh\nprintf "%s|" "$@"\n', "utf-8")
+    python.chmod(0o755)
+    saida = subprocess.run([str(exe), "selftest", "-psn_0_123", "--gui"], capture_output=True, text=True).stdout
+    assert saida == "-I|-B|-m|memoria|selftest|--gui|"

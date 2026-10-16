@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Exceções do hardened runtime para o Python embutido (só na versão assinada).
+  - allow-jit e allow-unsigned-executable-memory: o ctypes, o cffi e o pyobjc
+    criam pequenos pedaços de código em memória (callbacks do libffi).
+  - disable-library-validation: o Python carrega as extensões (.so) dos wheels.
+  São as mesmas que o PyInstaller e o Briefcase usam. A notarização aceita-as.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>

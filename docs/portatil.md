@@ -27,8 +27,10 @@ O caminho de instalação com o uv (`install.sh`, `install.ps1`, wheel) continua
    A alternativa (zip "embeddable" do python.org, assinado pela PSF) ficou parada no 3.12.10.
 4. **`memoria update` troca a pasta no mesmo sítio.** O caminho não muda,
    por isso a ligação ao Claude Code (MCP) continua válida.
-5. **Sem assinatura Apple por agora.** Pode juntar-se depois (Developer ID e notarização),
-   se quisermos que o download pelo browser funcione sem passos extra no Mac.
+5. **Sem assinatura Apple na release normal** (decisão do organizador: só se for mesmo preciso).
+   Pelo setup não é preciso: testado, um zip descarregado com `curl` não fica em quarentena
+   e a app abre sem perguntas. Há um script opcional para assinar e notarizar
+   (ver "Assinatura opcional").
 
 Opções postas de parte: PyInstaller e Briefcase (lançadores sem assinatura, mais falsos
 positivos dos antivírus; o Briefcase precisa de uma máquina Windows para o build).
@@ -113,6 +115,45 @@ há "Abrir" com o botão direito. Há duas saídas:
 Windows: o SmartScreen mostra "O Windows protegeu o computador".
 Clica em "Mais informações" e depois em "Executar mesmo assim".
 
+Nota para a página da release (está no CHANGELOG, que é o texto da release):
+"Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
+Definições do Sistema → Privacidade e Segurança."
+
+## Assinatura opcional (macOS)
+
+Só para quem descarrega pelo browser, AirDrop ou Mail, ou para empresas cujo EDR
+só aceita executáveis assinados. Não faz parte da release normal. Corre-a o organizador,
+no Mac dele, com o seu Developer ID. Nenhum script guarda credenciais.
+
+Uma vez, no Mac do organizador:
+
+1. Criar o certificado "Developer ID Application" (Xcode → Settings → Accounts →
+   Manage Certificates → +). Só o titular da conta o pode criar.
+2. Criar uma palavra-passe específica da app em account.apple.com.
+3. Guardar o perfil do notarytool no Keychain (pede a palavra-passe; não fica em ficheiros):
+
+   ```bash
+   xcrun notarytool store-credentials memoria-notary --apple-id <email> --team-id <TEAMID>
+   ```
+
+Em cada release, depois de `scripts/build.sh` e antes de `scripts/publish-release.sh`:
+
+```bash
+scripts/sign-macos.sh --identidade "Developer ID Application: <Nome> (<TEAMID>)" --perfil memoria-notary \
+  dist/Memoria-<versão>-macos-arm64.zip dist/Memoria-<versão>-macos-x86_64.zip
+```
+
+O script troca o lançador `sh` por um executável compilado (`portatil/macos/lancador.c`,
+arm64 e x86_64), assina cada Mach-O e a app com o hardened runtime e
+`portatil/macos/entitlements.plist`, notariza, agrafa o ticket, verifica com `spctl`,
+refaz os zips e atualiza o `SHA256SUMS`.
+Para testar sem conta Apple: `scripts/sign-macos.sh --adhoc --saida /tmp/teste <zip>`.
+
+Testado em modo `--adhoc` (macOS 26.6, Apple Silicon): `codesign --verify --deep --strict`
+passa depois de extrair com o `ditto` e com o extrator do `memoria update`; `selftest --gui`
+passa com o hardened runtime (o zip Intel também, no Rosetta); correr a app não estraga a assinatura.
+Por testar: a notarização e o `spctl` com um Developer ID verdadeiro.
+
 ## Verificado
 
 No Mac (Apple Silicon, macOS 26.6):
@@ -122,9 +163,9 @@ No Mac (Apple Silicon, macOS 26.6):
   `memoria selftest --gui` passa (janela pronta em menos de 1 s). Abre pelo Finder (`open`).
 - Nada é escrito dentro da app.
 - Zip Intel: `selftest` passa no Rosetta (sem janela).
-- Cópia com quarentena: o `ditto` e o `unzip` passam a quarentena do zip para a app.
-  A app não arranca. O macOS mostra o aviso do Gatekeeper (`spctl`: "rejected, no usable signature").
-  Depois de `xattr -dr com.apple.quarantine`, abre.
+- Cópia com quarentena (`0083;…;Google Chrome;…` e `0081;…;Safari;`): o `ditto` e o `unzip`
+  passam a quarentena do zip para a app. A app não arranca. O macOS mostra o aviso do
+  Gatekeeper (`spctl`: "rejected, no usable signature"). Depois de `xattr -dr com.apple.quarantine`, abre.
 - `memoria update` com um servidor local: descarrega, verifica o SHA-256, corre o `selftest`
   da versão nova, troca a pasta e reindexa. Testado também em `~/Applications` e com a app renomeada.
 - MCP por stdio através do lançador (`memoria mcp`): as três ferramentas respondem.

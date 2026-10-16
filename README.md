@@ -51,7 +51,8 @@ Extrai e abre. Não precisa de admin nem de rede. O setup do workshop faz isto s
 
 - Ligar ao Claude Code: `memoria selftest` mostra o comando `claude mcp add` certo.
   No Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; no Windows, `memoria.cmd selftest`.
-- Se o zip veio pelo browser, o Mac bloqueia a app (não tem assinatura).
+- Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
+  Definições do Sistema → Privacidade e Segurança: o Mac bloqueia a app (não tem assinatura).
   Desbloqueia no Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
   No Windows, em "O Windows protegeu o computador", clica em "Mais informações" e "Executar mesmo assim".
 - Depois de ligar ao Claude Code, não movas a app.

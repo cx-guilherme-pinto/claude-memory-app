@@ -10,6 +10,13 @@ Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https:/
   com o Python 3.12 e as dependências lá dentro. Extrai e abre, sem instalador nem admin.
 - `memoria update` na versão portátil: descarrega o zip, verifica o SHA-256, testa e troca a pasta no mesmo sítio.
 - `memoria selftest` na versão portátil mostra o comando `claude mcp add` para essa pasta.
+- `scripts/sign-macos.sh` (opcional, corrido pelo organizador): assina e notariza os zips do Mac
+  com o Developer ID. Não faz parte da release normal.
+
+### Notas
+
+- Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
+  Definições do Sistema → Privacidade e Segurança.
 
 ## [0.2.1] - 2026-10-16
 
