@@ -20,7 +20,8 @@ Tudo fica no computador do participante. Estado, pendentes e riscos: [docs/HANDO
 - `web/`: UI React + Vite. Catálogos em `web/src/locales/*.json`, ajudas em `web/src/i18n.jsx`.
   O build vai para `src/memoria/web_dist/` (no `.gitignore`; o wheel inclui-o).
 - `portatil/`: modelos da versão portátil (`macos/`, `windows/`). Ver `docs/portatil.md`.
-- `scripts/`: `build.sh`, `publish-release.sh`, `render_installers.py`, `build_portatil.py`, `lock.sh`, `sign-macos.sh`.
+- `scripts/`: `build.sh`, `publish-release.sh`, `mudar-alojamento.sh` (alojamento e versão de uma vez),
+  `render_installers.py`, `build_portatil.py`, `lock.sh`, `sign-macos.sh`.
 - `install/`: `install.sh` e `install.ps1`. O bloco de configuração no topo é gerado.
 - `release.conf`: URLs e versões. A única fonte.
 - `tests/`: pytest. `test_browser.py` usa Playwright. `test_gui.py` abre a janela nativa (só macOS com ecrã).

@@ -60,38 +60,54 @@ Verificado:
 
 ## Publicar uma versão
 
-### Mudar de alojamento (uma vez)
+### Mudar de alojamento e versão (um comando)
 
-1. Em `release.conf`:
-   - `MEMORY_APP_REPO_URL=https://<servidor>/<org>/claude-memory-app.git`
-   - `RELEASE_PROVIDER=github`
-   - o `RELEASE_DOWNLOAD_URL` fica igual.
-2. `python3 scripts/render_installers.py --escrever`. Atualiza os URLs por omissão em `install/install.sh`,
-   `install/install.ps1` e o bloco de instalação do `README.md`. Não editar à mão: o `build.sh` e os testes
-   falham se não estiverem em sincronia.
-3. `uv run pytest`.
-4. No kit, o `repos.conf` tem de apontar para o mesmo repositório e versão.
+```bash
+scripts/mudar-alojamento.sh --repo-url https://<servidor>/<org>/claude-memory-app.git \
+  --provider github --versao vX.Y.Z [--data AAAA-MM-DD]
+```
 
-### Cada versão
+Muda só: `release.conf` (URL, versão e `RELEASE_PROVIDER`), os blocos gerados de `install/install.sh`,
+`install/install.ps1` e `README.md`, `pyproject.toml`, `web/package.json`, `web/package-lock.json`
+(só o próprio pacote), `uv.lock`, e acrescenta `## [X.Y.Z] - data` no topo do `CHANGELOG.md`.
+Não faz commit. No fim diz o que mudou e onde ainda aparece o servidor antigo.
+Correr outra vez com os mesmos argumentos não muda nada. O `RELEASE_DOWNLOAD_URL` fica igual.
 
-1. Subir a versão em `pyproject.toml` (`version`), `release.conf` (`MEMORY_APP_VERSION=vX.Y.Z`) e
-   `CHANGELOG.md` (secção `## [X.Y.Z] - AAAA-MM-DD`).
-2. `python3 scripts/render_installers.py --escrever` (a versão também está no bloco gerado) e `uv lock`
-   (o CI corre `uv sync --locked`). Opcional: `web/package.json` e `(cd web && npm install --package-lock-only)`.
-3. `uv run pytest` e commit.
-4. `scripts/build.sh`. Gera em `dist/` o wheel, `constraints.txt`, `install.sh` e `install.ps1` com o SHA-256
-   do wheel, os 3 zips portáteis e o `SHA256SUMS`. `PORTATIL=0 scripts/build.sh` salta os zips.
-5. Login no GitHub corporativo: `gh auth login --hostname <servidor>` (ou `GH_ENTERPRISE_TOKEN`).
-   O servidor vem do `MEMORY_APP_REPO_URL`; não é preciso `GH_HOST`.
-6. `scripts/publish-release.sh --so-token` confirma o login. Depois `scripts/publish-release.sh`:
-   - cria a tag `vX.Y.Z` (do `release.conf`) e faz push para `origin`;
-   - cria a release e envia os assets com o `gh` (só aqui se fala com a API);
-   - verifica os assets pela API (`gh release download`) e depois pelo URL público.
-     Num repositório privado ou interno, o URL público dá um aviso (ver "Riscos").
+Para mudar só a versão no mesmo alojamento, passa o URL e o fornecedor atuais.
+À mão, sem o script: editar o `release.conf`, `pyproject.toml` e `CHANGELOG.md`, depois
+`python3 scripts/render_installers.py --escrever` e `uv lock`.
+
+### Publicar
+
+1. `scripts/mudar-alojamento.sh …` (acima).
+2. UI e testes:
+   ```bash
+   uv sync
+   (cd web && npm ci && npm run build) && rm -rf src/memoria/web_dist && cp -R web/dist src/memoria/web_dist
+   uv run playwright install chromium && uv run pytest
+   ```
+3. Commit e push do `main` para o servidor novo. O remoto tem de se chamar `origin`:
+   o `publish-release.sh` faz push da tag para `origin`.
+   **Não cries a tag à mão.** O `publish-release.sh` cria-a (anotada, no `HEAD`, com a versão do
+   `release.conf`) e envia-a. Se já existir, usa-a; tem de apontar para o commit do build.
+4. `scripts/build.sh`. Gera em `dist/` o wheel, `constraints.txt`, `install.sh` e `install.ps1` com o
+   SHA-256 do wheel, os 3 zips portáteis e o `SHA256SUMS`. `PORTATIL=0 scripts/build.sh` salta os zips.
+5. Login: `gh auth login --hostname <servidor>` (ou `GH_ENTERPRISE_TOKEN`). O servidor vem do
+   `MEMORY_APP_REPO_URL`: o `GH_HOST` não é preciso (e não atrapalha).
+   `scripts/publish-release.sh --so-token` confirma o login.
+6. `scripts/publish-release.sh`: cria e envia a tag, cria a release, envia os assets com o `gh`
+   (só aqui se fala com a API), verifica-os pela API e depois pelo URL público.
+   Num repositório privado ou interno, o URL público dá um aviso (ver "Riscos").
 7. Avisar o kit para mudar o `MEMORY_APP_VERSION` no `repos.conf`.
 
-Pelo CI: um push de uma tag `v*` corre o `.github/workflows/release.yml` (build, testes, publicação).
-A tag tem de ser igual ao `MEMORY_APP_VERSION`.
+**Atenção ao CI.** Uma tag `v*` enviada para o servidor dispara o `.github/workflows/release.yml`,
+que também publica. Escolhe um dos caminhos:
+- publicação local (passos 4 a 6): desliga as Actions do repositório, ou o workflow, antes do passo 6;
+- publicação pelo CI: depois do passo 3, cria e envia a tag (`git tag -a vX.Y.Z -m "Memória vX.Y.Z"`
+  e `git push origin vX.Y.Z`) e não corras os passos 4 a 6. O runner precisa de acesso ao PyPI, ao npm
+  e aos downloads do python-build-standalone.
+
+O workflow corre build, testes e publicação. A tag tem de ser igual ao `MEMORY_APP_VERSION`.
 
 ## Assinatura opcional do Mac
 
