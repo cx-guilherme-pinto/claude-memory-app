@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { useEffect, useMemo, useState } from 'react';
 import { chamar } from './api.js';
-import { MOTIVOS, Marca, ROTULOS, TIPOS_MEMORIA, dataCurta } from './tipos.jsx';
+import { MOTIVOS, Marca, ROTULOS, TIPOS_MEMORIA, dataLonga } from './tipos.jsx';
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -127,7 +127,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
           </>
         )}
         <dt>Data</dt>
-        <dd className="num">{dataCurta(nota?.data || no.data)}</dd>
+        <dd className="num">{dataLonga(nota?.data || no.data)}</dd>
         {nota?.custo_usd != null && (
           <>
             <dt>Custo</dt>
@@ -149,8 +149,8 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
           <h3>Ficheiros</h3>
           <ul className="lista">
             {nota.ficheiros.map((f) => (
-              <li key={f} className="mono">
-                {f}
+              <li key={f}>
+                <code>{f}</code>
               </li>
             ))}
           </ul>
@@ -183,7 +183,7 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
                 <button type="button" onClick={() => onAbrir(r.id)} title={r.id}>
                   <Marca tipo={r.tipo} />
                   <span>{r.rotulo}</span>
-                  <span className="motivo num">{dataCurta(r.data)}</span>
+                  <span className="motivo num">{dataLonga(r.data)}</span>
                 </button>
               </li>
             ))}
@@ -198,7 +198,11 @@ export default function Painel({ no, vizinhos, onFechar, onAbrir, idEpico }) {
           </button>
         </div>
       )}
-      {nota && <p className="mono fraco">{nota.id}.md</p>}
+      {nota && (
+        <p className="fraco">
+          <code>{nota.id}.md</code>
+        </p>
+      )}
     </aside>
   );
 }

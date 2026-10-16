@@ -13,6 +13,14 @@ Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https:/
 - `scripts/sign-macos.sh` (opcional, corrido pelo organizador): assina e notariza os zips do Mac
   com o Developer ID. Não faz parte da release normal.
 
+### Alterado
+
+- Interface com a skill de design do workshop (`design-taste-frontend`, regras da casa e DESIGN.md):
+  coluna à esquerda com o nome, as contas, a procura, os filtros e as últimas memórias pelo título;
+  mapa à direita, com a linha temporal ("Ver crescer") por baixo.
+- Período em segmentos; tipos (a legenda do mapa) na coluna; datas como "21 jun.".
+- Monospace só em código real (caminhos e comandos).
+
 ### Notas
 
 - Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em

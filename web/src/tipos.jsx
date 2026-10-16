@@ -102,7 +102,14 @@ export function Marca({ tipo, tamanho = 12 }) {
   );
 }
 
-export function dataCurta(iso) {
-  if (!iso) return '';
-  return iso.slice(0, 10);
+// Meses à mão: o Intl de cada browser abrevia de maneira diferente ("21/06", "21 jun.").
+const MESES = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+
+// "21 jun." neste ano, "21 jun. 2025" nos outros. Usa a data escrita na nota, sem fuso.
+export function dataLonga(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return '';
+  const texto = `${Number(m[3])} ${MESES[Number(m[2]) - 1]}`;
+  return Number(m[1]) === new Date().getFullYear() ? texto : `${texto} ${m[1]}`;
 }
+

@@ -74,7 +74,9 @@ export default function Procura({ entradaRef, texto, onTexto, grupos, onEscolher
         ref={entradaRef}
         className="campo campo-procura"
         type="search"
-        placeholder="Procurar memória, projeto ou ticket  /"
+        placeholder="Procurar memória ou ticket"
+        aria-keyshortcuts="/"
+        title="Procurar (tecla /)"
         aria-label="Procurar memórias, projetos, tarefas e épicos"
         role="combobox"
         aria-expanded={Boolean(mostrar)}
