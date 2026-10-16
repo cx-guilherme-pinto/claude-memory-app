@@ -2,6 +2,16 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [Por publicar]
+
+### Alterado
+
+- Interface com a skill de design do workshop (`design-taste-frontend`, regras da casa e DESIGN.md):
+  coluna à esquerda com o nome, as contas, a procura, os filtros e as últimas memórias pelo título;
+  mapa à direita, com a linha temporal ("Ver crescer") por baixo.
+- Período em segmentos; tipos (a legenda do mapa) na coluna; datas como "21 jun.".
+- Monospace só em código real (caminhos e comandos).
+
 ## [0.2.1] - 2026-10-16
 
 ### Corrigido

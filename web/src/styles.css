@@ -44,10 +44,11 @@
   --tipo-ficheiro: #b6bab4;
 
   --fonte: "Bricolage Grotesque", system-ui, sans-serif;
-  --fonte-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fonte-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* taste-skill-ignore: só para código real */
   --t-pequeno: 0.875rem;
   --t-base: 1.0625rem;
   --t-titulo: 1.5rem;
+  --t-display: clamp(2.25rem, 3.4vw, 3.25rem);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -124,35 +125,59 @@ button, input, select, textarea {
 }
 
 .num { font-variant-numeric: tabular-nums; }
-.mono { font-family: var(--fonte-mono); font-size: var(--t-pequeno); } /* só caminhos de ficheiros (código real) */
 .pequeno { font-size: var(--t-pequeno); }
 .fraco { color: var(--muted); }
+/* Monospace só em código real: caminhos de ficheiros e comandos. */
+code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-ignore: código real */
 
-/* ---------------------------------------------------------------- layout */
-.app { position: relative; width: 100%; height: 100%; }
-.tela { position: absolute; inset: 0; }
-
-.barra {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  pointer-events: none;
+/* ---------------------------------------------------------------- layout
+ * Coluna à esquerda (um degrau de tom): o nome, as contas, a procura, os filtros
+ * e as memórias pelo seu título. À direita, o mapa, com a linha temporal por baixo.
+ */
+.app {
+  --coluna: clamp(300px, 27vw, 400px);
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--coluna) minmax(0, 1fr);
 }
-.barra > * { pointer-events: auto; }
+
+.coluna {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  padding: 22px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cabeca h1 {
+  margin: 0;
+  font-size: var(--t-display);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+.resumo {
+  margin: 10px 0 0;
+  font-size: var(--t-titulo);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
 
 .campo, .seletor {
-  background: var(--surface);
+  background: var(--surface-2);
   border: 0;
   padding: 7px 10px;
   min-height: 36px;
 }
 .campo::placeholder { color: var(--muted); }
-.seletor { padding-right: 6px; }
+.seletor { padding-right: 6px; width: 100%; min-width: 0; }
 
 .botao {
   background: var(--surface-2);
@@ -177,21 +202,26 @@ button, input, select, textarea {
   width: 36px;
   padding: 0;
 }
-.espaco { flex: 1; }
+.botao-largo { width: 100%; min-height: 46px; }
 
-.contagem { color: var(--muted); padding: 0 4px; }
+.contagem { color: var(--muted); margin: -8px 0 0; }
 
 /* ---------------------------------------------------------------- procura */
-.procura { position: relative; width: min(340px, 100%); }
-.procura .campo-procura { width: 100%; }
+.procura { position: relative; width: 100%; }
+.procura .campo-procura {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  background: var(--bg);
+}
 .resultados {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  width: min(420px, calc(100vw - 24px));
+  width: 100%;
   max-height: min(60vh, 520px);
   overflow-y: auto;
-  background: var(--surface);
+  background: var(--surface-2);
   padding: 6px;
   z-index: 5;
   animation: aparecer 160ms var(--ease) both;
@@ -208,10 +238,10 @@ button, input, select, textarea {
   grid-template-columns: 14px 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 5px 6px;
+  padding: 6px;
   cursor: pointer;
 }
-.resultados li:hover { background: var(--surface-2); }
+.resultados li:hover { background: var(--surface); }
 /* Opção escolhida: fundo --ink, texto --bg. */
 .resultados li[aria-selected="true"] { background: var(--ink); color: var(--bg); }
 .resultados li[aria-selected="true"] .lado { color: var(--bg); }
@@ -219,18 +249,36 @@ button, input, select, textarea {
 .resultados .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resultados .vazio-lista { color: var(--muted); padding: 6px; margin: 0; }
 
-/* ---------------------------------------------------------------- legenda */
-.legenda {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  background: var(--surface);
-  padding: 6px;
+/* ---------------------------------------------------------------- filtros */
+.filtros { display: grid; gap: 8px; }
+.segmentos {
   display: grid;
-  gap: 1px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+}
+.segmentos button {
+  background: var(--surface-2);
+  border: 0;
+  min-height: 36px;
+  padding: 6px 2px;
+  font-size: var(--t-pequeno);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.segmentos button:hover { background: var(--bg); }
+.segmentos button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+
+/* Tipos: memórias à esquerda, contexto à direita. Também é a legenda do mapa. */
+.tipos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, auto);
+  grid-auto-flow: column;
+  gap: 0 8px;
+  margin: 0 -6px;
   font-size: var(--t-pequeno);
 }
-.legenda button {
+.tipos button {
   display: grid;
   grid-template-columns: 14px 1fr auto;
   gap: 8px;
@@ -238,51 +286,120 @@ button, input, select, textarea {
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 3px 6px;
+  padding: 4px 6px;
+  min-height: 30px;
   cursor: pointer;
-  min-width: 150px;
 }
-.legenda button:hover { background: var(--surface-2); }
-.legenda button[aria-pressed="false"] { color: var(--muted); }
-.legenda button[aria-pressed="false"] svg { opacity: 0.3; }
+.tipos button:hover { background: var(--surface-2); }
+.tipos button[aria-pressed="false"] { color: var(--muted); }
+.tipos button[aria-pressed="false"] svg { opacity: 0.3; }
 
-/* ------------------------------------------------------------- linha temporal */
-.tempo {
-  position: absolute;
-  left: 188px;
-  right: 12px;
-  bottom: 12px;
-  max-width: 640px;
+/* ---------------------------------------------------------------- recentes */
+.recentes { flex: 1 0 auto; }
+.recentes h2 {
+  font-size: var(--t-base);
+  font-weight: 650;
+  margin: 0 0 6px;
+}
+.recentes > p { margin: 0; }
+.recentes ol {
+  list-style: none;
+  margin: 0 -8px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.recentes li { animation: subir 320ms var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.recentes button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 2px 10px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+  cursor: pointer;
+}
+.recentes button svg { grid-row: 1 / span 2; margin-top: 5px; }
+.recentes .titulo {
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.recentes .linha-meta {
+  grid-column: 2;
+  font-size: var(--t-pequeno);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recentes button:hover { background: var(--surface-2); }
+.recentes button[aria-current="true"] { background: var(--ink); color: var(--bg); }
+.recentes button[aria-current="true"] .linha-meta { color: var(--bg); }
+
+/* A ação fica sempre à vista, no fundo da coluna. */
+.coluna-fim {
+  position: sticky;
+  bottom: -18px;
+  margin: 0 -20px -18px;
+  padding: 10px 20px 18px;
   background: var(--surface);
-  padding: 6px 10px;
+  display: grid;
+  gap: 6px;
+}
+.estado { margin: 0; font-size: var(--t-pequeno); }
+.aviso-versao { margin: 0; font-size: var(--t-pequeno); color: var(--muted); animation: aparecer 240ms var(--ease) both; }
+
+/* ---------------------------------------------------------------- mapa */
+.area {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.tela { position: relative; min-height: 0; overflow: hidden; }
+
+.tempo {
+  background: var(--surface);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  padding: 10px clamp(12px, 2vw, 24px);
 }
-.tempo input[type="range"] { flex: 1; accent-color: var(--ink); }
-.tempo .data { min-width: 84px; text-align: right; }
-
-.aviso-versao {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  color: var(--muted);
-  font-size: var(--t-pequeno);
-  background: var(--bg);
-  padding: 4px 8px;
-  animation: aparecer 240ms var(--ease) both;
+.botao-tempo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font-weight: 600;
 }
+.tempo input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--ink); }
+.tempo .data { font-weight: 600; min-width: 8ch; text-align: right; }
+.tempo .fraco { font-size: var(--t-pequeno); white-space: nowrap; min-width: 11ch; }
 
 .vazio {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
   text-align: center;
+  padding: 24px;
   pointer-events: none;
   color: var(--muted);
 }
-.vazio p { margin: 4px 0; }
+.vazio p { margin: 4px 0; max-width: 40ch; }
+.vazio .vazio-titulo {
+  color: var(--ink);
+  font-size: var(--t-titulo);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
 
 /* ---------------------------------------------------------------- painel */
 .painel {
@@ -290,9 +407,9 @@ button, input, select, textarea {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(400px, 100%);
+  width: min(420px, 100%);
   background: var(--surface);
-  padding: 18px 20px 24px;
+  padding: 20px 22px 24px;
   overflow-y: auto;
   animation: entrar 240ms var(--ease) both;
 }
@@ -333,7 +450,7 @@ button, input, select, textarea {
 .markdown h1, .markdown h2, .markdown h3 { font-size: var(--t-base); margin: 14px 0 6px; }
 .markdown p, .markdown ul, .markdown ol { margin: 0 0 10px; }
 .markdown ul, .markdown ol { padding-left: 20px; }
-.markdown code { font-family: var(--fonte-mono); font-size: var(--t-pequeno); background: var(--surface-2); padding: 1px 4px; }
+.markdown code { background: var(--surface-2); padding: 1px 4px; }
 .markdown pre { background: var(--bg); padding: 10px; overflow-x: auto; }
 .markdown pre code { background: transparent; padding: 0; }
 .markdown a { color: var(--ink); text-decoration-color: var(--muted); text-underline-offset: 3px; }
@@ -342,6 +459,7 @@ button, input, select, textarea {
 .seccao { margin-top: 18px; }
 .seccao h3 { font-size: var(--t-pequeno); color: var(--muted); font-weight: 650; margin: 0 0 6px; }
 .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lista code { font-size: var(--t-pequeno); overflow-wrap: anywhere; }
 .lista button {
   width: 100%;
   display: grid;
@@ -363,6 +481,7 @@ button, input, select, textarea {
 .fundo-dialogo {
   position: absolute;
   inset: 0;
+  z-index: 10;
   background: color-mix(in srgb, var(--bg) 70%, transparent);
   display: grid;
   place-items: center;
@@ -386,15 +505,19 @@ textarea.campo { min-height: 140px; resize: vertical; line-height: 1.5; }
 .erro { color: var(--ink); background: var(--bg); padding: 8px 10px; margin-top: 12px; }
 
 @keyframes entrar { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes subir { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes subir { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* Telemóvel (só no modo browser; a janela tem no mínimo 820 px): o mapa por baixo do essencial. */
 @media (max-width: 760px) {
-  .tempo { left: 12px; right: 12px; max-width: none; }
-  .legenda { display: none; }
+  .app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .coluna { padding: 16px; gap: 12px; }
+  .tipos, .recentes { display: none; }
+  .tempo { gap: 10px; }
+  .tempo .fraco { display: none; }
   .grelha { grid-template-columns: 1fr; }
 }
