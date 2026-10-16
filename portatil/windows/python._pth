@@ -1,0 +1,7 @@
+# Memoria portatil: caminhos do Python. Gera-se como python3XX._pth (nome da DLL).
+# Com este ficheiro, o Python ignora PYTHONPATH, PYTHONHOME e o site do utilizador.
+# "import site" junta Lib\site-packages e corre o sitecustomize.py.
+Lib
+DLLs
+.
+import site

@@ -37,6 +37,27 @@ O instalador:
 
 Os comandos ficam em `~/.local/bin` (Mac/Linux) ou `%USERPROFILE%\.local\bin` (Windows).
 
+### Versão portátil (sem instalar)
+
+Cada release traz também um zip por plataforma, com o Python lá dentro:
+
+| Ficheiro | Abrir |
+|---|---|
+| `Memoria-<versão>-macos-arm64.zip` (Apple Silicon) | `Memoria.app` |
+| `Memoria-<versão>-macos-x86_64.zip` (Intel) | `Memoria.app` |
+| `Memoria-<versão>-windows-x64.zip` | `Memoria\Memoria.exe` |
+
+Extrai e abre. Não precisa de admin nem de rede. O setup do workshop faz isto sozinho.
+
+- Ligar ao Claude Code: `memoria selftest` mostra o comando `claude mcp add` certo.
+  No Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; no Windows, `memoria.cmd selftest`.
+- Se o zip veio pelo browser, o Mac bloqueia a app (não tem assinatura).
+  Desbloqueia no Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
+  No Windows, em "O Windows protegeu o computador", clica em "Mais informações" e "Executar mesmo assim".
+- Depois de ligar ao Claude Code, não movas a app.
+
+Detalhes e decisões: [docs/portatil.md](docs/portatil.md).
+
 ## Ligar ao Claude Code
 
 ```bash
@@ -133,6 +154,9 @@ memoria update
 
 No Windows, a instalação termina numa janela nova. Fecha o Claude Code antes.
 
+Na versão portátil, o update descarrega o zip novo, verifica-o e troca a pasta da app no mesmo sítio.
+A ligação ao Claude Code continua válida.
+
 Os URLs vêm de `~/.memoria/config.json` e, se faltarem, do `release.conf` do pacote.
 Chaves lidas (uma variável de ambiente com o mesmo nome sobrepõe-se):
 
@@ -171,7 +195,8 @@ uv sync
 uv run pytest
 ```
 
-- `scripts/build.sh`: UI, wheel, instaladores e `SHA256SUMS` em `dist/`.
+- `scripts/build.sh`: UI, wheel, instaladores, zips portáteis e `SHA256SUMS` em `dist/`.
+- `scripts/build_portatil.py`: os zips portáteis (`PORTATIL=0 scripts/build.sh` salta-os).
 - `scripts/publish-release.sh`: tag, release e assets. As chamadas à API do alojamento
   estão só em `create_release()` (Gitea ou GitHub, por `RELEASE_PROVIDER`).
 - `scripts/lock.sh`: gera o `constraints.txt` e confirma que há wheels para Mac e Windows.

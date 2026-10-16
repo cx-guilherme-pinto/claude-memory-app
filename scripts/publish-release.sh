@@ -44,6 +44,10 @@ owner="${owner##*/}"
 
 wheel="memoria-${VERSION#v}-py3-none-any.whl"
 ASSETS=("$wheel" constraints.txt SHA256SUMS install.sh install.ps1)
+# Versão portátil (scripts/build_portatil.py), se o build a gerou.
+for z in dist/Memoria-"${VERSION#v}"-*.zip; do
+  if [ -e "$z" ]; then ASSETS+=("${z#dist/}"); fi
+done
 
 TOKEN=""
 

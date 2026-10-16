@@ -79,6 +79,14 @@ def verificar_base() -> bool:
     except OSError as erro:
         resultados.append(_linha(False, f"Sem escrita em {home}: {erro}"))
 
+    from memoria import portatil
+
+    dados = portatil.info()
+    if dados and portatil.translocada():
+        resultados.append(_linha(False, "A app corre de uma cópia temporária do macOS. Move-a para Aplicações."))
+    elif dados:
+        resultados.append(_linha(True, f"Versão portátil {dados['plataforma']}: {portatil.raiz()}"))
+
     return all(resultados)
 
 
@@ -100,6 +108,10 @@ def correr(gui: bool = False, timeout: float = 60.0, t0: float | None = None) ->
     ok = verificar_base()
     if not gui:
         print("selftest: OK" if ok else "selftest: FALHOU")
+        from memoria import portatil
+
+        if ok and portatil.info():
+            print(f"Para ligar ao Claude Code:\n  {portatil.comando_claude()}")
         return 0 if ok else 1
     if not ok:
         print("selftest: FALHOU (antes da janela)")

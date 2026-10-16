@@ -2,6 +2,15 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
+## [Por publicar]
+
+### Adicionado
+
+- Versão portátil: `Memoria-<versão>-macos-arm64.zip`, `-macos-x86_64.zip` e `-windows-x64.zip`,
+  com o Python 3.12 e as dependências lá dentro. Extrai e abre, sem instalador nem admin.
+- `memoria update` na versão portátil: descarrega o zip, verifica o SHA-256, testa e troca a pasta no mesmo sítio.
+- `memoria selftest` na versão portátil mostra o comando `claude mcp add` para essa pasta.
+
 ## [0.2.1] - 2026-10-16
 
 ### Corrigido

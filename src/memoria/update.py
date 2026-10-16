@@ -5,6 +5,7 @@
    pelo padrão RELEASE_DOWNLOAD_URL ({repo}/releases/download/{version}/{file}).
 3. Verifica os SHA-256.
 4. Corre `uv tool install --force --python <versão> <wheel> --constraints <ficheiro>`.
+   Na versão portátil, em vez disso, troca a pasta da app pelo zip novo (ver portatil.py).
 5. Reconstrói o índice. Nunca toca nos ficheiros Markdown.
 
 Repositório privado (só em desenvolvimento): se o download anónimo falhar com
@@ -237,6 +238,11 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
     if nova <= atual and not forcar:
         _info("Já tens a versão mais recente.")
         return 0
+
+    from memoria import portatil
+
+    if portatil.info():
+        return portatil.atualizar(cfg, tag, Descarregador())
 
     uv = encontrar_uv(cfg)
     python = cfg.get("PYTHON_VERSION") or "3.12"

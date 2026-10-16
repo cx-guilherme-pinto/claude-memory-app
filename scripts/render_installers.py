@@ -152,7 +152,9 @@ def main() -> int:
         wheels = sorted(a.somas.glob("memoria-*.whl"))
         if len(wheels) != 1:
             sys.exit(f"Esperava um wheel em {a.somas}, encontrei {len(wheels)}.")
-        linhas = [f"{sha256(f)}  {f.name}" for f in [wheels[0], *(a.somas / n for n in ASSETS)]]
+        versao = conf["MEMORY_APP_VERSION"].lstrip("v")
+        portateis = sorted(a.somas.glob(f"Memoria-{versao}-*.zip"))
+        linhas = [f"{sha256(f)}  {f.name}" for f in [wheels[0], *(a.somas / n for n in ASSETS), *portateis]]
         (a.somas / "SHA256SUMS").write_text("\n".join(linhas) + "\n", "utf-8", newline="\n")
     return 0
 

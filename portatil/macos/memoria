@@ -1,0 +1,11 @@
+#!/bin/sh
+# Lançador da Memória portátil (macOS). É o executável principal da Memoria.app.
+#
+# Sem argumentos, abre a janela. Com argumentos, é a linha de comandos:
+#   Memoria.app/Contents/MacOS/memoria selftest
+#   Memoria.app/Contents/MacOS/memoria mcp       (é o que o Claude Code corre)
+#
+# -I ignora PYTHONPATH e afins do utilizador. -B não escreve .pyc dentro da app
+# (o build já os compilou).
+pasta="$(cd "$(dirname "$0")/.." && pwd -P)"
+exec "$pasta/Resources/python/bin/python3" -I -B -m memoria "$@"
