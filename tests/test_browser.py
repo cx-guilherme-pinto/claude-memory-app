@@ -72,10 +72,17 @@ def _arrancar_browser(home: Path) -> tuple[subprocess.Popen, str]:
 
 
 def _esperar_desenho(pagina) -> int:
+    """Espera que o grafo desenhe nós e devolve quantos píxeis estavam desenhados nesse momento.
+
+    Devolve o valor visto pela espera, não uma leitura nova: no Chromium headless do Playwright
+    os animation frames nem sempre correm, e um canvas redimensionado depois do primeiro desenho
+    pode ficar por repintar (num browser visível e na janela nativa repinta no frame seguinte).
+    """
     pagina.wait_for_function("document.documentElement.dataset.pronto !== undefined", timeout=30000)
-    # A simulação desenha durante alguns frames; dá-lhe tempo.
-    pagina.wait_for_function(f"({PIXEIS_DESENHADOS})() > 300", timeout=15000)
-    return pagina.evaluate(PIXEIS_DESENHADOS)
+    visto = pagina.wait_for_function(
+        f"(() => {{ const n = ({PIXEIS_DESENHADOS})(); return n > 300 ? n : false; }})()", timeout=15000
+    )
+    return int(visto.json_value())
 
 
 def test_memoria_browser_desenha_os_nos(home: Path, navegador):
@@ -190,7 +197,7 @@ def test_hebraico_em_rtl(home: Path, navegador, monkeypatch):
         caixas = pagina.evaluate(RETANGULOS)
         assert abs(caixas["painel"]["x"] - caixas["area"]["x"]) < 2
         assert pagina.locator(".painel dt").first.inner_text() == "סוג"
-        assert pagina.evaluate(PIXEIS_DESENHADOS) > 300
+        assert int(pagina.evaluate("() => document.documentElement.dataset.pronto")) > 40
         assert pagina.evaluate(
             "() => [...document.fonts].some((f) => f.family.includes('Noto Sans Hebrew') && f.status === 'loaded')"
         )

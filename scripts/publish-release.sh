@@ -12,6 +12,11 @@
 #           Primeiro faz GET /api/v1/user (só leitura) para confirmar que o token
 #           tem acesso à API. Se não tiver, pára e explica.
 #   github  `gh release create` (usa $GH_TOKEN, $GITHUB_TOKEN ou o login do gh).
+#           Funciona com GitHub Enterprise: o servidor vem do MEMORY_APP_REPO_URL
+#           (o gh recebe --repo <servidor>/<dono>/<nome>). Para um servidor que não seja
+#           github.com, o gh precisa de login nesse servidor (`gh auth login --hostname <servidor>`)
+#           ou de GH_ENTERPRISE_TOKEN. A verificação dos assets usa `gh release download`,
+#           que funciona também com repositórios privados ou internos.
 #
 # O token nunca é impresso nem gravado: vai para o curl pelo stdin (--config -).
 #
@@ -50,6 +55,7 @@ for z in dist/Memoria-"${VERSION#v}"-*.zip; do
 done
 
 TOKEN=""
+VERIFICADO_API=0
 
 falha() { echo "Erro: $*" >&2; exit 1; }
 
@@ -140,20 +146,31 @@ PY
       rm -rf "$tmp"
       ;;
     github)
-      [ "$SO_TOKEN" = 1 ] && { gh auth status; return 0; }
       command -v gh >/dev/null || falha "falta o gh (GitHub CLI)."
+      [ "$SO_TOKEN" = 1 ] && { gh auth status --hostname "$host"; return 0; }
+      local alvo="$host/$owner/$name"
       local notas
       notas="$(mktemp)"
       notas_da_versao > "$notas"
       local extra=()
       [[ "$VERSION" == *-* ]] && extra+=(--prerelease)
-      if gh release view "$VERSION" --repo "$owner/$name" >/dev/null 2>&1; then
-        gh release upload "$VERSION" --repo "$owner/$name" "${ASSETS[@]/#/dist/}"
+      if gh release view "$VERSION" --repo "$alvo" >/dev/null 2>&1; then
+        gh release upload "$VERSION" --repo "$alvo" "${ASSETS[@]/#/dist/}"
       else
-        gh release create "$VERSION" --repo "$owner/$name" --title "$VERSION" \
+        gh release create "$VERSION" --repo "$alvo" --title "$VERSION" \
           --notes-file "$notas" --verify-tag "${extra[@]}" "${ASSETS[@]/#/dist/}"
       fi
       rm -f "$notas"
+      # Verificação pela API (funciona em repositórios privados e internos).
+      local tmp
+      tmp="$(mktemp -d)"
+      gh release download "$VERSION" --repo "$alvo" --dir "$tmp" >/dev/null || falha "gh release download falhou."
+      for f in "${ASSETS[@]}"; do
+        cmp -s "$tmp/$f" "dist/$f" || falha "o asset $f na release difere de dist/$f"
+      done
+      rm -rf "$tmp"
+      VERIFICADO_API=1
+      echo "Assets verificados pela API do GitHub."
       ;;
     *)
       falha "RELEASE_PROVIDER desconhecido: $PROVIDER (usa gitea ou github)."
@@ -194,7 +211,17 @@ echo "A verificar os downloads..."
 tmp="$(mktemp -d)"
 for f in "${ASSETS[@]}"; do
   url="$(url_asset "$f")"
-  curl_token -fsSL --retry 3 -o "$tmp/$f" "$url" || falha "não consegui descarregar $url"
+  if ! curl_token -fsSL --retry 3 -o "$tmp/$f" "$url"; then
+    if [ "$VERIFICADO_API" = 1 ]; then
+      # A release está certa (vista pela API), mas o URL público não responde:
+      # o repositório é privado ou interno. Os instaladores e o `memoria update`
+      # descarregam por este URL, por isso precisam de um repositório público.
+      echo "Aviso: $url não se descarrega sem login (repositório privado ou interno)." >&2
+      echo "       Os instaladores e o memoria update precisam de um repositório público." >&2
+      continue
+    fi
+    falha "não consegui descarregar $url"
+  fi
   cmp -s "$tmp/$f" "dist/$f" || falha "o download de $f difere de dist/$f"
   echo "  ok: $url"
 done
