@@ -1,4 +1,4 @@
-# Instalador da Memoria para Windows 10/11. Nao precisa de admin. PowerShell 5.1 ou mais recente.
+# Instalador da Agent Memory para Windows 10/11. Nao precisa de admin. PowerShell 5.1 ou mais recente.
 #
 # Uso:
 #   powershell -ExecutionPolicy Bypass -c "irm <repo>/releases/download/<versao>/install.ps1 | iex"
@@ -10,22 +10,23 @@
 #   4. corre "uv tool install" com o Python 3.12 gerido pelo uv;
 #   5. cria um atalho no menu Iniciar.
 #
-# Repositorio privado (so em desenvolvimento): define $env:MEMORIA_DOWNLOAD_TOKEN.
+# Repositorio privado (so em desenvolvimento): define $env:AGENT_MEMORY_DOWNLOAD_TOKEN
+# (ou a antiga $env:MEMORIA_DOWNLOAD_TOKEN).
 # O token nunca e impresso.
 #
 # Este ficheiro tem de ser so ASCII (o PowerShell 5.1 le ficheiros sem BOM como ANSI).
 
 # >>> config: gerado a partir de release.conf por scripts/render_installers.py. Nao editar a mao.
 $MemoryAppRepoUrl = 'https://github.com/cx-guilherme-pinto/claude-memory-app.git'
-$MemoryAppVersion = 'v0.4.1'
+$MemoryAppVersion = 'v0.5.0'
 $ReleaseDownloadUrl = '{repo}/releases/download/{version}/{file}'
 $UvVersion = '0.13.1'
 $PythonVersion = '3.12'
-$BuildVersion = 'v0.4.1'
+$BuildVersion = 'v0.5.0'
 $WheelSha256 = ''
 # <<< config
 
-function Install-Memoria {
+function Install-AgentMemory {
     $ErrorActionPreference = 'Stop'
     $ProgressPreference = 'SilentlyContinue'
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -54,7 +55,8 @@ function Install-Memoria {
 
     function Get-Asset([string]$Url, [string]$OutFile) {
         $headers = @{}
-        if ($env:MEMORIA_DOWNLOAD_TOKEN) { $headers['Authorization'] = 'token ' + $env:MEMORIA_DOWNLOAD_TOKEN }
+        $token = if ($env:AGENT_MEMORY_DOWNLOAD_TOKEN) { $env:AGENT_MEMORY_DOWNLOAD_TOKEN } else { $env:MEMORIA_DOWNLOAD_TOKEN }
+        if ($token) { $headers['Authorization'] = 'token ' + $token }
         try {
             Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing -Headers $headers
         } catch {
@@ -78,7 +80,7 @@ function Install-Memoria {
         return $false
     }
 
-    $tmp = Join-Path ([IO.Path]::GetTempPath()) ('memoria-' + [Guid]::NewGuid().ToString('N'))
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ('agent-memory-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp | Out-Null
     try {
         # --- 1. WebView2 ---------------------------------------------------
@@ -92,7 +94,7 @@ function Install-Memoria {
             if (Test-WebView2) {
                 Write-Host 'WebView2: installed.'
             } else {
-                Write-Host ('Warning: WebView2 was not installed (code ' + $p.ExitCode + '). Memoria will open in the browser.')
+                Write-Host ('Warning: WebView2 was not installed (code ' + $p.ExitCode + '). Agent Memory will open in the browser.')
             }
         }
 
@@ -115,7 +117,7 @@ function Install-Memoria {
 
         # --- 3. download e verificacao -----------------------------------
         $wheel = 'memoria-' + $version.TrimStart('v') + '-py3-none-any.whl'
-        Write-Host ('Downloading Memoria ' + $version + '...')
+        Write-Host ('Downloading Agent Memory ' + $version + '...')
         Get-Asset (Get-AssetUrl 'SHA256SUMS') (Join-Path $tmp 'SHA256SUMS')
         $sums = @{}
         foreach ($line in Get-Content (Join-Path $tmp 'SHA256SUMS')) {
@@ -139,9 +141,14 @@ function Install-Memoria {
         & $uv tool install --force --managed-python --python $pyVer (Join-Path $tmp $wheel) --constraints (Join-Path $tmp 'constraints.txt')
         if ($LASTEXITCODE -ne 0) { throw 'uv tool install failed.' }
         $bin = (& $uv tool dir --bin).Trim()
-        $memoria = Join-Path $bin 'memoria.exe'
-        $memoriaGui = Join-Path $bin 'memoria-gui.exe'
-        if (-not (Test-Path $memoria)) { throw ('Not found: ' + $memoria) }
+        # O comando chama-se agent-memory desde a v0.5 (memoria continua, para versoes antigas).
+        $memoria = Join-Path $bin 'agent-memory.exe'
+        $memoriaGui = Join-Path $bin 'agent-memory-gui.exe'
+        if (-not (Test-Path $memoria)) {
+            $memoria = Join-Path $bin 'memoria.exe'
+            $memoriaGui = Join-Path $bin 'memoria-gui.exe'
+        }
+        if (-not (Test-Path $memoria)) { throw ('Not found: ' + (Join-Path $bin 'agent-memory.exe')) }
 
         # --- 5. atalho no menu Iniciar ------------------------------------
         $alvo = if (Test-Path $memoriaGui) { $memoriaGui } else { $memoria }
@@ -165,7 +172,7 @@ function Install-Memoria {
         Write-Host ''
         Write-Host ('Agent Memory ' + $version + ' installed.')
         Write-Host 'To connect it to Claude Code:'
-        Write-Host ('  claude mcp add --scope user memoria -- "' + $memoria + '" mcp')
+        Write-Host ('  claude mcp add --scope user agent-memory -- "' + $memoria + '" mcp')
         $pathUser = [Environment]::GetEnvironmentVariable('Path', 'User')
         if (($env:Path + ';' + $pathUser) -notlike ('*' + $bin + '*')) {
             Write-Host ('Note: ' + $bin + ' is not on PATH. Open a new terminal.')
@@ -176,7 +183,7 @@ function Install-Memoria {
 }
 
 try {
-    Install-Memoria
+    Install-AgentMemory
 } catch {
     Write-Host ('Error: ' + $_.Exception.Message) -ForegroundColor Red
 }

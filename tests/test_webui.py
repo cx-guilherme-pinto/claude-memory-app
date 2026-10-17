@@ -116,7 +116,7 @@ def test_api_fluxo_completo(servidor):
     nota = json.loads(_pedido(servidor, "POST", "/api/nota", {"args": [novo["id"]]}, token=t)[2])["resultado"]
     assert nota["corpo"].startswith("Primeira linha") and nota["relacionadas"] == []
     estado, _, corpo = _pedido(servidor, "POST", "/api/nota", {"args": ["nada"]}, token=t)
-    assert estado == 400 and "não encontrada" in json.loads(corpo)["erro"]
+    assert estado == 400 and "não encontrada" in json.loads(corpo)["error"]
 
 
 def test_abrir_ficheiro_so_dentro_da_pasta(mem: Memoria, monkeypatch):

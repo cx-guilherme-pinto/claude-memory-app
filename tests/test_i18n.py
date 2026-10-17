@@ -20,6 +20,7 @@ MARCADOR = re.compile(r"\{(\w+)\}")
 
 @pytest.fixture
 def sem_env(monkeypatch):
+    monkeypatch.delenv("AGENT_MEMORY_LANG", raising=False)
     monkeypatch.delenv("MEMORIA_LANG", raising=False)
     i18n.repor()
     yield
@@ -86,24 +87,43 @@ def test_precedencia_env_guardada_sistema(monkeypatch, home, sem_env):
     i18n.repor()
     monkeypatch.setattr(i18n, "lingua_sistema", lambda: "hi")
     assert i18n.lingua() == "he"  # a escolha guardada ganha ao sistema
-    dados = json.loads((home / "preferencias.json").read_text("utf-8"))
-    assert dados == {"lingua": "he"}
+    dados = json.loads((home / "preferences.json").read_text("utf-8"))
+    assert dados == {"language": "he"}
+    assert not (home / "preferencias.json").exists()
     monkeypatch.setenv("MEMORIA_LANG", "en")
     i18n.repor()
-    assert i18n.lingua() == "en"  # a variável de ambiente ganha a tudo
+    assert i18n.lingua() == "en"  # a variável de ambiente (mesmo a antiga) ganha a tudo
+    monkeypatch.setenv("AGENT_MEMORY_LANG", "hi")
+    i18n.repor()
+    assert i18n.lingua() == "hi"  # o nome novo ganha ao antigo
+
+
+def test_le_a_escolha_guardada_pela_v04(home, sem_env, monkeypatch):
+    monkeypatch.setattr(i18n, "lingua_sistema", lambda: "en")
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "preferencias.json").write_text('{"lingua": "he"}', "utf-8")
+    assert i18n.lingua() == "he"
+    # O ficheiro novo, quando existe, ganha ao antigo.
+    (home / "preferences.json").write_text('{"language": "pt"}', "utf-8")
+    i18n.repor()
+    monkeypatch.setattr(i18n, "lingua_sistema", lambda: "en")
+    assert i18n.lingua() == "pt"
 
 
 def test_definir_lingua_invalida(sem_env, home):
     with pytest.raises(ValueError):
         i18n.definir_lingua("fr")
-    assert not (home / "preferencias.json").exists()
+    assert not (home / "preferences.json").exists()
 
 
 def test_preferencias_mantem_outras_chaves(home, sem_env):
     home.mkdir(parents=True, exist_ok=True)
-    (home / "preferencias.json").write_text('{"outra": 1}', "utf-8")
+    (home / "preferencias.json").write_text('{"outra": 1, "lingua": "he"}', "utf-8")
     i18n.definir_lingua("pt")
-    assert json.loads((home / "preferencias.json").read_text("utf-8")) == {"outra": 1, "lingua": "pt"}
+    assert json.loads((home / "preferences.json").read_text("utf-8")) == {"outra": 1, "language": "pt"}
+    assert json.loads((home / "preferencias.json").read_text("utf-8")) == {"outra": 1, "lingua": "he"}  # intacto
+    i18n.definir_lingua("en")
+    assert json.loads((home / "preferences.json").read_text("utf-8")) == {"outra": 1, "language": "en"}
 
 
 # ------------------------------------------------------------------ catálogos
@@ -154,7 +174,7 @@ def test_chaves_web_usadas_existem():
     dinamicas = {f"tipo.{t}" for t in ("licao", "fazer", "nao_fazer", "historico", "projeto", "epico", "tarefa", "ficheiro")}
     dinamicas |= {f"motivo.{m}" for m in ("ligacao", "tarefa", "epico", "projeto", "ficheiro")}
     dinamicas |= {"vista.mapa", "vista.atividade"}
-    dinamicas |= {f"ferramenta.memoria_{f}" for f in ("procurar", "relacionadas", "adicionar")}
+    dinamicas |= {f"ferramenta.memory_{f}" for f in ("search", "related", "add")}
     periodos = ("tudo", "7", "30", "90", "365")
     dinamicas |= {f"periodo.{p}" for p in periodos} | {f"periodo.{p}.curto" for p in periodos}
     assert usadas, "nenhuma chave encontrada"
@@ -168,28 +188,33 @@ def test_chaves_web_usadas_existem():
     [("pt", "Tipo inválido"), ("en", "Invalid type"), ("hi", "इनवैलिड टाइप"), ("he", "סוג לא תקין")],
 )
 def test_erros_na_lingua(monkeypatch, capsys, lingua, trecho):
-    monkeypatch.setenv("MEMORIA_LANG", lingua)
+    monkeypatch.setenv("AGENT_MEMORY_LANG", lingua)
     i18n.repor()
-    assert main(["add", "--tipo", "ideia", "--projeto", "p", "--texto", "x"]) == 1
+    assert main(["add", "--type", "ideia", "--project", "p", "--text", "x"]) == 1
     assert trecho in capsys.readouterr().err
 
 
 def test_comando_lingua(monkeypatch, capsys, home, sem_env):
     monkeypatch.setattr(i18n, "lingua_sistema", lambda: "pt")
-    assert main(["lingua", "he"]) == 0
+    assert main(["language", "he"]) == 0
     assert "עברית (he)" in capsys.readouterr().out
     i18n.repor()
     monkeypatch.setattr(i18n, "lingua_sistema", lambda: "pt")
-    assert main(["lingua"]) == 0
+    assert main(["language"]) == 0
     assert "שפה: עברית (he)" in capsys.readouterr().out
 
 
 def test_selftest_mostra_a_lingua(monkeypatch, capsys):
+    # O setup do kit pede o selftest em inglês com a variável antiga (MEMORIA_LANG=en).
+    monkeypatch.delenv("AGENT_MEMORY_LANG")
     monkeypatch.setenv("MEMORIA_LANG", "en")
     i18n.repor()
     assert main(["selftest"]) == 0
     saida = capsys.readouterr().out
     assert "Language: English (en)" in saida and "selftest: OK" in saida and "Secret redaction" in saida
+    assert saida.startswith("Agent Memory ")
+    # Em inglês, nem uma palavra portuguesa.
+    assert not re.search(r"memória|memoria|falhou|pasta|língua|[ãõçáéíóú]", saida, re.I), saida
 
 
 def test_mcp_em_ingles_em_qualquer_lingua(monkeypatch, mem):
@@ -198,7 +223,7 @@ def test_mcp_em_ingles_em_qualquer_lingua(monkeypatch, mem):
 
     from memoria.mcp_server import INSTRUCOES, criar_servidor
 
-    monkeypatch.setenv("MEMORIA_LANG", "he")
+    monkeypatch.setenv("AGENT_MEMORY_LANG", "he")
     i18n.repor()
 
     async def ferramentas():
@@ -211,8 +236,9 @@ def test_mcp_em_ingles_em_qualquer_lingua(monkeypatch, mem):
         textos += [p.get("description", "") for p in f.input_schema["properties"].values()]
     for texto in textos:
         assert texto.isascii(), texto
-        # Os nomes dos parâmetros (tarefa, epico, ...) são identificadores; a prosa é inglesa.
+        # Desde a v0.5, também os nomes (parâmetros, tipos) são ingleses.
         assert not re.search(r"\b(memórias|ligação|Procura|Guarda|projeto atual|Só deste)\b", texto), texto
+        assert not re.search(r"memoria_|licao|fazer|historico|tarefa|epico|projeto|texto|titulo", texto), texto
 
 
 def test_pagina_traz_lingua_e_direcao(monkeypatch, mem, tmp_path):
@@ -223,7 +249,7 @@ def test_pagina_traz_lingua_e_direcao(monkeypatch, mem, tmp_path):
     raiz = tmp_path / "ui"
     raiz.mkdir()
     (raiz / "index.html").write_text('<!doctype html><html lang="pt-PT"><head><title>M</title></head></html>', "utf-8")
-    monkeypatch.setenv("MEMORIA_LANG", "he")
+    monkeypatch.setenv("AGENT_MEMORY_LANG", "he")
     i18n.repor()
     s = ServidorUI(Api(mem, modo="janela"), raiz=raiz).iniciar()
     try:
@@ -250,6 +276,16 @@ def test_api_definir_lingua(mem, home, sem_env):
     assert info["lingua"] == "hi" and info["direcao"] == "ltr"
     assert api.inicio()["lingua"] == "hi"
     assert {lng["codigo"] for lng in info["linguas"]} == {"pt", "en", "hi", "he"}
-    assert json.loads((home / "preferencias.json").read_text("utf-8"))["lingua"] == "hi"
+    assert json.loads((home / "preferences.json").read_text("utf-8"))["language"] == "hi"
     with pytest.raises(ValueError):
         api.definir_lingua("xx")
+
+
+def test_preferencias_estragadas_sao_ignoradas(home, sem_env, monkeypatch):
+    monkeypatch.setattr(i18n, "lingua_sistema", lambda: "en")
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "preferences.json").write_text("{nao e json", "utf-8")
+    (home / "preferencias.json").write_text('["lista"]', "utf-8")
+    assert i18n.lingua() == "en"
+    i18n.definir_lingua("he")
+    assert json.loads((home / "preferences.json").read_text("utf-8")) == {"language": "he"}

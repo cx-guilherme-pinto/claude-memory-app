@@ -1,6 +1,6 @@
 """Modo browser a sério: é o recurso do Windows sem WebView2.
 
-Arranca `memoria --browser` como um participante (BROWSER=true para não abrir nada),
+Arranca `agent-memory --browser` como um participante (BROWSER=true para não abrir nada),
 lê o URL que a app imprime e abre-o num Chromium headless (Playwright).
 Confirma que a página usa a ponte HTTP, pede os dados e desenha nós no canvas.
 """
@@ -51,7 +51,7 @@ def navegador():
 
 
 def _arrancar_browser(home: Path) -> tuple[subprocess.Popen, str]:
-    env = {**os.environ, "MEMORIA_HOME": str(home), "BROWSER": "true", "MEMORIA_SEM_UPDATE": "1"}
+    env = {**os.environ, "AGENT_MEMORY_HOME": str(home), "BROWSER": "true", "AGENT_MEMORY_NO_UPDATE": "1"}
     proc = subprocess.Popen(
         [sys.executable, "-m", "memoria", "--browser"],
         stdout=subprocess.DEVNULL,
@@ -68,7 +68,7 @@ def _arrancar_browser(home: Path) -> tuple[subprocess.Popen, str]:
         if m:
             return proc, m.group(1)
     proc.kill()
-    pytest.fail("memoria --browser não imprimiu o URL da sessão")
+    pytest.fail("agent-memory --browser não imprimiu o URL da sessão")
 
 
 def _esperar_desenho(pagina) -> int:
@@ -154,9 +154,9 @@ def _abrir(home: Path, navegador, monkeypatch, lingua: str | None):
     from memoria import i18n
 
     if lingua:
-        monkeypatch.setenv("MEMORIA_LANG", lingua)
+        monkeypatch.setenv("AGENT_MEMORY_LANG", lingua)
     else:
-        monkeypatch.delenv("MEMORIA_LANG", raising=False)
+        monkeypatch.delenv("AGENT_MEMORY_LANG", raising=False)
         monkeypatch.setattr(i18n, "lingua_sistema", lambda: "pt")
     i18n.repor()
     servidor = ServidorUI(Api(Memoria(home), modo="browser"))
@@ -234,9 +234,9 @@ def test_seletor_muda_e_guarda_a_lingua(home: Path, navegador, monkeypatch):
         pagina.wait_for_function("() => document.documentElement.lang === 'en'")
         # Guardado no disco e usado na próxima abertura (o servidor já manda lang="en").
         fim = time.monotonic() + 5
-        while time.monotonic() < fim and not (home / "preferencias.json").exists():
+        while time.monotonic() < fim and not (home / "preferences.json").exists():
             time.sleep(0.1)
-        assert _json.loads((home / "preferencias.json").read_text("utf-8"))["lingua"] == "en"
+        assert _json.loads((home / "preferences.json").read_text("utf-8"))["language"] == "en"
         resposta = pagina.reload()
         assert '<html lang="en" dir="ltr">' in resposta.text()
         _esperar_desenho(pagina)
@@ -259,8 +259,8 @@ def test_atividade_do_claude(home: Path, navegador, monkeypatch):
 
     async def chamadas():
         async with Client(criar_servidor(mem)) as c:
-            await c.call_tool("memoria_procurar", {"texto": "cache", "limite": 3})
-            await c.call_tool("memoria_procurar", {"texto": "coisa que não existe"})
+            await c.call_tool("memory_search", {"text": "cache", "limit": 3})
+            await c.call_tool("memory_search", {"text": "coisa que não existe"})
 
     # O Playwright síncrono já tem um event loop nesta thread: as chamadas MCP vão noutra.
     import threading
@@ -283,6 +283,73 @@ def test_atividade_do_claude(home: Path, navegador, monkeypatch):
         pagina.wait_for_selector(".painel h2")
         assert pagina.locator(".atividade").count() == 0  # voltou ao mapa
         assert pagina.locator(".painel h2").inner_text() == titulo
+    finally:
+        contexto.close()
+        servidor.parar()
+
+
+# Palavras e pedaços de identificadores portugueses que não podem aparecer na interface em inglês.
+PORTUGUES = re.compile(
+    r"memória|memoria|lição|licao|fazer|histórico|historico|projeto|tarefa|épico|epico|ficheiro|ligaç|ligac|"
+    r"etiqueta|pesquisa|procurar|guardar|cancelar|atividade|sem resultados|redigido|[ãõçáéíóúâêô]",
+    re.I,
+)
+
+
+def test_ingles_sem_portugues(home: Path, navegador, monkeypatch):
+    """Em inglês, o mapa, o painel de uma nota, o editor e a vista de atividade não mostram português."""
+    import asyncio
+    import threading
+
+    from mcp import Client
+
+    from memoria.mcp_server import criar_servidor
+
+    mem = Memoria(home)
+    a = mem.adicionar(
+        tipo="lesson", titulo="Cache the build", texto="Use a shared cache. See [[Retry with backoff]].",
+        projeto="security-arena", tarefa="ARENA-7", epico="ARENA-1", etiquetas=["ci"], ficheiros=["build.mjs"],
+    )
+    mem.adicionar(tipo="dont", titulo="Retry with backoff", texto="Never retry in a loop.", projeto="security-arena", tarefa="ARENA-8")
+    mem.adicionar(tipo="history", titulo="Swarm run", texto="Four agents, one wave.", projeto="practice-project", custo_usd=1.25)
+
+    async def chamadas():
+        async with Client(criar_servidor(mem)) as c:
+            await c.call_tool("memory_search", {"text": "cache", "project": "security-arena"})
+            await c.call_tool("memory_related", {"ref": a["caminho"]})
+            await c.call_tool("memory_add", {"type": "do", "title": "Plan first", "text": "x", "project": "security-arena"})
+            await c.call_tool("memory_search", {"text": "nothing like this"})
+
+    fio = threading.Thread(target=lambda: asyncio.run(chamadas()))
+    fio.start()
+    fio.join(60)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, "en")
+    try:
+        textos = [pagina.locator("body").inner_text()]
+        pagina.locator(".recentes li button", has_text="Cache the build").click()
+        pagina.wait_for_selector(".painel .seccao")
+        pagina.wait_for_timeout(300)
+        textos.append(pagina.locator(".painel").inner_text())
+        pagina.get_by_role("button", name="Edit").click()
+        pagina.wait_for_selector(".painel textarea")
+        texto_editor = pagina.locator(".painel textarea").input_value()
+        assert texto_editor.startswith("---\ntype: lesson\ntitle: Cache the build\nproject: security-arena\n")
+        textos += [pagina.locator(".painel").inner_text(), texto_editor]
+        pagina.get_by_role("button", name="Cancel").click()
+        pagina.get_by_role("button", name="New memory").click()
+        pagina.wait_for_selector(".dialogo")
+        textos.append(pagina.locator(".dialogo").inner_text())
+        pagina.keyboard.press("Escape")
+        pagina.get_by_role("button", name="Claude activity").click()
+        pagina.wait_for_selector(".atividade .registo-linha:not(.registo-cabeca)")
+        textos.append(pagina.locator(".atividade").inner_text())
+        titulos = pagina.locator(".atividade [role=cell][title]").evaluate_all("(es) => es.map((e) => e.title)")
+        assert set(titulos) == {"memory_search", "memory_related", "memory_add"}
+        textos += titulos
+        for texto in textos:
+            # O seletor de línguas mostra cada língua no seu nome ("Português"): é de propósito.
+            texto = texto.replace("Português", "")
+            assert not PORTUGUES.search(texto), PORTUGUES.search(texto).group(0) + " em: " + texto[:2000]
     finally:
         contexto.close()
         servidor.parar()

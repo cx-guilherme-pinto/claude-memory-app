@@ -608,7 +608,7 @@ export default function App() {
           )}
           {aviso && (
             <p className="aviso-versao" role="status">
-              {tx('aviso.versao', { versao: String(aviso.ultima || '').replace(/^v/, '') }, { comando: <code>memoria update</code> })}
+              {tx('aviso.versao', { versao: String(aviso.ultima || '').replace(/^v/, '') }, { comando: <code>agent-memory update</code> })}
             </p>
           )}
           <button className="botao botao-principal botao-largo" type="button" onClick={() => setNovaAberta(true)}>

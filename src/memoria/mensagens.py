@@ -53,10 +53,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     ),
     "erro.nota_grande": _m("A nota é demasiado grande.", "The note is too large.", "नोट बहुत बड़ा है।", "ההערה גדולה מדי."),
     "erro.falta_cabecalho": _m(
-        "Falta o cabeçalho no início: linhas '---' com tipo, titulo e projeto.",
-        "The header is missing at the top: '---' lines with tipo, titulo and projeto.",
-        "शुरुआत में हेडर नहीं है: '---' लाइनें, जिनमें tipo, titulo और projeto हों।",
-        "חסרה כותרת עליונה בהתחלה: שורות '---' עם tipo, titulo ו-projeto.",
+        "Falta o cabeçalho no início: linhas '---' com type, title e project.",
+        "The header is missing at the top: '---' lines with type, title and project.",
+        "शुरुआत में हेडर नहीं है: '---' लाइनें, जिनमें type, title और project हों।",
+        "חסרה כותרת עליונה בהתחלה: שורות '---' עם type, title ו-project.",
     ),
     "erro.yaml": _m(
         "O cabeçalho YAML tem um erro.",
@@ -77,10 +77,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "הכותרת העליונה חייבת להיות רשימה של שורות 'key: value'.",
     ),
     "erro.falta_titulo_cabecalho": _m(
-        "Falta o titulo no cabeçalho.",
-        "The header has no titulo.",
-        "हेडर में titulo नहीं है।",
-        "בכותרת העליונה חסר titulo.",
+        "Falta o title no cabeçalho.",
+        "The header has no title.",
+        "हेडर में title नहीं है।",
+        "בכותרת העליונה חסר title.",
     ),
     "erro.dados_invalidos": _m("Dados inválidos.", "Invalid data.", "इनवैलिड डेटा।", "נתונים לא תקינים."),
     "erro.so_http": _m("Só ligações http/https.", "Only http/https links.", "सिर्फ़ http/https लिंक।", "רק קישורי http/https."),
@@ -137,6 +137,12 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "वॉर्निंग: {caminho} इनवैलिड है ({erro})। इसे इग्नोर कर रहे हैं।",
         "אזהרה: {caminho} לא תקין ({erro}). מתעלמים ממנו.",
     ),
+    "aviso.indexar": _m(
+        "aviso ao indexar: {erro}",
+        "warning while indexing: {erro}",
+        "इंडेक्स करते समय वॉर्निंग: {erro}",
+        "אזהרה בזמן בניית האינדקס: {erro}",
+    ),
     "aviso.memoria_ignorada": _m(
         "Aviso: memória ignorada: {erro}",
         "Warning: memory skipped: {erro}",
@@ -164,10 +170,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
     ),
     "cli.add": _m("adicionar uma memória", "add a memory", "एक मेमोरी जोड़ें", "להוסיף זיכרון"),
     "cli.add.tipo": _m(
-        "licao, fazer, nao_fazer ou historico",
-        "licao, fazer, nao_fazer or historico",
-        "licao, fazer, nao_fazer या historico",
-        "licao, fazer, nao_fazer או historico",
+        "lesson, do, dont ou history",
+        "lesson, do, dont or history",
+        "lesson, do, dont या history",
+        "lesson, do, dont או history",
     ),
     "cli.add.titulo": _m(
         "título curto (por omissão, a primeira linha do texto)",
@@ -452,10 +458,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "פתחו את הכתובת המלאה ש-Agent Memory הציגה בטרמינל. היא מתחילה ב-{base}?t=",
     ),
     "web.sem_sessao_2": _m(
-        "Ou fecha esta página e corre de novo: memoria --browser",
-        "Or close this page and run it again: memoria --browser",
-        "या यह पेज बंद करें और फिर से चलाएँ: memoria --browser",
-        "או סגרו את הדף והריצו שוב: memoria --browser",
+        "Ou fecha esta página e corre de novo: agent-memory --browser",
+        "Or close this page and run it again: agent-memory --browser",
+        "या यह पेज बंद करें और फिर से चलाएँ: agent-memory --browser",
+        "או סגרו את הדף והריצו שוב: agent-memory --browser",
     ),
     # ----------------------------------------------------------------- update
     "up.sem_git": _m(
@@ -558,10 +564,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "עודכן לגרסה {versao}. הזיכרונות לא שונו.",
     ),
     "up.reindex_falhou": _m(
-        "Aviso: o reindex falhou. Corre `memoria reindex` à mão.",
-        "Warning: the reindex failed. Run `memoria reindex` yourself.",
-        "वॉर्निंग: reindex फ़ेल। `memoria reindex` खुद चलाएँ।",
-        "אזהרה: בניית האינדקס נכשלה. הריצו `memoria reindex` ידנית.",
+        "Aviso: o reindex falhou. Corre `agent-memory reindex` à mão.",
+        "Warning: the reindex failed. Run `agent-memory reindex` yourself.",
+        "वॉर्निंग: reindex फ़ेल। `agent-memory reindex` खुद चलाएँ।",
+        "אזהרה: בניית האינדקס נכשלה. הריצו `agent-memory reindex` ידנית.",
     ),
     "up.nova_janela": _m(
         "A atualização continua numa nova janela, depois de esta terminar.",

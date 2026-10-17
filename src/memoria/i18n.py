@@ -1,8 +1,9 @@
 """Línguas da app: português, inglês, hindi e hebraico.
 
 Ordem de escolha (a primeira que existir ganha):
-1. variável de ambiente MEMORIA_LANG (pt, en, hi, he);
-2. a escolha guardada no seletor da interface ($MEMORIA_HOME/preferencias.json);
+1. variável de ambiente AGENT_MEMORY_LANG (pt, en, hi, he), ou a antiga MEMORIA_LANG;
+2. a escolha guardada no seletor da interface (<pasta dos dados>/preferences.json;
+   lê também o preferencias.json das versões até à v0.4);
 3. a língua do sistema (macOS: AppleLanguages; Windows: língua da interface;
    outros: LANGUAGE/LC_ALL/LC_MESSAGES/LANG);
 4. inglês.
@@ -26,7 +27,6 @@ LINGUAS = ("pt", "en", "hi", "he")
 RESERVA = "en"
 NOMES = {"pt": "Português", "en": "English", "hi": "हिन्दी", "he": "עברית"}
 RTL = {"he"}
-ENV = "MEMORIA_LANG"
 _SINONIMOS = {"iw": "he"}  # código antigo do hebraico (Java, Android antigo)
 
 _trinco = threading.Lock()
@@ -90,25 +90,43 @@ def lingua_sistema() -> str:
     return RESERVA
 
 
-def _ficheiro_preferencias() -> Path:
+FICHEIRO_PREFERENCIAS = "preferences.json"
+FICHEIRO_PREFERENCIAS_ANTIGO = "preferencias.json"  # até à v0.4, chave "lingua"
+
+
+def _ficheiro_preferencias(antigo: bool = False) -> Path:
     from memoria import config
 
-    return config.memoria_home() / "preferencias.json"
+    return config.memoria_home() / (FICHEIRO_PREFERENCIAS_ANTIGO if antigo else FICHEIRO_PREFERENCIAS)
+
+
+def _ler_preferencias(antigo: bool = False) -> dict | None:
+    try:
+        dados = json.loads(_ficheiro_preferencias(antigo).read_text("utf-8"))
+    except (OSError, ValueError):
+        return None
+    return dados if isinstance(dados, dict) else None
 
 
 def lingua_guardada() -> str | None:
-    try:
-        dados = json.loads(_ficheiro_preferencias().read_text("utf-8"))
-    except (OSError, ValueError):
-        return None
-    return normalizar(dados.get("lingua")) if isinstance(dados, dict) else None
+    dados = _ler_preferencias()
+    if dados is not None:
+        return normalizar(dados.get("language") or dados.get("lingua"))
+    antigas = _ler_preferencias(antigo=True)
+    return normalizar(antigas.get("lingua")) if antigas else None
+
+
+def lingua_ambiente() -> str | None:
+    from memoria import config
+
+    return normalizar(config.ambiente(config.ENV_LINGUA))
 
 
 def lingua() -> str:
     global _atual
     with _trinco:
         if _atual is None:
-            _atual = normalizar(os.environ.get(ENV)) or lingua_guardada() or lingua_sistema()
+            _atual = lingua_ambiente() or lingua_guardada() or lingua_sistema()
         return _atual
 
 
@@ -120,12 +138,12 @@ def definir_lingua(codigo: str, guardar: bool = True) -> str:
         raise ValueError(t("erro.lingua", codigo=codigo, linguas=", ".join(LINGUAS)))
     if guardar:
         caminho = _ficheiro_preferencias()
-        try:
-            dados = json.loads(caminho.read_text("utf-8"))
-            dados = dados if isinstance(dados, dict) else {}
-        except (OSError, ValueError):
-            dados = {}
-        dados["lingua"] = lingua_nova
+        # Primeira escolha na v0.5: leva as outras preferências do ficheiro antigo (que fica como está).
+        dados = _ler_preferencias()
+        if dados is None:
+            dados = _ler_preferencias(antigo=True) or {}
+        dados.pop("lingua", None)
+        dados["language"] = lingua_nova
         caminho.parent.mkdir(parents=True, exist_ok=True)
         temporario = caminho.with_name(f".{caminho.name}.tmp")
         temporario.write_text(json.dumps(dados, ensure_ascii=False, indent=2) + "\n", "utf-8")
@@ -136,7 +154,7 @@ def definir_lingua(codigo: str, guardar: bool = True) -> str:
 
 
 def repor() -> None:
-    """Esquece a língua em memória (testes; ou depois de mudar MEMORIA_HOME)."""
+    """Esquece a língua em memória (testes; ou depois de mudar a pasta dos dados)."""
     global _atual
     with _trinco:
         _atual = None

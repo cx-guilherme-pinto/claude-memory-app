@@ -27,7 +27,7 @@ O caminho de instalação com o uv (`install.sh`, `install.ps1`, wheel) continua
 3. **Python do python-build-standalone 3.12.15 nos três zips.** É o mesmo que o uv instala hoje.
    Tem FTS5 e as correções de segurança. Os `.exe` não são assinados.
    A alternativa (zip "embeddable" do python.org, assinado pela PSF) ficou parada no 3.12.10.
-4. **`memoria update` troca a pasta no mesmo sítio.** O caminho não muda,
+4. **O `update` troca a pasta no mesmo sítio.** O caminho não muda,
    por isso a ligação ao Claude Code (MCP) continua válida.
 5. **Sem assinatura Apple na release normal** (decisão do organizador: só se for mesmo preciso).
    Pelo setup não é preciso: testado, um zip descarregado com `curl` não fica em quarentena
@@ -51,7 +51,7 @@ Windows:
 - `Memoria.exe` é uma cópia do `pythonw.exe`. O `sitecustomize.py` abre a janela
   quando o executável é `Memoria.exe` e não há argumentos. Nos outros casos não faz nada.
 - `python312._pth` fixa os caminhos e ignora `PYTHONPATH`/`PYTHONHOME` do utilizador.
-- O MCP é `…\Memoria\python.exe -m memoria mcp`. Na consola: `memoria.cmd selftest`.
+- O MCP é `…\Memoria\python.exe -m memoria mcp`. Na consola: `agent-memory.cmd selftest` (o `memoria.cmd` é o nome antigo e continua a funcionar).
 - Se o zip veio pelo browser, a app tira a marca da Internet aos seus ficheiros no arranque.
   Sem isso, o .NET recusa as DLL do pythonnet e do WebView2 e a janela não abre.
 
@@ -85,7 +85,7 @@ rm -rf "$HOME/Applications/Memoria.app"
 ditto -x -k "$tmp/$zip" "$HOME/Applications"
 app="$HOME/Applications/Memoria.app/Contents/MacOS/memoria"
 "$app" selftest
-claude mcp add --scope user memoria -- "$app" mcp
+claude mcp add --scope user agent-memory -- "$app" mcp
 ```
 
 Windows (PowerShell 5.1; o `Expand-Archive` é lento com milhares de ficheiros):
@@ -99,7 +99,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $tmp $zip), $destino)
 $py = Join-Path $destino 'Memoria\python.exe'
 & $py -m memoria selftest
-claude mcp add --scope user memoria -- $py -m memoria mcp
+claude mcp add --scope user agent-memory -- $py -m memoria mcp
 # Atalho no menu Iniciar para Memoria\Memoria.exe (como o install.ps1 já faz).
 ```
 
@@ -189,4 +189,4 @@ No Mac (Apple Silicon, macOS 26.6):
 - Windows ARM (corre o zip x64 em emulação).
 
 Também por fazer: o menu da app mostra "Memoria" (sem acento), a app não tem ícone,
-e o aviso de versão nova na interface diz `memoria update` (na versão portátil é o caminho completo).
+e o aviso de versão nova na interface diz `agent-memory update` (na versão portátil é o caminho completo).

@@ -62,14 +62,16 @@ def raiz(prefixo: Path | None = None) -> Path:
 
 
 def comando(prefixo: Path | None = None) -> list[str]:
-    """Comando absoluto que corre `memoria` nesta versão portátil."""
+    """Comando absoluto que corre a app (CLI e MCP) nesta versão portátil."""
     exe, *resto = info(prefixo)["comando"]
     return [str(raiz(prefixo) / exe), *resto]
 
 
 def comando_claude(prefixo: Path | None = None) -> str:
     """O comando para ligar ao Claude Code, pronto a copiar."""
-    partes = ["claude", "mcp", "add", "--scope", "user", "memoria", "--", *comando(prefixo), "mcp"]
+    from memoria.mcp_server import NOME_SERVIDOR
+
+    partes = ["claude", "mcp", "add", "--scope", "user", NOME_SERVIDOR, "--", *comando(prefixo), "mcp"]
     return subprocess.list2cmdline(partes) if os.name == "nt" else shlex.join(partes)
 
 
@@ -155,6 +157,7 @@ def extrair(zip_: Path, destino: Path) -> None:
 
 
 def _verificar_nova(versao: str, comando_nova: list[str]) -> None:
+    from memoria import config
     from memoria.update import ErroUpdate
 
     r = subprocess.run(
@@ -163,7 +166,7 @@ def _verificar_nova(versao: str, comando_nova: list[str]) -> None:
         capture_output=True,
         text=True,
         timeout=180,
-        env={**os.environ, "MEMORIA_SEM_UPDATE": "1"},
+        env={**os.environ, **config.ambiente_sem_update()},
     )
     if r.returncode != 0:
         raise ErroUpdate(t("pt.selftest_falhou", versao=versao) + "\n" + (r.stdout + r.stderr)[-1500:])
@@ -183,7 +186,7 @@ def atualizar(cfg: dict[str, str], tag: str, baixar, prefixo: Path | None = None
         raise ErroUpdate(t("pt.copia_temporaria"))
     nome = nome_zip(tag, dados["plataforma"])
     try:
-        pasta = Path(tempfile.mkdtemp(prefix=".memoria-update-", dir=atual.parent))
+        pasta = Path(tempfile.mkdtemp(prefix=".agent-memory-update-", dir=atual.parent))
     except OSError as erro:
         raise ErroUpdate(t("st.sem_escrita", pasta=atual.parent, erro=erro)) from None
     entregue = False
@@ -199,14 +202,14 @@ def atualizar(cfg: dict[str, str], tag: str, baixar, prefixo: Path | None = None
         if sha256(zip_) != somas[nome]:
             raise ErroUpdate(t("pt.sha", nome=nome))
         try:
-            extrair(zip_, pasta / "nova")
+            extrair(zip_, pasta / "new")
         except (OSError, ValueError, zipfile.BadZipFile) as erro:
             raise ErroUpdate(t("pt.extrair", nome=nome, erro=erro)) from None
         zip_.unlink()
         # O zip tem uma só pasta (Memoria.app ou Memoria). A troca mantém o nome
         # atual, mesmo que o utilizador tenha mudado o nome da app.
-        topo = list((pasta / "nova").iterdir())
-        nova = topo[0] if len(topo) == 1 else pasta / "nova"
+        topo = list((pasta / "new").iterdir())
+        nova = topo[0] if len(topo) == 1 else pasta / "new"
         dados_nova = info(nova / dados["prefixo"])
         if not dados_nova or dados_nova.get("plataforma") != dados["plataforma"]:
             raise ErroUpdate(t("pt.plataforma", nome=nome, plataforma=dados["plataforma"]))
@@ -218,7 +221,7 @@ def atualizar(cfg: dict[str, str], tag: str, baixar, prefixo: Path | None = None
             entregue = True
             return _trocar_depois_de_sair(atual, nova, pasta, [str(atual / exe), *resto])
 
-        antiga = pasta / "antiga"
+        antiga = pasta / "old"
         os.rename(atual, antiga)
         try:
             os.rename(nova, atual)
@@ -247,7 +250,7 @@ def script_troca(atual: Path, nova: Path, pasta: Path, pid: int, reindex: list[s
             "$ErrorActionPreference = 'Stop'",
             f"Wait-Process -Id {pid} -ErrorAction SilentlyContinue",
             f"$atual = {ps(atual)}",
-            f"$antiga = {ps(pasta / 'antiga')}",
+            f"$antiga = {ps(pasta / 'old')}",
             "$movida = $false",
             "for ($i = 0; $i -lt 90; $i++) {",
             "    try { Move-Item -LiteralPath $atual -Destination $antiga; $movida = $true; break }",
@@ -271,7 +274,7 @@ def _trocar_depois_de_sair(atual: Path, nova: Path, pasta: Path, reindex: list[s
     """Windows: não se pode mover a pasta enquanto este processo (ou o MCP) a usa."""
     from memoria.update import _info
 
-    script = pasta / "trocar.ps1"
+    script = pasta / "swap.ps1"
     # Com BOM: o PowerShell 5.1 lê UTF-8 corretamente (caminhos com acentos).
     script.write_text(script_troca(atual, nova, pasta, os.getpid(), reindex), encoding="utf-8-sig")
     subprocess.Popen(

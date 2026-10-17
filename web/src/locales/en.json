@@ -128,7 +128,7 @@
   "atividade.abrir": "Open the memory",
   "atividade.vazio_titulo": "Claude hasn't used Agent Memory yet.",
   "atividade.vazio_texto": "When Claude Code calls the MCP tools, the calls show up here.",
-  "ferramenta.memoria_procurar": "Search",
-  "ferramenta.memoria_relacionadas": "Related",
-  "ferramenta.memoria_adicionar": "Saved"
+  "ferramenta.memory_search": "Search",
+  "ferramenta.memory_related": "Related",
+  "ferramenta.memory_add": "Saved"
 }

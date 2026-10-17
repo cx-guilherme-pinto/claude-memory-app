@@ -44,16 +44,16 @@ def test_campos_novos_no_frontmatter(mem):
         etiquetas=["#ci", "Cache", "cache", ""],
     )
     meta = _meta(r["caminho"])
-    assert meta["tarefa"] == "ABC-123" and meta["epico"] == "ABC-100"
+    assert meta["task"] == "ABC-123" and meta["epic"] == "ABC-100"
     assert meta["url"] == "https://empresa.atlassian.net/browse/ABC-123"
-    assert meta["etiquetas"] == ["ci", "Cache"]
-    assert list(meta)[:7] == ["tipo", "titulo", "projeto", "tarefa", "epico", "url", "etiquetas"]
+    assert meta["tags"] == ["ci", "Cache"]
+    assert list(meta)[:7] == ["type", "title", "project", "task", "epic", "url", "tags"]
 
 
 def test_campos_vazios_nao_sao_escritos(mem):
     meta = _meta(mem.adicionar(tipo="fazer", titulo="Simples", texto="x", projeto="p")["caminho"])
-    assert not {"tarefa", "epico", "url", "etiquetas"} & set(meta)
-    assert meta["ficheiros"] == [] and meta["ligacoes"] == []
+    assert not {"task", "epic", "url", "tags", "cost_usd"} & set(meta)
+    assert meta["files"] == [] and meta["links"] == []
 
 
 @pytest.mark.parametrize(
@@ -69,7 +69,7 @@ def test_campos_vazios_nao_sao_escritos(mem):
 )
 def test_tarefa_inferida_do_url(mem, url, tarefa):
     meta = _meta(mem.adicionar(tipo="fazer", titulo="U", texto="x", projeto="p", url=url)["caminho"])
-    assert meta.get("tarefa", "") == tarefa
+    assert meta.get("task", "") == tarefa
 
 
 def test_url_invalido(mem):
@@ -84,7 +84,7 @@ def test_url_com_credenciais_e_redigido(mem):
 
 def test_epico_igual_a_tarefa_nao_duplica(mem):
     meta = _meta(mem.adicionar(tipo="fazer", titulo="E", texto="x", projeto="p", tarefa="ABC-100", epico="abc-100")["caminho"])
-    assert meta["tarefa"] == "ABC-100" and "epico" not in meta
+    assert meta["task"] == "ABC-100" and "epic" not in meta
 
 
 @pytest.mark.parametrize(
@@ -104,12 +104,19 @@ def test_notas_e_indice_da_v01(home: Path):
     antigo = home / ".indice" / "memoria.sqlite"
     antigo.parent.mkdir()
     antigo.write_bytes(b"indice da v0.1")
+    antigo_v2 = home / ".indice" / "memoria-v2.sqlite"
+    antigo_v2.write_bytes(b"indice da v0.4")
+    registo_antigo = home / ".indice" / "registo.sqlite"
+    registo_antigo.write_bytes(b"registo da v0.4")
     mem = Memoria(home)
     achado = mem.procurar("cache")[0]
     assert achado["tarefa"] == "ABC-1" and achado["epico"] == "" and achado["etiquetas"] == [] and achado["url"] == ""
-    assert (home / ".indice" / NOME_FICHEIRO).is_file()
+    assert (home / ".index" / NOME_FICHEIRO).is_file()
+    assert NOME_FICHEIRO == "index-v2.sqlite"
     mem.reindexar()
-    assert not antigo.exists()
+    assert not antigo.exists() and not antigo_v2.exists()
+    assert registo_antigo.exists()  # o registo MCP nunca é apagado
+    assert (pasta / "2026-10-16-usar-cache-no-build.md").read_text("utf-8") == NOTA_V01  # nem as notas
     assert mem.procurar("ABC-1")[0]["id"] == achado["id"]
 
 
@@ -247,23 +254,23 @@ def test_mcp_novos_parametros(mem):
     async def principal():
         async with Client(criar_servidor(mem)) as cliente:
             r = await cliente.call_tool(
-                "memoria_adicionar",
+                "memory_add",
                 {
-                    "tipo": "licao",
-                    "titulo": "Via MCP",
-                    "texto": "x",
-                    "projeto": "p",
-                    "tarefa": "ABC-7",
-                    "epico": "ABC-1",
+                    "type": "lesson",
+                    "title": "Via MCP",
+                    "text": "x",
+                    "project": "p",
+                    "task": "ABC-7",
+                    "epic": "ABC-1",
                     "url": "https://empresa.atlassian.net/browse/ABC-7",
-                    "etiquetas": ["mcp"],
+                    "tags": ["mcp"],
                 },
             )
-            p = await cliente.call_tool("memoria_procurar", {"texto": "", "epico": "abc-1"})
+            p = await cliente.call_tool("memory_search", {"text": "", "epic": "abc-1"})
             return r, p
 
     r, p = asyncio.run(principal())
     meta = _meta(r.content[0].text)
-    assert meta["epico"] == "ABC-1" and meta["etiquetas"] == ["mcp"]
-    achado = json.loads(p.content[0].text)["resultados"][0]
-    assert achado["tarefa"] == "ABC-7" and achado["epico"] == "ABC-1" and achado["url"].endswith("ABC-7")
+    assert meta["epic"] == "ABC-1" and meta["tags"] == ["mcp"]
+    achado = json.loads(p.content[0].text)["results"][0]
+    assert achado["task"] == "ABC-7" and achado["epic"] == "ABC-1" and achado["url"].endswith("ABC-7")

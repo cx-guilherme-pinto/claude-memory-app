@@ -57,7 +57,7 @@ async function viaHttp(metodo, args) {
   });
   const dados = await resposta.json().catch(() => ({}));
   if (resposta.status === 403) throw new Error(t('sessao.invalida'));
-  if (!resposta.ok) throw new Error(dados.erro || `Erro ${resposta.status}`);
+  if (!resposta.ok) throw new Error(dados.error || dados.erro || `HTTP ${resposta.status}`);
   return dados.resultado;
 }
 

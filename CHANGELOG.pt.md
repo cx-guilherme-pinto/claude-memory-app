@@ -4,12 +4,41 @@
 
 Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https://semver.org/lang/pt-PT/).
 
-## [Por publicar]
+## [0.5.0] - 2026-10-17
 
 ### Alterado
 
-- A app passa a chamar-se **Agent Memory** em todas as línguas (janela, título da página, menus, mensagens, atalhos e docs). Até à v0.4 chamava-se *Memória*. O comando `memoria`, o servidor MCP `memoria` e a pasta `~/.memoria` mantêm o nome.
+- A app passa a chamar-se **Agent Memory** em todas as línguas (janela, título da página, menus, mensagens, atalhos e docs). Até à v0.4 chamava-se *Memória*.
 - Os instaladores criam `~/Applications/Agent Memory.app` (Mac) e "Agent Memory" no menu Iniciar (Windows), e removem o atalho antigo *Memória*.
+- **Nomes técnicos em inglês**, para um workshop em inglês não mostrar nem uma palavra em português
+  (os termos técnicos ficam em inglês em todas as línguas):
+  - comando `agent-memory` (e `agent-memory-gui`), com `search` e `language` e as opções
+    `--type`, `--title`, `--project`, `--text`, `--task`, `--epic`, `--tag`, `--file`, `--link`, `--cost`, `--limit`,
+    e `update --check/--force/--version`;
+  - servidor MCP `agent-memory` com as ferramentas `memory_search(text?, project?, task?, epic?, type?, limit)`,
+    `memory_add(type, title, text, project, task?, epic?, url?, tags?, files?, links?, cost_usd?)` e
+    `memory_related(ref, limit)`. Os resultados usam chaves em inglês (`results`, `path`, `title`, `type`, `task`,
+    `excerpt`, `score`, `strength`, `reasons`, ...). As instruções para o modelo usam os nomes novos;
+  - tipos `lesson`, `do`, `dont` e `history`;
+  - as notas novas levam o cabeçalho em inglês (`type`, `title`, `project`, `task`, `epic`, `url`, `tags`,
+    `files`, `date`, `cost_usd`, `links`);
+  - pasta dos dados `~/.agent-memory` (`AGENT_MEMORY_HOME`), com `.index/index-v2.sqlite`, `.index/activity.sqlite`
+    e `preferences.json`;
+  - variáveis `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE` e `AGENT_MEMORY_DOWNLOAD_TOKEN`;
+  - a marca da redação é `[REDACTED:<tipo>]`;
+  - o zip portátil do Windows traz `agent-memory.cmd` e `README.pt.txt` (era `LEIA-ME.txt`).
+- As respostas de erro do servidor web são em inglês (`{"error": "not found"}`).
+
+### Compatibilidade
+
+Nada muda de sítio e nenhuma nota é reescrita:
+
+- O `memoria` (e o `memoria-gui`) continuam a funcionar, tal como `procurar`, `lingua` e as opções em português (`--tipo`, `--projeto`, `--verificar`, ...). Não aparecem na ajuda.
+- Se `~/.memoria` existir e `~/.agent-memory` não, a app continua a usar `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` e `MEMORIA_DOWNLOAD_TOKEN` continuam a funcionar (os nomes novos ganham).
+- As notas com o cabeçalho antigo em português (`tipo: licao`, `titulo`, `projeto`, `tarefa`, ...) são lidas como estão. Os filtros de tipo aceitam os dois nomes.
+- O registo de atividade antigo (`.indice/registo.sqlite`) é copiado uma vez, nunca movido; as linhas antigas aparecem com os nomes novos das ferramentas. A língua guardada em `preferencias.json` é lida.
+- Os nomes antigos das ferramentas MCP (`memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`) **saíram**: as skills do kit usam os novos. Volta a registar o servidor como `agent-memory` (`claude mcp remove --scope user memoria` e depois `claude mcp add --scope user agent-memory -- <agent-memory> mcp`).
+- O wheel (`memoria-<versão>-py3-none-any.whl`), o nome da ferramenta no uv (`memoria`), o pacote Python e os zips e pastas portáteis (`Memoria-…zip`, `Memoria.app`, `Memoria\Memoria.exe`) mantêm o nome, para as instalações e as atualizações continuarem a funcionar.
 
 ## [0.4.1] - 2026-10-16
 

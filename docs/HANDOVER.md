@@ -20,6 +20,7 @@ pushes to both. Releases v0.1.0 to v0.4.0 are being copied there by the workshop
 | 0.2.3 | Edit a memory inside the app |
 | 0.3.0 | 4 languages (pt, en, hi, he), Hebrew RTL, language picker |
 | 0.4.0 | "Claude activity" view (MCP call log) |
+| 0.5.0 (not released yet) | Name *Agent Memory*; English technical names: `agent-memory` command, `agent-memory` MCP server with `memory_search`/`memory_add`/`memory_related`, English note headers and `~/.agent-memory`. Old names still accepted (see the CHANGELOG) |
 
 Assets in each release: the wheel, `constraints.txt`, `install.sh`, `install.ps1`, `SHA256SUMS`
 and the 3 portable zips.
@@ -38,30 +39,30 @@ Verified:
 ## Open work
 
 1. **Test on real Windows.** Only static checks so far: `install.ps1`, the portable zip,
-   WebView2, pythonnet, `memoria-gui.exe` and the folder swap in `memoria update`.
+   WebView2, pythonnet, `agent-memory-gui.exe` and the folder swap in `agent-memory update`.
 2. **Test on an Intel Mac and on Windows ARM.** The wheels exist (see `scripts/lock.sh`), but nothing was run there.
 3. **Have native speakers review Hindi and Hebrew:** `web/src/locales/hi.json`, `he.json`,
    `src/memoria/mensagens.py`, `README.hi.md` and `README.he.md`.
 4. **Installer messages in other languages.** `install.sh` and `install.ps1` speak English only
-   (the `.ps1` must stay ASCII). The Windows zip has `README.txt` (English) and `LEIA-ME.txt` (Portuguese).
+   (the `.ps1` must stay ASCII). The Windows zip has `README.txt` (English) and `README.pt.txt` (Portuguese).
 5. **Run the CI workflow for the first time** (`.github/workflows/release.yml`). Gitea had no runner:
    every release was made by hand with the same scripts.
 6. **Real Apple signing** (Developer ID + notarization): only ad hoc signing was tested.
 
 ## Risks
 
-- **Private or internal repository.** The installers, the kit's setup and `memoria update` download from
+- **Private or internal repository.** The installers, the kit's setup and `agent-memory update` download from
   `{repo}/releases/download/<tag>/<file>`. On GitHub that URL only works without login on a public
   repository. With a private or internal repository, participants can't install or update.
   Fixes: publish releases on a public repository, or add an API download (with a token) to `update.py`
   and the installers.
 - **Gatekeeper, SmartScreen and EDR.** The zips aren't signed. Through the setup (curl or Invoke-WebRequest)
   they aren't quarantined. Downloaded in a browser, macOS blocks them.
-- **TLS-inspecting proxies.** uv needs `UV_SYSTEM_CERTS=1`. `memoria update` uses the system certificates
+- **TLS-inspecting proxies.** uv needs `UV_SYSTEM_CERTS=1`. `agent-memory update` uses the system certificates
   (truststore). Its `git ls-remote` uses the git configuration.
 - **`cryptography` pinned to 46.0.3** (`constraints.in`): the last version with wheels for Intel Mac
   and Windows ARM. It comes from `mcp`; the stdio server doesn't use it.
-- **Updating on Windows with Claude Code open.** `memoria mcp` locks the files. The swap script waits up
+- **Updating on Windows with Claude Code open.** `agent-memory mcp` locks the files. The swap script waits up
   to 3 minutes and asks to close Agent Memory and Claude Code.
 - **Canvas tests in headless Chromium.** Animation frames don't always run. The tests use the value seen
   at drawing time (`tests/test_browser.py`, `_esperar_desenho`).

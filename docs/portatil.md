@@ -27,7 +27,7 @@ The uv install path (`install.sh`, `install.ps1`, wheel) stays as it is.
 3. **python-build-standalone 3.12.15 in all three zips.** It's the same Python uv installs today.
    It has FTS5 and the security fixes. The `.exe` files aren't signed.
    The alternative (python.org's "embeddable" zip, signed by the PSF) stopped at 3.12.10.
-4. **`memoria update` swaps the folder in place.** The path doesn't change,
+4. **`update` swaps the folder in place.** The path doesn't change,
    so the Claude Code connection (MCP) stays valid.
 5. **No Apple signing in the normal release** (the organizer's call: only if really needed).
    The setup doesn't need it: tested, a zip downloaded with `curl` isn't quarantined
@@ -51,7 +51,7 @@ Windows:
 - `Memoria.exe` is a copy of `pythonw.exe`. `sitecustomize.py` opens the window
   when the executable is `Memoria.exe` and there are no arguments. Otherwise it does nothing.
 - `python312._pth` pins the paths and ignores the user's `PYTHONPATH`/`PYTHONHOME`.
-- The MCP command is `…\Memoria\python.exe -m memoria mcp`. In a console: `memoria.cmd selftest`.
+- The MCP command is `…\Memoria\python.exe -m memoria mcp`. In a console: `agent-memory.cmd selftest` (`memoria.cmd` is the old name and still works).
 - If the zip came through a browser, the app removes the Internet mark from its files at startup.
   Without that, .NET refuses the pythonnet and WebView2 DLLs and the window doesn't open.
 
@@ -85,7 +85,7 @@ rm -rf "$HOME/Applications/Memoria.app"
 ditto -x -k "$tmp/$zip" "$HOME/Applications"
 app="$HOME/Applications/Memoria.app/Contents/MacOS/memoria"
 "$app" selftest
-claude mcp add --scope user memoria -- "$app" mcp
+claude mcp add --scope user agent-memory -- "$app" mcp
 ```
 
 Windows (PowerShell 5.1; `Expand-Archive` is slow with thousands of files):
@@ -99,7 +99,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $tmp $zip), $destino)
 $py = Join-Path $destino 'Memoria\python.exe'
 & $py -m memoria selftest
-claude mcp add --scope user memoria -- $py -m memoria mcp
+claude mcp add --scope user agent-memory -- $py -m memoria mcp
 # Start menu shortcut to Memoria\Memoria.exe (as install.ps1 already does).
 ```
 
@@ -189,4 +189,4 @@ On a Mac (Apple Silicon, macOS 26.6):
 - Windows ARM (runs the x64 zip under emulation).
 
 Also still to do: the app menu shows "Memoria" (no accent), the app has no icon,
-and the new-version notice in the UI says `memoria update` (in the portable version it's the full path).
+and the new-version notice in the UI says `agent-memory update` (in the portable version it's the full path).

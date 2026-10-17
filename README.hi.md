@@ -5,7 +5,9 @@
 Agent Memory वो सब Markdown फ़ाइलों में सेव करता है जो Claude Code सीखता है, आपके अपने कंप्यूटर पर।
 यह इन notes को एक graph में दिखाता है और MCP server के ज़रिए Claude Code को वापस देता है।
 
-v0.4 तक इस ऐप का नाम *Memória* था। कमांड (`memoria`), MCP सर्वर (`memoria`) और डेटा फ़ोल्डर (`~/.memoria`) के नाम वही हैं।
+v0.4 तक इस ऐप का नाम *Memória* था। v0.5 से technical नाम भी English में हैं: `agent-memory` command,
+`memory_search`, `memory_add` और `memory_related` tools वाला `agent-memory` MCP server, और `~/.agent-memory` फ़ोल्डर।
+पुराने नाम अब भी चलते हैं ([v0.4 से आ रहे हैं](#v04-से-आ-रहे-हैं) देखें)।
 
 - **सबक** (lessons), नियम (**करें**, **न करें**) और टास्क की **हिस्ट्री**।
 - हर note किसी ticket (Jira, GitHub) और उसके epic से लिंक हो सकता है।
@@ -22,13 +24,13 @@ Admin rights की ज़रूरत नहीं।
 **macOS** (Intel और Apple Silicon) और Linux, Terminal में:
 
 ```bash
-curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.sh | sh
+curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.5.0/install.sh | sh
 ```
 
 **Windows 10/11**, PowerShell में:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.5.0/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -54,47 +56,49 @@ Commands `~/.local/bin` (Mac/Linux) या `%USERPROFILE%\.local\bin` (Windows) 
 
 Unzip करें और खोलें। न admin चाहिए, न नेटवर्क। Workshop का setup यह खुद कर देता है।
 
-- Claude Code से जोड़ने के लिए: `memoria selftest` सही `claude mcp add` command दिखाता है।
-  Mac पर `…/Memoria.app/Contents/MacOS/memoria selftest`; Windows पर `memoria.cmd selftest`।
+- Claude Code से जोड़ने के लिए: `selftest` सही `claude mcp add` command दिखाता है।
+  Mac पर `…/Memoria.app/Contents/MacOS/memoria selftest`; Windows पर `agent-memory.cmd selftest`।
 - एक लाइन वाले install command का इस्तेमाल करें। ब्राउज़र से डाउनलोड किए zip के लिए
   System Settings → Privacy & Security में approval चाहिए: macOS ऐप को ब्लॉक करता है (signed नहीं है)।
   Terminal से अनब्लॉक करें: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`।
   Windows पर "Windows protected your PC" आए तो "More info" और फिर "Run anyway" पर क्लिक करें।
 - Claude Code से जोड़ने के बाद ऐप को मूव न करें।
+- Zips, ऐप का फ़ोल्डर और उसके launchers का नाम `Memoria` ही रहता है: पुरानी portable कॉपी अपनी जगह पर अपडेट होती रहती हैं।
 
 डिटेल्स और फ़ैसले: [docs/portatil.md](docs/portatil.md) (English)।
 
 ## Claude Code से जोड़ें
 
 ```bash
-claude mcp add --scope user memoria -- "$HOME/.local/bin/memoria" mcp
+claude mcp add --scope user agent-memory -- "$HOME/.local/bin/agent-memory" mcp
 ```
 
-Windows पर: `claude mcp add --scope user memoria -- "%USERPROFILE%\.local\bin\memoria.exe" mcp`।
+Windows पर: `claude mcp add --scope user agent-memory -- "%USERPROFILE%\.local\bin\agent-memory.exe" mcp`।
 
-MCP tools:
+MCP tools (Claude Code में: `mcp__agent-memory__memory_search` वगैरह):
 
 | Tool | काम |
 |---|---|
-| `memoria_procurar(texto, projeto?, tipo?, tarefa?, epico?, limite=10)` | Notes सर्च करता है। Ticket key (`ABC-123`) से टास्क और उसका epic मिलता है। |
-| `memoria_adicionar(tipo, titulo, texto, projeto, tarefa?, epico?, url?, ficheiros?, ligacoes?, etiquetas?, custo_usd?)` | Note सेव करके उसका path लौटाता है। |
-| `memoria_relacionadas(id_ou_caminho, limite=10)` | लिंक हुए notes, सबसे मज़बूत रिलेशन पहले। |
+| `memory_search(text?, project?, task?, epic?, type?, limit=10)` | Notes सर्च करता है। Ticket key (`ABC-123`) से टास्क और उसका epic मिलता है। `text` खाली हो तो सबसे नए notes। |
+| `memory_add(type, title, text, project, task?, epic?, url?, tags?, files?, links?, cost_usd?)` | Note सेव करके उसका path लौटाता है। |
+| `memory_related(ref, limit=10)` | लिंक हुए notes, सबसे मज़बूत रिलेशन पहले। `ref` वो path है जो `memory_add` ने लौटाया, या note का id, नाम या title। |
 
-Tools और parameters के नाम पुर्तगाली में हैं और कभी नहीं बदलते।
+`type`: `lesson` (सबक), `do` (करें), `dont` (न करें) या `history` (हिस्ट्री)।
+Results में भी यही English नाम हैं (`results`, `path`, `title`, `task`, ...; `memory_related` में `strength` और `reasons` भी)।
 
 ## इस्तेमाल
 
 | Command | क्या करता है |
 |---|---|
-| `memoria` | विंडो खोलता है। |
-| `memoria --browser` | वही इंटरफ़ेस ब्राउज़र में खोलता है। |
-| `memoria add --tipo licao --projeto p --titulo "..." --texto "..." [--tarefa ABC-123 --epico ABC-100 --url ...]` | Note सेव करता है। |
-| `memoria procurar "text" [--tarefa ABC-123] [--epico ABC-100]` | Command line से सर्च। |
-| `memoria reindex` | Markdown फ़ाइलों से index फिर से बनाता है। |
-| `memoria update` | लेटेस्ट वर्ज़न इंस्टॉल करता है। |
-| `memoria selftest [--gui]` | इंस्टॉलेशन चेक करता है। `--gui` के साथ विंडो खोलकर बंद करता है। |
-| `memoria lingua [pt\|en\|hi\|he]` | भाषा दिखाता या चुनता है। |
-| `memoria mcp` | MCP server (Claude Code इसे इस्तेमाल करता है)। |
+| `agent-memory` | विंडो खोलता है। |
+| `agent-memory --browser` | वही इंटरफ़ेस ब्राउज़र में खोलता है। |
+| `agent-memory add --type lesson --project p --title "..." --text "..." [--task ABC-123 --epic ABC-100 --url ...]` | Note सेव करता है। |
+| `agent-memory search "text" [--task ABC-123] [--epic ABC-100] [--json]` | Command line से सर्च। |
+| `agent-memory reindex` | Markdown फ़ाइलों से index फिर से बनाता है। |
+| `agent-memory update` | लेटेस्ट वर्ज़न इंस्टॉल करता है। |
+| `agent-memory selftest [--gui]` | इंस्टॉलेशन चेक करता है। `--gui` के साथ विंडो खोलकर बंद करता है। |
+| `agent-memory language [pt\|en\|hi\|he]` | भाषा दिखाता या चुनता है। |
+| `agent-memory mcp` | MCP server (Claude Code इसे इस्तेमाल करता है)। |
 
 विंडो में किसी node पर क्लिक करके note देखें। सर्च के लिए `/` और बंद करने के लिए `Esc` दबाएँ।
 सर्च में memories, projects और tasks/epics दिखते हैं; किसी एक को चुनकर उस पर फ़ोकस करें।
@@ -115,8 +119,8 @@ Terminal सेशन का पता दिखाता है (`http://127.0.
 
 व्यू अपने-आप रिफ़्रेश होता है। यह सेशन के हिसाब से अलग नहीं होता।
 
-Log `~/.memoria/.indice/registo.sqlite` में आपके कंप्यूटर पर रहता है, index से अलग
-(`memoria reindex` इसे नहीं मिटाता)। सर्च किया टेक्स्ट secrets मास्क करके और छोटा करके सेव होता है।
+Log `~/.agent-memory/.index/activity.sqlite` में आपके कंप्यूटर पर रहता है, index से अलग
+(`agent-memory reindex` इसे नहीं मिटाता)। सर्च किया टेक्स्ट secrets मास्क करके और छोटा करके सेव होता है।
 Notes का कंटेंट कभी log नहीं होता। पुरानी लाइनें अपने-आप हटती हैं; कुल कॉल्स की गिनती बनी रहती है।
 
 ## भाषाएँ
@@ -128,8 +132,8 @@ Notes का कंटेंट कभी log नहीं होता। प�
 - **बाक़ी:** `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` या `LANG`।
 
 कोई भी सपोर्टेड न हो तो English।
-कॉलम के ऊपर वाला picker भाषा तुरंत बदलता है और `~/.memoria/preferencias.json` में सेव करता है।
-Command line से: `memoria lingua hi`। `MEMORIA_LANG` variable सब पर भारी है।
+कॉलम के ऊपर वाला picker भाषा तुरंत बदलता है और `~/.agent-memory/preferences.json` में सेव करता है।
+Command line से: `agent-memory language hi`। `AGENT_MEMORY_LANG` variable सब पर भारी है।
 
 - हिब्रू दाएँ से बाएँ खुलती है। हर note का टेक्स्ट अपनी दिशा में रहता है।
 - हिंदी और हिब्रू के लिए Noto Sans Devanagari और Noto Sans Hebrew ऐप में शामिल हैं।
@@ -137,55 +141,67 @@ Command line से: `memoria lingua hi`। `MEMORIA_LANG` variable सब प�
 
 ## मेमोरी कहाँ रहती हैं
 
-`~/.memoria` में (या `MEMORIA_HOME` वाले फ़ोल्डर में):
+`~/.agent-memory` में (या `AGENT_MEMORY_HOME` वाले फ़ोल्डर में):
 
 ```text
-~/.memoria/
+~/.agent-memory/
   <project>/<YYYY-MM-DD>-<slug>.md   हर note की एक फ़ाइल
   config.json                        update URLs (ऑप्शनल)
-  .indice/memoria-v2.sqlite          index; डिलीट कर सकते हैं
-  .indice/registo.sqlite             MCP कॉल्स का log ("Claude की एक्टिविटी")
-  preferencias.json                  picker में चुनी भाषा
+  .index/index-v2.sqlite             index; डिलीट कर सकते हैं
+  .index/activity.sqlite             MCP कॉल्स का log ("Claude की एक्टिविटी")
+  preferences.json                   picker में चुनी भाषा
 ```
 
-हर note में एक YAML हेडर होता है। Fields के नाम पुर्तगाली में हैं और contract का हिस्सा हैं:
+हर note में एक YAML हेडर होता है। Fields के नाम contract का हिस्सा हैं:
 
 ```markdown
 ---
-tipo: licao            # licao (सबक) | fazer (करें) | nao_fazer (न करें) | historico (हिस्ट्री)
-titulo: Build cache इस्तेमाल करें
-projeto: arena-de-seguranca
-tarefa: ARENA-12       # ऑप्शनल: ticket key (या owner/repo#12)
-epico: ARENA-1         # ऑप्शनल: epic या parent
+type: lesson           # lesson (सबक) | do (करें) | dont (न करें) | history (हिस्ट्री)
+title: Build cache इस्तेमाल करें
+project: security-arena
+task: ARENA-12         # ऑप्शनल: ticket key (या owner/repo#12)
+epic: ARENA-1          # ऑप्शनल: epic या parent
 url: https://company.atlassian.net/browse/ARENA-12   # ऑप्शनल
-etiquetas: [ci, cache] # ऑप्शनल: tags
-ficheiros: [orquestrador/plan.mjs]
-data: '2026-10-16T13:25:33+01:00'
-custo_usd: 1.25        # ऑप्शनल
-ligacoes: [Retries से बचें]
+tags: [ci, cache]      # ऑप्शनल
+files: [orchestrator/plan.mjs]
+date: '2026-10-16T13:25:33+01:00'
+cost_usd: 1.25         # ऑप्शनल
+links: [Retries से बचें]
 ---
 
 Cache से build 3 गुना तेज़ होता है। देखें [[Retries से बचें]]।
 ```
 
 आप फ़ाइलें हाथ से एडिट कर सकते हैं; ऐप बदलाव पकड़ लेता है।
-`memoria reindex` कभी भी index फिर से बनाता है।
-`epico`, `url` और `etiquetas` v0.2 में आए और ऑप्शनल हैं: v0.1 के notes चलते रहते हैं।
+`agent-memory reindex` कभी भी index फिर से बनाता है।
+`epic`, `url` और `tags` v0.2 में आए और ऑप्शनल हैं: v0.1 के notes चलते रहते हैं।
 
 Tickets:
 
 - Jira keys कैपिटल में रहती हैं (`abc-123` → `ABC-123`); GitHub की `owner/repo#12` जैसी।
-- `tarefa` न हो तो ऐप उसे `url` से निकालता है, अगर वो Jira ticket या issue/PR हो।
-- बिना `epico` वाला note अपने टास्क का epic ले लेता है, अगर कोई और note उसे बताता हो।
+- `task` न हो तो ऐप उसे `url` से निकालता है, अगर वो Jira ticket या issue/PR हो।
+- बिना `epic` वाला note अपने टास्क का epic ले लेता है, अगर कोई और note उसे बताता हो।
 - `ABC-123` सर्च करने पर उस टास्क के notes, उसके epic के notes और उसे mention करने वाले notes मिलते हैं।
 
 Links की ताक़त, सबसे मज़बूत पहले:
-explicit link (`[[...]]` या `ligacoes`), वही टास्क, वही epic, वही प्रोजेक्ट, शेयर्ड फ़ाइलें।
+explicit link (`[[...]]` या `links`), वही टास्क, वही epic, वही प्रोजेक्ट, शेयर्ड फ़ाइलें।
+
+## v0.4 से आ रहे हैं
+
+कुछ भी मूव नहीं होता और कोई note दोबारा नहीं लिखा जाता। पुराने नाम चलते रहते हैं:
+
+- `memoria` command (और `memoria-gui`), `procurar`, `lingua` और `--tipo`, `--projeto` जैसे options अब भी चलते हैं। नए: `agent-memory`, `search`, `language`, `--type`, `--project` वगैरह।
+- MCP: server `agent-memory`, tools `memory_search`, `memory_add`, `memory_related`। पुराने tool नाम (`memoria_procurar`, ...) हटा दिए गए हैं।
+- अगर `~/.memoria` है और `~/.agent-memory` नहीं, तो ऐप `~/.memoria` ही इस्तेमाल करता है। `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` और `MEMORIA_DOWNLOAD_TOKEN` भी चलते हैं (नए: `AGENT_MEMORY_HOME`, `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE`, `AGENT_MEMORY_DOWNLOAD_TOKEN`)।
+- पुराने हेडर (`tipo: licao`, `titulo`, `projeto`, ...) वाले notes वैसे ही पढ़े जाते हैं। नए notes English हेडर के साथ लिखे जाते हैं।
+- पुराना activity log (`.indice/registo.sqlite`) एक बार कॉपी होता है; पहले चुनी भाषा (`preferencias.json`) पढ़ी जाती है।
+
+Claude Code में नया MCP नाम: `claude mcp remove --scope user memoria`, फिर ऊपर वाला `claude mcp add`।
 
 ## अपडेट
 
 ```bash
-memoria update
+agent-memory update
 ```
 
 1. `git ls-remote --tags` से लेटेस्ट वर्ज़न ढूँढता है (बिना API)।
@@ -198,7 +214,7 @@ Windows पर इंस्टॉल एक नई विंडो में प
 पोर्टेबल वर्ज़न में update नया zip डाउनलोड करके चेक करता है और ऐप का फ़ोल्डर उसी जगह बदल देता है।
 Claude Code से कनेक्शन चलता रहता है।
 
-URLs `~/.memoria/config.json` से आते हैं और वहाँ न हों तो पैकेज की `release.conf` से।
+URLs `~/.agent-memory/config.json` से आते हैं और वहाँ न हों तो पैकेज की `release.conf` से।
 पढ़ी जाने वाली keys (उसी नाम का environment variable इन्हें ओवरराइड करता है):
 
 | Key | उदाहरण |
@@ -214,17 +230,17 @@ URLs `~/.memoria/config.json` से आते हैं और वहाँ न
 - सेव करने से पहले ऐप tokens, API keys (`sk-ant-…`, `ghp_…`, `AKIA…`, `xox…`),
   JWTs, private keys और `password=…` जैसे पैटर्न मास्क करता है।
 - इंटरफ़ेस सिर्फ़ `127.0.0.1` पर, एक random session key के साथ सुनता है।
-- नेटवर्क का इस्तेमाल सिर्फ़ वर्ज़न चेक (`git ls-remote`) और `memoria update` के लिए होता है।
-  बंद करने के लिए: `MEMORIA_SEM_UPDATE=1`।
+- नेटवर्क का इस्तेमाल सिर्फ़ वर्ज़न चेक (`git ls-remote`) और `agent-memory update` के लिए होता है।
+  बंद करने के लिए: `AGENT_MEMORY_NO_UPDATE=1`।
 - न embeddings, न models। सर्च सादा टेक्स्ट है (SQLite FTS5)।
 
 ## आम समस्याएँ
 
 - **"इस Python के SQLite में FTS5 नहीं है"**: uv वाले Python से फिर से इंस्टॉल करें
   (`uv tool install --force --managed-python --python 3.12 <wheel>`)।
-- **कंपनी का proxy**: uv और `memoria update` `HTTPS_PROXY` और सिस्टम certificates इस्तेमाल करते हैं।
+- **कंपनी का proxy**: uv और `agent-memory update` `HTTPS_PROXY` और सिस्टम certificates इस्तेमाल करते हैं।
   uv के लिए `UV_SYSTEM_CERTS=1` भी सेट करें।
-- **विंडो नहीं खुलती**: `memoria --browser` वही इंटरफ़ेस ब्राउज़र में खोलता है।
+- **विंडो नहीं खुलती**: `agent-memory --browser` वही इंटरफ़ेस ब्राउज़र में खोलता है।
 
 ## डेवलपमेंट
 

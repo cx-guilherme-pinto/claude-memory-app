@@ -1,4 +1,4 @@
-"""`memoria update`: instala a release mais recente.
+"""`agent-memory update`: instala a release mais recente.
 
 1. Descobre a tag mais recente com `git ls-remote --tags <MEMORY_APP_REPO_URL>` (sem API).
 2. Descarrega SHA256SUMS, o wheel e constraints.txt para uma pasta temporária,
@@ -9,7 +9,7 @@
 5. Reconstrói o índice. Nunca toca nos ficheiros Markdown.
 
 Repositório privado (só em desenvolvimento): se o download anónimo falhar com
-401/403/404, usa MEMORIA_DOWNLOAD_TOKEN ou o token que o git guarda para esse
+401/403/404, usa AGENT_MEMORY_DOWNLOAD_TOKEN (ou a antiga MEMORIA_DOWNLOAD_TOKEN) ou o token que o git guarda para esse
 servidor (`git credential fill`). O token nunca é impresso nem gravado.
 """
 
@@ -145,7 +145,7 @@ def _token_git(url: str) -> str | None:
 
 def descarregar(url: str, destino: Path, token: str | None = None, timeout: float = 120) -> None:
     config.validar_url(url)
-    cabecalhos = {"User-Agent": f"memoria/{__version__}"}
+    cabecalhos = {"User-Agent": f"agent-memory/{__version__}"}
     if token:
         cabecalhos["Authorization"] = f"token {token}"
     pedido = urllib.request.Request(url, headers=cabecalhos)
@@ -171,7 +171,7 @@ class Descarregador:
         except urllib.error.URLError as erro:
             raise ErroUpdate(t("up.sem_ligacao", host=urlsplit(url).hostname, motivo=erro.reason)) from None
         self._tentou_token = True
-        self._token = os.environ.get("MEMORIA_DOWNLOAD_TOKEN") or _token_git(url)
+        self._token = config.ambiente(config.ENV_TOKEN) or _token_git(url)
         if not self._token:
             raise ErroUpdate(t("up.sem_credenciais", url=url))
         try:
@@ -200,7 +200,7 @@ def verificar(timeout: float = 10) -> dict:
     cfg = config.definicoes()
     repo = cfg.get("MEMORY_APP_REPO_URL")
     if not repo:
-        return {"atual": __version__, "disponivel": False, "erro": "sem MEMORY_APP_REPO_URL"}
+        return {"atual": __version__, "disponivel": False, "erro": "no MEMORY_APP_REPO_URL"}
     try:
         tag = ultima_tag(repo, timeout=timeout)
     except ErroUpdate as erro:
@@ -247,7 +247,7 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
 
     uv = encontrar_uv(cfg)
     python = cfg.get("PYTHON_VERSION") or "3.12"
-    pasta = Path(tempfile.mkdtemp(prefix="memoria-update-"))
+    pasta = Path(tempfile.mkdtemp(prefix="agent-memory-update-"))
     try:
         baixar = Descarregador()
         somas_ficheiro = pasta / "SHA256SUMS"
@@ -278,13 +278,27 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
     return 0
 
 
+EXECUTAVEIS = ("agent-memory", "memoria")  # o nome de agora e o antigo (os dois instalados pelo uv)
+
+
 def executavel_memoria() -> str | None:
-    """O executável `memoria` instalado pelo uv (o novo, depois do update)."""
-    nome = "memoria.exe" if os.name == "nt" else "memoria"
+    """O executável `agent-memory` instalado pelo uv (o novo, depois do update).
+
+    Ao lado do que está a correr, primeiro: o update pode vir de uma versão antiga, só com `memoria`.
+    """
+    sufixo = ".exe" if os.name == "nt" else ""
     aqui = Path(sys.argv[0]).resolve() if sys.argv and sys.argv[0] else None
-    if aqui and aqui.name == nome and aqui.is_file():
+    if aqui and aqui.is_file() and aqui.name in {f"{n}{sufixo}" for n in EXECUTAVEIS}:
+        for nome in EXECUTAVEIS:
+            vizinho = aqui.with_name(f"{nome}{sufixo}")
+            if vizinho.is_file():
+                return str(vizinho)
         return str(aqui)
-    return shutil.which("memoria")
+    for nome in EXECUTAVEIS:
+        encontrado = shutil.which(nome)
+        if encontrado:
+            return encontrado
+    return None
 
 
 def reindexar_com_nova_versao() -> None:
@@ -299,13 +313,13 @@ def _instalar_depois_de_sair(cmd: list[str], pasta: Path) -> int:
     """Windows: não se pode substituir o venv enquanto este processo corre.
 
     Lança um PowerShell que espera que este processo termine, instala e reindexa.
-    Aviso: feche também o Claude Code (que corre `memoria mcp`) antes de atualizar.
+    Aviso: feche também o Claude Code (que corre `agent-memory mcp`) antes de atualizar.
     """
 
     def ps(texto: str) -> str:
         return "'" + texto.replace("'", "''") + "'"
 
-    exe = executavel_memoria() or "memoria"
+    exe = executavel_memoria() or "agent-memory"
     linhas = [
         "$ErrorActionPreference = 'Stop'",
         f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue",
@@ -317,7 +331,7 @@ def _instalar_depois_de_sair(cmd: list[str], pasta: Path) -> int:
         f"Write-Host {ps(t('ps.atualizada'))}",
         "Start-Sleep -Seconds 3",
     ]
-    script = pasta / "instalar.ps1"
+    script = pasta / "install.ps1"
     # Com BOM: o PowerShell 5.1 lê UTF-8 corretamente (caminhos com acentos).
     script.write_text("\r\n".join(linhas) + "\r\n", encoding="utf-8-sig")
     subprocess.Popen(

@@ -1,8 +1,9 @@
 """Índice SQLite: pesquisa FTS5 e arestas do grafo.
 
-O índice é descartável: `memoria reindex` reconstrói-o a partir dos Markdown.
-Cada versão do esquema usa o seu ficheiro (memoria-v<N>.sqlite), para uma versão
-antiga ainda aberta (ex.: um `memoria mcp` do Claude Code) não estragar a nova.
+O índice é descartável: `agent-memory reindex` reconstrói-o a partir dos Markdown.
+Fica em <pasta dos dados>/.index/index-v<N>.sqlite (até à v0.4: .indice/memoria-v<N>.sqlite).
+Cada versão do esquema usa o seu ficheiro, para uma versão antiga ainda aberta
+(ex.: um `memoria mcp` do Claude Code) não estragar a nova.
 
 Pesquisa (FTS5): título (nome da memória), corpo, projeto, chaves (tarefa, épico,
 etiquetas) e ficheiros. Uma chave de ticket no texto (ABC-123, dono/repo#12)
@@ -36,11 +37,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, Protocol
 
-from memoria import store
+from memoria import config, store
 from memoria.i18n import t
 
 VERSAO_ESQUEMA = 2
-NOME_FICHEIRO = f"memoria-v{VERSAO_ESQUEMA}.sqlite"
+NOME_FICHEIRO = f"index-v{VERSAO_ESQUEMA}.sqlite"
 
 PESOS = {"ligacao": 8.0, "tarefa": 4.0, "epico": 2.0, "projeto": 1.0, "ficheiro": 0.25}
 MAX_FICHEIROS = 0.5  # teto da contribuição dos ficheiros partilhados
@@ -177,7 +178,7 @@ def _normal(texto: str) -> str:
 class Indice:
     def __init__(self, home: Path, caminho: Path | None = None, embeddings: Embeddings | None = None):
         self.home = Path(home)
-        self.caminho = Path(caminho) if caminho else self.home / ".indice" / NOME_FICHEIRO
+        self.caminho = Path(caminho) if caminho else config.pasta_interna(self.home) / NOME_FICHEIRO
         self.embeddings = embeddings  # sempre None
 
     # ---------------------------------------------------------------- ligação
@@ -213,10 +214,17 @@ class Indice:
         )
 
     def _apagar_indices_antigos(self) -> None:
-        """Índices de esquemas anteriores (ex.: memoria.sqlite da v0.1). Melhor esforço."""
+        """Índices de esquemas anteriores e os da pasta .indice (até à v0.4). Melhor esforço.
+
+        Só apaga ficheiros do índice (descartáveis): nunca as notas nem o registo MCP.
+        """
         pasta = self.caminho.parent
-        for f in [*pasta.glob("memoria.sqlite*"), *pasta.glob("memoria-v*.sqlite*")]:
-            if not f.name.startswith(self.caminho.name):
+        antiga = self.home / config.PASTA_INTERNA_ANTIGA
+        candidatos = [*pasta.glob("index-v*.sqlite*"), *pasta.glob("memoria.sqlite*"), *pasta.glob("memoria-v*.sqlite*")]
+        if antiga != pasta:
+            candidatos += [*antiga.glob("memoria.sqlite*"), *antiga.glob("memoria-v*.sqlite*")]
+        for f in candidatos:
+            if f.parent != pasta or not f.name.startswith(self.caminho.name):
                 try:
                     f.unlink()
                 except OSError:

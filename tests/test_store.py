@@ -25,12 +25,16 @@ def test_escrever_e_ler(home: Path):
     texto = caminho.read_text("utf-8")
     assert texto.startswith("---\n")
     meta = yaml.safe_load(texto.split("---\n")[1])
-    assert meta["tipo"] == "licao"
-    assert meta["projeto"] == "Arena de Segurança"
-    assert meta["ficheiros"] == ["src/a.py", "src/b.py"]
-    assert meta["ligacoes"] == ["x", "y"]
-    assert isinstance(meta["data"], str) and meta["data"].startswith("2026-10-01T12:30:00")
-    assert meta["custo_usd"] == 1.234567
+    # Desde a v0.5, chaves e valores em inglês.
+    assert list(meta) == ["type", "title", "project", "task", "files", "date", "cost_usd", "links"]
+    assert meta["type"] == "lesson"
+    assert meta["title"] == "Usar cache no build"
+    assert meta["project"] == "Arena de Segurança"
+    assert meta["task"] == "ABC-12"
+    assert meta["files"] == ["src/a.py", "src/b.py"]
+    assert meta["links"] == ["x", "y"]
+    assert isinstance(meta["date"], str) and meta["date"].startswith("2026-10-01T12:30:00")
+    assert meta["cost_usd"] == 1.234567
 
     nota = store.ler_nota(caminho, home)
     assert nota.id == "arena-de-seguranca/2026-10-01-usar-cache-no-build"
@@ -48,14 +52,38 @@ def test_nunca_reescreve(home: Path):
 
 @pytest.mark.parametrize(
     "entrada,esperado",
-    [("lição", "licao"), ("Não fazer", "nao_fazer"), ("nao-fazer", "nao_fazer"), ("Histórico", "historico"), ("FAZER", "fazer")],
+    [
+        ("lição", "licao"),
+        ("Não fazer", "nao_fazer"),
+        ("nao-fazer", "nao_fazer"),
+        ("Histórico", "historico"),
+        ("FAZER", "fazer"),
+        ("lesson", "licao"),
+        ("Do", "fazer"),
+        ("dont", "nao_fazer"),
+        ("don't", "nao_fazer"),
+        ("do not", "nao_fazer"),
+        ("History", "historico"),
+    ],
 )
 def test_normalizar_tipo(entrada, esperado):
     assert store.normalizar_tipo(entrada) == esperado
 
 
+@pytest.mark.parametrize("tipo,externo", [("licao", "lesson"), ("fazer", "do"), ("nao_fazer", "dont"), ("historico", "history")])
+def test_tipo_escrito_em_ingles(home: Path, tipo, externo):
+    caminho = store.escrever_nota(home, tipo=tipo, titulo="t", texto="", projeto="p")
+    assert yaml.safe_load(caminho.read_text("utf-8").split("---\n")[1])["type"] == externo
+    assert store.ler_nota(caminho, home).tipo == tipo
+
+
+def test_titulo_sem_letras_latinas(home: Path):
+    caminho = store.escrever_nota(home, tipo="fazer", titulo="שלום", texto="", projeto="p")
+    assert caminho.name.endswith("-note.md")
+
+
 def test_tipo_invalido(home: Path):
-    with pytest.raises(ValueError, match="Tipo inválido"):
+    with pytest.raises(ValueError, match="Tipo inválido.*lesson, do, dont, history"):
         store.escrever_nota(home, tipo="ideia", titulo="x", texto="", projeto="p")
 
 
@@ -88,3 +116,35 @@ def test_ler_sem_frontmatter(home: Path):
     assert nota.titulo == "2026-03-04-livre"
     assert nota.projeto == "solto"
     assert nota.data == "2026-03-04"
+
+
+def test_ler_frontmatter_ingles_escrito_a_mao(home: Path):
+    pasta = home / "manual"
+    pasta.mkdir(parents=True)
+    f = pasta / "2026-02-03-note.md"
+    f.write_text(
+        "---\ntype: dont\ntitle: Hand written\nproject: manual\ntask: abc-1\nepic: ABC-0\ntags: [x]\n"
+        "date: 2026-02-03\nfiles: a.py, b.py\ncost_usd: 0.5\nlinks: ['[[other]]']\n---\nText\n",
+        "utf-8",
+    )
+    nota = store.ler_nota(f, home)
+    assert (nota.tipo, nota.titulo, nota.projeto, nota.tarefa, nota.epico) == ("nao_fazer", "Hand written", "manual", "ABC-1", "ABC-0")
+    assert nota.etiquetas == ["x"] and nota.ficheiros == ["a.py", "b.py"] and nota.custo_usd == 0.5
+    assert nota.data == "2026-02-03" and nota.ligacoes == ["other"]
+
+
+def test_chave_inglesa_ganha_a_portuguesa(home: Path):
+    pasta = home / "misto"
+    pasta.mkdir(parents=True)
+    f = pasta / "2026-02-03-misto.md"
+    f.write_text("---\ntype: lesson\ntipo: historico\ntitle: Novo\ntitulo: Antigo\nproject: misto\n---\nx\n", "utf-8")
+    nota = store.ler_nota(f, home)
+    assert (nota.tipo, nota.titulo) == ("licao", "Novo")
+
+
+@pytest.mark.parametrize(
+    "cabecalho",
+    ["type: lesson\ntitle: Novo\nproject: p", "tipo: licao\ntitulo: Antigo\nprojeto: p"],
+)
+def test_validar_aceita_os_dois_cabecalhos(cabecalho):
+    store.validar_texto(f"---\n{cabecalho}\n---\n\ntexto\n")
