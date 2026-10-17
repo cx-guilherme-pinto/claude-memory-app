@@ -58,6 +58,13 @@ Encontrado por um teste de caos do kit do workshop (ambientes estragados de prop
   Os erros do disco na CLI são uma linha, não um traceback.
 - Com um `LC_ALL` antigo (ISO-8859-1) no Mac/Linux, o texto que entra no `add` por um pipe é lido como UTF-8, a saída é
   UTF-8 e o `search --json` é JSON só com ASCII.
+- `agent-memory update` num Mac sem as Command Line Tools do Xcode: quando o uv descarrega um Python novo, já não
+  abre o diálogo "instalar as ferramentas de programador" (um `install_name_tool` vazio fica primeiro no PATH,
+  só nesse `uv tool install`, como faz o setup do kit).
+- `agent-memory update` sem git no PATH (ou só com o `/usr/bin/git` de fachada da Apple) usa o git que o setup do kit
+  instala: `~/.workshop-claude/bin/git` no Mac; no Windows `%USERPROFILE%\.workshop-claude\git\cmd\git.exe`
+  ou o Git for Windows (`%LOCALAPPDATA%\Programs\Git`, `%ProgramFiles%\Git`). A verificação das Command Line Tools
+  também exige que `<xcode-select -p>/usr/bin/git` exista (ferramentas apagadas ainda abrem o diálogo).
 
 ### Compatibilidade
 

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -322,3 +323,226 @@ def test_script_windows_espera_e_instala(tmp_path: Path, monkeypatch):
     assert "Wait-Process -Id" in texto and "'tool' 'install' '--force'" in texto and "reindex" in texto
     assert "João" in texto
     assert lancados and lancados[0][0] == "powershell"
+
+
+# ------------------------------------------- git e Command Line Tools (macOS sem CLT)
+POSIX = pytest.mark.skipif(sys.platform == "win32", reason="scripts /bin/sh falsos")
+_WHICH = update.shutil.which
+
+
+def _executavel(caminho: Path, texto: str) -> Path:
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho.write_text(texto)
+    caminho.chmod(0o755)
+    return caminho
+
+
+def _xcode_select_falso(tmp_path: Path, monkeypatch, corpo: str) -> Path:
+    """Um xcode-select no PATH (só ele) que regista os argumentos e corre `corpo`."""
+    pasta = tmp_path / "bin-xcode"
+    registo = tmp_path / "xcode-select-args.txt"
+    _executavel(pasta / "xcode-select", f'#!/bin/sh\necho "$@" >> "{registo}"\n{corpo}\n')
+    monkeypatch.setenv("PATH", str(pasta))
+    return registo
+
+
+def _which(**fixos):
+    """shutil.which com respostas fixas para alguns nomes (o resto procura de verdade)."""
+    return lambda nome, *a, **k: fixos[nome] if nome in fixos else _WHICH(nome, *a, **k)
+
+
+def _git_do_kit_mac(casa: Path) -> Path:
+    return _executavel(casa / ".workshop-claude" / "bin" / "git", "#!/bin/sh\nexit 0\n")
+
+
+@POSIX
+def test_clt_ok_sem_ferramentas(tmp_path: Path, monkeypatch):
+    registo = _xcode_select_falso(tmp_path, monkeypatch, "echo 'xcode-select: error: unable to get active developer directory' >&2\nexit 2")
+    assert update._clt_ok() is False
+    assert registo.read_text().split() == ["-p"]  # só -p: nunca o --install
+
+
+@POSIX
+def test_clt_ok_pasta_apagada(tmp_path: Path, monkeypatch):
+    # xcode-select -p aponta para uma pasta sem git (ferramentas apagadas): os shims abririam o diálogo.
+    ferramentas = tmp_path / "CommandLineTools"
+    (ferramentas / "usr" / "bin").mkdir(parents=True)
+    _xcode_select_falso(tmp_path, monkeypatch, f"echo '{ferramentas}'")
+    assert update._clt_ok() is False
+
+
+@POSIX
+def test_clt_ok_com_ferramentas(tmp_path: Path, monkeypatch):
+    ferramentas = tmp_path / "Command Line Tools"
+    _executavel(ferramentas / "usr" / "bin" / "git", "#!/bin/sh\nexit 0\n")
+    _xcode_select_falso(tmp_path, monkeypatch, f"echo '{ferramentas}'")
+    assert update._clt_ok() is True
+
+
+def test_clt_ok_sem_xcode_select(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path))
+    assert update._clt_ok() is False
+
+
+def test_git_do_path_tem_prioridade(home: Path, monkeypatch):
+    _git_do_kit_mac(Path.home())
+    monkeypatch.setattr(update.shutil, "which", _which(git="/opt/homebrew/bin/git"))
+    monkeypatch.setattr(update, "_clt_ok", lambda: pytest.fail("só se pergunta pelas CLT com /usr/bin/git"))
+    assert update._git() == "/opt/homebrew/bin/git"
+
+
+@POSIX
+def test_git_sem_git_no_path_usa_o_do_kit(home: Path, monkeypatch):
+    kit = _git_do_kit_mac(Path.home())
+    monkeypatch.setattr(update.shutil, "which", _which(git=None))
+    assert update._git() == str(kit)
+
+
+@POSIX
+def test_git_shim_da_apple_usa_o_do_kit(home: Path, monkeypatch):
+    kit = _git_do_kit_mac(Path.home())
+    monkeypatch.setattr(update.sys, "platform", "darwin")
+    monkeypatch.setattr(update.shutil, "which", _which(git="/usr/bin/git"))
+    monkeypatch.setattr(update, "_clt_ok", lambda: False)
+    assert update._git() == str(kit)
+
+
+def test_git_shim_da_apple_sem_git_do_kit(home: Path, monkeypatch):
+    monkeypatch.setattr(update.sys, "platform", "darwin")
+    monkeypatch.setattr(update.shutil, "which", _which(git="/usr/bin/git"))
+    monkeypatch.setattr(update, "_clt_ok", lambda: False)
+    with pytest.raises(update.ErroUpdate, match="Command Line Tools"):
+        update._git()
+
+
+def test_git_com_clt_usa_usr_bin_git(home: Path, monkeypatch):
+    _git_do_kit_mac(Path.home())
+    monkeypatch.setattr(update.sys, "platform", "darwin")
+    monkeypatch.setattr(update.shutil, "which", _which(git="/usr/bin/git"))
+    monkeypatch.setattr(update, "_clt_ok", lambda: True)
+    assert update._git() == "/usr/bin/git"
+
+
+def test_git_usr_bin_fora_do_mac_nao_pergunta_pelas_clt(home: Path, monkeypatch):
+    monkeypatch.setattr(update.sys, "platform", "linux")
+    monkeypatch.setattr(update.shutil, "which", _which(git="/usr/bin/git"))
+    monkeypatch.setattr(update, "_clt_ok", lambda: pytest.fail("só no macOS"))
+    assert update._git() == "/usr/bin/git"
+
+
+def test_git_nenhum(home: Path, monkeypatch):
+    monkeypatch.setattr(update.shutil, "which", _which(git=None))
+    with pytest.raises(update.ErroUpdate, match="não está instalado. É preciso"):
+        update._git()
+
+
+def test_git_do_kit_ignora_ficheiro_nao_executavel(home: Path):
+    if sys.platform == "win32":
+        pytest.skip("no Windows todos os ficheiros contam como executáveis")
+    git = _git_do_kit_mac(Path.home())
+    git.chmod(0o644)
+    assert update._git_do_kit(windows=False) is None
+
+
+def test_git_do_kit_windows(home: Path, tmp_path: Path, monkeypatch):
+    local = tmp_path / "AppData Local"
+    programas = tmp_path / "Program Files"
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    monkeypatch.setenv("ProgramFiles", str(programas))
+    assert update._git_do_kit(windows=True) is None
+    sistema = _executavel(programas / "Git" / "cmd" / "git.exe", "")
+    assert update._git_do_kit(windows=True) == str(sistema)
+    do_utilizador = _executavel(local / "Programs" / "Git" / "cmd" / "git.exe", "")
+    assert update._git_do_kit(windows=True) == str(do_utilizador)
+    # O do kit (%USERPROFILE%\.workshop-claude\git\cmd\git.exe) vem primeiro.
+    kit = _executavel(Path.home() / ".workshop-claude" / "git" / "cmd" / "git.exe", "")
+    assert update._git_do_kit(windows=True) == str(kit)
+
+
+@POSIX
+def test_ultima_tag_com_o_git_do_kit(tmp_path: Path, home: Path, monkeypatch):
+    repo = _repo_git_com_tags(tmp_path, ["v0.1.0", "v0.2.0"])
+    git_real = os.path.realpath(_WHICH("git"))
+    # O wrapper do kit, como o setup o escreve (aqui chama o git real); e um PATH sem git.
+    _executavel(Path.home() / ".workshop-claude" / "bin" / "git", f'#!/bin/sh\nexec "{git_real}" "$@"\n')
+    vazio = tmp_path / "path-sem-git"
+    vazio.mkdir()
+    monkeypatch.setenv("PATH", str(vazio))
+    assert update.ultima_tag(str(repo)) == "v0.2.0"
+
+
+def _como_mac_sem_clt(monkeypatch, install_name_tool: str | None = "/usr/bin/install_name_tool", clt: bool = False):
+    monkeypatch.setattr(update.sys, "platform", "darwin")
+    monkeypatch.setattr(update.shutil, "which", _which(install_name_tool=install_name_tool))
+    monkeypatch.setattr(update, "_clt_ok", lambda: clt)
+
+
+@POSIX
+def test_ambiente_uv_sem_clt_tem_install_name_tool_vazio(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("OUTRA_VARIAVEL", "fica")
+    _como_mac_sem_clt(monkeypatch)
+    env = update.ambiente_uv(tmp_path)
+    falso = tmp_path / "no-clt" / "install_name_tool"
+    assert env is not None
+    assert env["PATH"] == f"{falso.parent}{os.pathsep}/usr/bin:/bin"
+    assert env["OUTRA_VARIAVEL"] == "fica"
+    assert os.environ["PATH"] == "/usr/bin:/bin"  # só para o subprocesso do uv
+    # O uv procura install_name_tool no PATH: encontra o vazio, que não faz nada e sai com 0.
+    assert _WHICH("install_name_tool", path=env["PATH"]) == str(falso)
+    r = subprocess.run([str(falso), "-id", "/x/libpython3.12.dylib", "/x/libpython3.12.dylib"], capture_output=True)
+    assert r.returncode == 0 and r.stdout == b"" and r.stderr == b""
+
+
+def test_ambiente_uv_sem_clt_e_sem_install_name_tool_visivel(tmp_path: Path, monkeypatch):
+    # O which não o vê (PATH sem /usr/bin, ou um sandbox que nega o shim): o falso vai na mesma, é inofensivo.
+    monkeypatch.setenv("PATH", "/x/bin")
+    _como_mac_sem_clt(monkeypatch, install_name_tool=None)
+    env = update.ambiente_uv(tmp_path)
+    assert env is not None and env["PATH"] == f"{tmp_path / 'no-clt'}{os.pathsep}/x/bin"
+    monkeypatch.delenv("PATH")
+    assert update.ambiente_uv(tmp_path)["PATH"] == str(tmp_path / "no-clt")
+
+
+def test_ambiente_uv_sem_mudancas(tmp_path: Path, monkeypatch):
+    _como_mac_sem_clt(monkeypatch, clt=True)
+    assert update.ambiente_uv(tmp_path) is None  # Command Line Tools instaladas
+    _como_mac_sem_clt(monkeypatch, install_name_tool="/opt/homebrew/opt/cctools/bin/install_name_tool")
+    assert update.ambiente_uv(tmp_path) is None  # um install_name_tool a sério primeiro no PATH
+    _como_mac_sem_clt(monkeypatch, install_name_tool=None, clt=True)
+    assert update.ambiente_uv(tmp_path) is None
+    _como_mac_sem_clt(monkeypatch)
+    monkeypatch.setattr(update.sys, "platform", "linux")
+    assert update.ambiente_uv(tmp_path) is None  # só no macOS
+    assert not (tmp_path / "no-clt").exists()
+
+
+@POSIX
+def test_update_sem_clt_uv_ve_install_name_tool_vazio(tmp_path: Path, home: Path, monkeypatch):
+    repo = _repo_git_com_tags(tmp_path, ["v9.9.9"])
+    git_real = _WHICH("git")
+    srv = _Servidor(_preparar_release(tmp_path, "v9.9.9"))
+    # Um uv falso que, como o verdadeiro depois de descarregar um Python, corre o install_name_tool do PATH.
+    registo = tmp_path / "uv-env.json"
+    uv = _executavel(
+        tmp_path / "uv",
+        f"#!{sys.executable}\nimport json, os, shutil, subprocess, pathlib\n"
+        f"itl = shutil.which('install_name_tool')\n"
+        f"rc = subprocess.run([itl, '-id', 'a', 'b']).returncode\n"
+        f"pathlib.Path({str(registo)!r}).write_text(json.dumps({{'itl': itl, 'rc': rc, 'path': os.environ['PATH']}}))\n",
+    )
+    _configurar(home, repo, srv.porta, uv)
+    monkeypatch.setattr(update, "reindexar_com_nova_versao", lambda: None)
+    monkeypatch.setattr(update, "_git", lambda: git_real)
+    _como_mac_sem_clt(monkeypatch)
+    path_antes = os.environ.get("PATH")
+    try:
+        assert update.atualizar() == 0
+    finally:
+        srv.fechar()
+    visto = json.loads(registo.read_text())
+    assert Path(visto["itl"]).name == "install_name_tool" and Path(visto["itl"]).parent.name == "no-clt"
+    assert visto["rc"] == 0
+    assert visto["path"].startswith(str(Path(visto["itl"]).parent) + os.pathsep)
+    assert os.environ.get("PATH") == path_antes
+    assert not Path(visto["itl"]).exists()  # a pasta temporária do update foi apagada

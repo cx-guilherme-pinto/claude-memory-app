@@ -57,6 +57,13 @@ Found by a chaos test of the workshop kit (broken environments on purpose):
   Disk errors in the CLI are one line, not a traceback.
 - With a legacy `LC_ALL` (ISO-8859-1) on Mac/Linux, text piped into `add` is read as UTF-8, the output is UTF-8,
   and `search --json` is ASCII-only JSON.
+- `agent-memory update` on a Mac without the Xcode Command Line Tools: when uv downloads a new Python, it no longer
+  opens the "install command line developer tools" dialog (an empty `install_name_tool` comes first in the PATH,
+  only for that `uv tool install`, as the kit's setup does).
+- `agent-memory update` without git in the PATH (or with only the Apple `/usr/bin/git` stub) uses the git that the
+  kit's setup installs: `~/.workshop-claude/bin/git` on Mac; on Windows `%USERPROFILE%\.workshop-claude\git\cmd\git.exe`
+  or Git for Windows (`%LOCALAPPDATA%\Programs\Git`, `%ProgramFiles%\Git`). The Command Line Tools check also
+  needs `<xcode-select -p>/usr/bin/git` to exist (deleted tools still open the dialog).
 
 ### Compatibility
 

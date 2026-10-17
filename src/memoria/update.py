@@ -1,10 +1,12 @@
 """`agent-memory update`: instala a release mais recente.
 
 1. Descobre a tag mais recente com `git ls-remote --tags <MEMORY_APP_REPO_URL>` (sem API).
+   Sem git no PATH, usa o git que o setup do kit deixa no perfil (ver _git_do_kit).
 2. Descarrega SHA256SUMS, o wheel e constraints.txt para uma pasta temporária,
    pelo padrão RELEASE_DOWNLOAD_URL ({repo}/releases/download/{version}/{file}).
 3. Verifica os SHA-256.
-4. Corre `uv tool install --force --python <versão> <wheel> --constraints <ficheiro>`.
+4. Corre `uv tool install --force --python <versão> <wheel> --constraints <ficheiro>`
+   (num Mac sem as Command Line Tools, com um install_name_tool vazio no PATH: ver ambiente_uv).
    Na versão portátil, em vez disso, troca a pasta da app pelo zip novo (ver portatil.py).
 5. Reconstrói o índice. Nunca toca nos ficheiros Markdown.
 
@@ -57,16 +59,53 @@ def tags_de_ls_remote(saida: str) -> list[str]:
     return sorted(tags, key=lambda t: versao_tuplo(t))
 
 
+def _clt_ok() -> bool:
+    """macOS: as Command Line Tools (ou o Xcode) estão instaladas a sério?
+
+    O `xcode-select -p` pode apontar para uma pasta que já não existe (ferramentas apagadas): nesse caso
+    o /usr/bin/git e os outros "shims" da Apple abrem o diálogo de instalação. Igual ao ws_clt_ok do setup do kit.
+    """
+    try:
+        r = subprocess.run(["xcode-select", "-p"], capture_output=True, timeout=20, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    pasta = os.fsdecode(r.stdout).strip()
+    if r.returncode != 0 or not pasta:
+        return False
+    git = Path(pasta) / "usr" / "bin" / "git"
+    return git.is_file() and os.access(git, os.X_OK)
+
+
+def _git_do_kit(windows: bool | None = None) -> str | None:
+    """O git que o setup do kit deixa no perfil (sem admin), para quando não há git no PATH."""
+    casa = Path.home()  # no Windows, %USERPROFILE%
+    if windows is None:
+        windows = os.name == "nt"
+    if windows:
+        candidatos = [casa / ".workshop-claude" / "git" / "cmd" / "git.exe"]
+        # Onde o setup do kit também procura (Get-WsGit): o Git for Windows só para o utilizador e o do sistema.
+        for base, partes in ((os.environ.get("LOCALAPPDATA"), ("Programs", "Git")), (os.environ.get("ProgramFiles"), ("Git",))):
+            if base:
+                candidatos.append(Path(base, *partes, "cmd", "git.exe"))
+    else:
+        # O wrapper do git portátil (dugite-native, em ~/.workshop-claude/git), sem as Command Line Tools.
+        candidatos = [casa / ".workshop-claude" / "bin" / "git"]
+    for c in candidatos:
+        if c.is_file() and os.access(c, os.X_OK):
+            return str(c)
+    return None
+
+
 def _git() -> str:
     git = shutil.which("git")
-    if not git:
-        raise ErroUpdate(t("up.sem_git"))
-    if sys.platform == "darwin" and git == "/usr/bin/git":
-        # Sem as Command Line Tools, /usr/bin/git abre um diálogo de instalação.
-        r = subprocess.run(["xcode-select", "-p"], capture_output=True)
-        if r.returncode != 0:
-            raise ErroUpdate(t("up.sem_clt"))
-    return git
+    # Sem as Command Line Tools, /usr/bin/git é só um "shim" que abre o diálogo de instalação: nunca o chamamos.
+    shim = bool(git) and sys.platform == "darwin" and os.path.normpath(git) == "/usr/bin/git" and not _clt_ok()
+    if git and not shim:
+        return git
+    do_kit = _git_do_kit()
+    if do_kit:
+        return do_kit
+    raise ErroUpdate(t("up.sem_clt" if shim else "up.sem_git"))
 
 
 def ultima_tag(repo_url: str, timeout: float = 30) -> str | None:
@@ -195,6 +234,35 @@ def comando_uv(uv: str, wheel: Path, constraints: Path, python: str) -> list[str
     return [uv, "tool", "install", "--force", "--python", python, str(wheel), "--constraints", str(constraints)]
 
 
+def ambiente_uv(pasta: Path) -> dict[str, str] | None:
+    """Ambiente do `uv tool install`. None: o do processo, sem mudanças.
+
+    macOS sem as Command Line Tools: depois de descarregar um Python novo, o uv corre `install_name_tool`
+    (procurado no PATH), e /usr/bin/install_name_tool é um "shim" da Apple que abre o diálogo
+    "instalar ferramentas de programador". Só neste comando, um install_name_tool vazio (em `pasta`)
+    fica primeiro no PATH; o acerto da libpython só serve para compilar extensões em C.
+    Como o ws_uv_tool_install do setup do kit; também quando o which não encontra nenhum (o uv só o
+    procuraria ao executar), porque o falso é inofensivo. Um install_name_tool a sério no PATH fica.
+    """
+    if sys.platform != "darwin":
+        return None
+    encontrado = shutil.which("install_name_tool")
+    if encontrado and os.path.normpath(encontrado) != "/usr/bin/install_name_tool":
+        return None
+    if _clt_ok():
+        return None
+    falsos = pasta / "no-clt"
+    try:
+        falsos.mkdir(parents=True, exist_ok=True)
+        falso = falsos / "install_name_tool"
+        falso.write_text("#!/bin/sh\nexit 0\n", encoding="ascii")
+        falso.chmod(0o755)
+    except OSError:
+        return None
+    caminho = os.environ.get("PATH")
+    return {**os.environ, "PATH": os.pathsep.join([str(falsos), caminho] if caminho else [str(falsos)])}
+
+
 def verificar(timeout: float = 10) -> dict:
     """Só verifica (usado pela UI, em segundo plano)."""
     cfg = config.definicoes()
@@ -267,7 +335,7 @@ def atualizar(forcar: bool = False, versao: str | None = None, so_verificar: boo
         if os.name == "nt":
             return _instalar_depois_de_sair(cmd, pasta)
         _info(t("up.a_instalar"))
-        r = subprocess.run(cmd, stdin=subprocess.DEVNULL)
+        r = subprocess.run(cmd, stdin=subprocess.DEVNULL, env=ambiente_uv(pasta))
         if r.returncode != 0:
             raise ErroUpdate(t("up.uv_falhou", codigo=r.returncode))
     finally:
