@@ -29,10 +29,12 @@ Extensão (embeddings): estão DESLIGADOS. Para os ligar no futuro, implementar
 from __future__ import annotations
 
 import json
+import math
 import re
 import sqlite3
 import sys
 import time
+import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, Protocol
@@ -40,8 +42,21 @@ from typing import Iterable, Protocol
 from memoria import config, store
 from memoria.i18n import t
 
-VERSAO_ESQUEMA = 2
+# v3: palavras com sinais combinantes (hindi) e uma coluna para o japonês e o chinês (ver _TOKENIZER).
+VERSAO_ESQUEMA = 3
 NOME_FICHEIRO = f"index-v{VERSAO_ESQUEMA}.sqlite"
+
+# Espera por um lock de outro processo (segundos). As sincronizações de rotina esperam pouco:
+# se outro processo está a escrever, a nota nova entra na sincronização seguinte.
+ESPERA = 15.0
+ESPERA_CURTA = 3.0
+# O snippet() do FTS5 cresce com o quadrado das ocorrências numa nota: um log colado
+# (dezenas de MB) prendia a pesquisa durante horas. Acima disto, o excerto é o início da nota.
+LIMITE_EXCERTO = 32_000  # bytes do ficheiro
+# O índice guarda (e pesquisa) só o início de uma nota enorme. O editor também recusa mais do que isto.
+LIMITE_CORPO = store.TAMANHO_MAXIMO  # caracteres
+# Uma pesquisa é uma frase, não um documento: o resto do texto não conta.
+LIMITE_CONSULTA = 4000  # caracteres
 
 PESOS = {"ligacao": 8.0, "tarefa": 4.0, "epico": 2.0, "projeto": 1.0, "ficheiro": 0.25}
 MAX_FICHEIROS = 0.5  # teto da contribuição dos ficheiros partilhados
@@ -54,6 +69,33 @@ _CHAVE_NO_TEXTO = re.compile(r"(?<![\w/#-])([A-Za-z][A-Za-z0-9_]*-\d+|[\w.-]+/[\
 
 class FTS5Indisponivel(RuntimeError):
     pass
+
+
+def _codigo(erro: BaseException) -> int | None:
+    codigo = getattr(erro, "sqlite_errorcode", None)
+    return codigo & 0xFF if isinstance(codigo, int) else None
+
+
+def indice_estragado(erro: BaseException) -> bool:
+    """O ficheiro do índice está corrompido (SQLITE_CORRUPT, SQLITE_NOTADB). Nunca: lock, disco cheio, I/O."""
+    if not isinstance(erro, sqlite3.DatabaseError):
+        return False
+    codigo = _codigo(erro)
+    if codigo is not None:
+        return codigo in (11, 26)
+    texto = str(erro).lower()
+    return "not a database" in texto or "malformed" in texto
+
+
+def indice_ocupado(erro: BaseException) -> bool:
+    """Outro processo tem o índice preso (SQLITE_BUSY, SQLITE_LOCKED)."""
+    if not isinstance(erro, sqlite3.OperationalError):
+        return False
+    codigo = _codigo(erro)
+    if codigo is not None:
+        return codigo in (5, 6)
+    texto = str(erro).lower()
+    return "locked" in texto or "busy" in texto
 
 
 class Embeddings(Protocol):
@@ -73,7 +115,7 @@ def verificar_fts5() -> None:
     try:
         con = sqlite3.connect(":memory:")
         try:
-            con.execute("CREATE VIRTUAL TABLE t USING fts5(x, tokenize='unicode61 remove_diacritics 2')")
+            con.execute(f"CREATE VIRTUAL TABLE t USING fts5(x, tokenize={_TOKENIZER})")
         finally:
             con.close()
     except sqlite3.Error as erro:
@@ -81,7 +123,22 @@ def verificar_fts5() -> None:
     _FTS5_OK = True
 
 
-_ESQUEMA = f"""
+# unicode61 corta as palavras nos sinais combinantes (categoria M): em hindi, "कैश" virava "क" e "श".
+# Com M* nas categorias, os sinais ficam dentro da palavra (e remove_diacritics continua a tirar os acentos).
+_TOKENIZER = "\"unicode61 remove_diacritics 2 categories 'L* N* Co M*'\""
+
+# Japonês e chinês não separam as palavras: o unicode61 faz de uma frase inteira uma "palavra",
+# e "キャッシュ" só se encontrava no início da frase. A coluna cjk guarda estes carateres um a um
+# (procurados como frase, ou seja, como texto seguido). Entre dois trechos vai um separador que
+# nenhuma pesquisa usa (uso privado), para uma frase não juntar o fim de um trecho ao início de outro.
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]+")
+_SEPARADOR_CJK = "\ue000"
+
+_TABELAS = {"meta", "notas", "notas_fts", "contexto", "arestas"}
+
+_ESQUEMA = tuple(
+    instrucao.strip()
+    for instrucao in f"""
 CREATE TABLE IF NOT EXISTS meta(chave TEXT PRIMARY KEY, valor TEXT);
 CREATE TABLE IF NOT EXISTS notas(
     id TEXT PRIMARY KEY,
@@ -105,8 +162,8 @@ CREATE INDEX IF NOT EXISTS notas_projeto ON notas(projeto);
 CREATE INDEX IF NOT EXISTS notas_tarefa ON notas(tarefa COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS notas_epico ON notas(epico_efetivo COLLATE NOCASE);
 CREATE VIRTUAL TABLE IF NOT EXISTS notas_fts USING fts5(
-    id UNINDEXED, titulo, corpo, projeto, chaves, ficheiros,
-    tokenize='unicode61 remove_diacritics 2'
+    id UNINDEXED, titulo, corpo, projeto, chaves, ficheiros, cjk,
+    tokenize={_TOKENIZER}
 );
 CREATE TABLE IF NOT EXISTS contexto(
     id TEXT PRIMARY KEY,
@@ -124,10 +181,13 @@ CREATE TABLE IF NOT EXISTS arestas(
 );
 CREATE INDEX IF NOT EXISTS arestas_destino ON arestas(destino);
 INSERT OR IGNORE INTO meta VALUES('versao_esquema', '{VERSAO_ESQUEMA}');
-"""
+""".split(";")
+    if instrucao.strip()
+)
+_APAGAR = tuple(f"DROP TABLE IF EXISTS {tabela}" for tabela in ("notas_fts", "notas", "contexto", "arestas", "meta"))
 
-# bm25: id, titulo, corpo, projeto, chaves, ficheiros
-_PESOS_BM25 = "0, 8.0, 1.0, 3.0, 6.0, 1.0"
+# bm25: id, titulo, corpo, projeto, chaves, ficheiros, cjk
+_PESOS_BM25 = "0, 8.0, 1.0, 3.0, 6.0, 1.0, 4.0"
 
 
 def id_projeto(projeto: str) -> str:
@@ -156,18 +216,37 @@ def chaves_no_texto(texto: str) -> list[str]:
     return [store.normalizar_chave(m.group(1)) for m in _CHAVE_NO_TEXTO.finditer(texto or "")]
 
 
+def _palavras(texto: str) -> list[str]:
+    """As palavras do texto: letras, números, _ e os sinais combinantes (o \\w do Python corta o hindi neles)."""
+    return "".join(c if c == "_" or unicodedata.category(c)[0] in "LNM" else " " for c in texto).split()
+
+
+def _cjk(texto: str) -> str:
+    """Os carateres japoneses e chineses, um a um (ver _CJK)."""
+    return f" {_SEPARADOR_CJK} ".join(" ".join(trecho) for trecho in _CJK.findall(texto or ""))
+
+
+def _texto_fts(texto: str) -> str:
+    # NFC: a mesma palavra escrita com ou sem carateres decompostos (macOS, hindi) dá os mesmos tokens.
+    return unicodedata.normalize("NFC", texto or "")
+
+
 def _consulta_fts(texto: str) -> str:
     """Chaves (ABC-123) viram frases exatas; as outras palavras, prefixos em OR."""
-    texto = texto or ""
+    texto = _texto_fts(texto)[:LIMITE_CONSULTA]
     partes = []
     for chave in chaves_no_texto(texto):
-        termos = re.findall(r"\w+", chave, flags=re.UNICODE)
+        termos = _palavras(chave)
         if termos:
             partes.append('"' + " ".join(termos) + '"')
     resto = _CHAVE_NO_TEXTO.sub(" ", texto)
-    palavras = re.findall(r"\w+", resto, flags=re.UNICODE)
-    uteis = [p for p in palavras if len(p) > 1 and p.lower() not in _PALAVRAS_VAZIAS] or [p for p in palavras if len(p) > 1]
-    partes += [f'"{p}"*' for p in uteis[:32]]
+    palavras = _palavras(resto)
+    # Uma letra sozinha não conta, exceto em japonês e chinês (猫 é uma palavra).
+    validas = [p for p in palavras if len(p) > 1 or _CJK.fullmatch(p)]
+    uteis = [p for p in validas if p.lower() not in _PALAVRAS_VAZIAS] or validas
+    uteis = list(dict.fromkeys(p.lower() for p in uteis))[:32]  # repetidas não contam (o snippet() pagava por cada uma)
+    partes += [f'"{p}"*' for p in uteis]
+    partes += [f'cjk : "{_cjk(p)}"' for p in uteis if _CJK.search(p)]
     return " OR ".join(partes)
 
 
@@ -183,35 +262,77 @@ class Indice:
 
     # ---------------------------------------------------------------- ligação
     @contextmanager
-    def ligar(self):
+    def ligar(self, espera: float | None = None):
+        """Uma ligação ao índice; grava no fim. `espera`: segundos à espera de um lock de outro processo."""
         verificar_fts5()
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
-        con = sqlite3.connect(self.caminho, timeout=15)
-        con.row_factory = sqlite3.Row
+        con = self._abrir(ESPERA if espera is None else espera)
         try:
-            con.execute("PRAGMA journal_mode=WAL")
-            con.execute("PRAGMA synchronous=NORMAL")
-            con.execute("PRAGMA busy_timeout=15000")
-            versao = con.execute("SELECT name FROM sqlite_master WHERE name='meta'").fetchone() and con.execute(
-                "SELECT valor FROM meta WHERE chave='versao_esquema'"
-            ).fetchone()
-            if versao and versao[0] != str(VERSAO_ESQUEMA):
-                self._apagar_tabelas(con)
-            con.executescript(_ESQUEMA)
             yield con
             con.commit()
         except BaseException:
-            con.rollback()
+            try:
+                con.rollback()
+            except sqlite3.Error:
+                pass  # ficheiro estragado: o erro que interessa é o de cima
             raise
         finally:
             con.close()
 
+    def _abrir(self, espera: float) -> sqlite3.Connection:
+        con = sqlite3.connect(self.caminho, timeout=espera)
+        con.row_factory = sqlite3.Row
+        try:
+            con.execute("PRAGMA journal_mode=WAL")
+            con.execute("PRAGMA synchronous=NORMAL")
+            con.execute(f"PRAGMA busy_timeout={int(espera * 1000)}")
+            tabelas = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            versao = con.execute("SELECT valor FROM meta WHERE chave='versao_esquema'").fetchone() if "meta" in tabelas else None
+            if versao and versao[0] != str(VERSAO_ESQUEMA):
+                self._apagar_tabelas(con)
+                versao = None
+            # Só cria o esquema se faltar: o INSERT do esquema precisa do lock de escrita, e uma pesquisa
+            # ficava à espera (15 s) de quem estivesse a escrever noutro processo.
+            if not versao or not _TABELAS <= tabelas:
+                self._criar_esquema(con)
+                con.commit()
+        except BaseException:
+            con.close()
+            raise
+        return con
+
+    @staticmethod
+    def _criar_esquema(con: sqlite3.Connection) -> None:
+        # execute() e não executescript(): este faz COMMIT antes, e o reindex corre numa só transação.
+        for instrucao in _ESQUEMA:
+            con.execute(instrucao)
+
     @staticmethod
     def _apagar_tabelas(con: sqlite3.Connection) -> None:
-        con.executescript(
-            "DROP TABLE IF EXISTS notas_fts; DROP TABLE IF EXISTS notas; DROP TABLE IF EXISTS contexto;"
-            "DROP TABLE IF EXISTS arestas; DROP TABLE IF EXISTS meta;"
-        )
+        for instrucao in _APAGAR:
+            con.execute(instrucao)
+
+    def _tirar_ficheiros(self) -> bool:
+        """Tira de cena um índice estragado: o ficheiro fica ao lado (.corrupt) e os -wal/-shm saem.
+
+        Devolve False se não deu (no Windows, outro processo ainda o tem aberto). As notas não mudam.
+        """
+        estragado = self.caminho.with_name(self.caminho.name + ".corrupt")
+        for f in (self.caminho.with_name(self.caminho.name + "-wal"), self.caminho.with_name(self.caminho.name + "-shm"), self.caminho):
+            try:
+                if f == self.caminho:
+                    f.replace(estragado)
+                else:
+                    f.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+        # Um -wal antigo ao lado de um ficheiro novo seria aplicado a esse ficheiro: tem de sair tudo.
+        return not any(f.exists() for f in (self.caminho, self.caminho.with_name(self.caminho.name + "-wal")))
 
     def _apagar_indices_antigos(self) -> None:
         """Índices de esquemas anteriores e os da pasta .indice (até à v0.4). Melhor esforço.
@@ -231,27 +352,52 @@ class Indice:
                     pass  # no Windows, um processo antigo ainda o pode ter aberto
 
     # ---------------------------------------------------------- sincronizar
-    def reindexar(self) -> dict:
-        """Reconstrói tudo a partir dos Markdown."""
-        with self.ligar() as con:
-            self._apagar_tabelas(con)
-            con.executescript(_ESQUEMA)
-        self._apagar_indices_antigos()
-        return self.sincronizar()
+    def reindexar(self, estragado: bool = False) -> dict:
+        """Reconstrói tudo a partir dos Markdown.
 
-    def sincronizar(self) -> dict:
-        """Atualiza só o que mudou no disco (mtime/tamanho) e refaz as arestas."""
+        Numa só transação: durante o reindex, os outros processos continuam a ver o índice anterior.
+        Um índice estragado (ou `estragado=True`) é posto de lado e refeito num ficheiro novo.
+        """
+        if estragado and self._tirar_ficheiros():
+            estado = self.sincronizar()
+        else:
+            try:
+                estado = self.sincronizar(do_zero=True)
+            except sqlite3.DatabaseError as erro:
+                if not indice_estragado(erro) or not self._tirar_ficheiros():
+                    raise
+                estado = self.sincronizar()
+        self._apagar_indices_antigos()
+        return estado
+
+    def sincronizar(self, espera: float | None = None, do_zero: bool = False) -> dict:
+        """Atualiza só o que mudou no disco (mtime/tamanho) e refaz as arestas. `do_zero`: refaz tudo."""
         inicio = time.perf_counter()
         erros: list[str] = []
-        with self.ligar() as con:
+        problemas: list[tuple[Path, str]] = []
+        ficheiros = list(store.listar_ficheiros(self.home, problemas))
+        ilegiveis = [caminho for caminho, motivo in problemas if motivo == "pasta_ilegivel"]
+        if self.home in ilegiveis:
+            do_zero = False  # sem ler a pasta dos dados, refazer tudo seria apagar o índice inteiro
+        with self.ligar(espera) as con:
+            if do_zero:
+                con.execute("BEGIN IMMEDIATE")
+                guardadas = self._linhas_das_pastas(con, ilegiveis)
+                self._apagar_tabelas(con)
+                self._criar_esquema(con)
+                self._repor_linhas(con, guardadas)
             conhecidas = {r["id"]: (r["mtime_ns"], r["tamanho"]) for r in con.execute("SELECT id, mtime_ns, tamanho FROM notas")}
             vistas: set[str] = set()
             alteradas = 0
-            for ficheiro in store.listar_ficheiros(self.home):
+            for ficheiro in ficheiros:
                 try:
                     st = ficheiro.stat()
+                except OSError:
+                    continue
+                try:
                     nid = store.id_de(ficheiro, self.home)
-                except (OSError, ValueError):
+                except ValueError:  # ligação simbólica para fora da pasta (ex.: Dropbox, OneDrive)
+                    erros.append(f"{ficheiro}: {t('aviso.fora_da_pasta')}")
                     continue
                 vistas.add(nid)
                 if conhecidas.get(nid) == (st.st_mtime_ns, st.st_size):
@@ -264,6 +410,16 @@ class Indice:
                     continue
                 self._gravar(con, nota, st.st_mtime_ns, st.st_size)
                 alteradas += 1
+            for caminho, motivo in problemas:
+                aviso = t("aviso.pasta_ilegivel") if motivo == "pasta_ilegivel" else t("aviso.fora_de_projeto")
+                erros.append(f"{caminho}: {aviso}")
+                if motivo == "pasta_ilegivel":
+                    # Sem permissão para ler a pasta: as memórias dela ficam como estavam (não foram apagadas).
+                    if caminho == self.home:
+                        vistas |= set(conhecidas)
+                    else:
+                        prefixo = unicodedata.normalize("NFC", caminho.name) + "/"
+                        vistas |= {i for i in conhecidas if i.startswith(prefixo)}
             removidas = set(conhecidas) - vistas
             for nid in removidas:
                 con.execute("DELETE FROM notas WHERE id=?", (nid,))
@@ -280,6 +436,30 @@ class Indice:
             "erros": len(erros),
             "segundos": round(time.perf_counter() - inicio, 3),
         }
+
+    @staticmethod
+    def _linhas_das_pastas(con: sqlite3.Connection, pastas: list[Path]) -> tuple[list, list]:
+        """As linhas do índice das notas destas pastas (sem permissão de leitura): o reindex mantém-nas."""
+        notas: list = []
+        fts: list = []
+        for pasta in pastas:
+            prefixo = unicodedata.normalize("NFC", pasta.name).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "/%"
+            notas += [tuple(r) for r in con.execute("SELECT * FROM notas WHERE id LIKE ? ESCAPE '\\'", (prefixo,))]
+            fts += [
+                tuple(r)
+                for r in con.execute(
+                    "SELECT id, titulo, corpo, projeto, chaves, ficheiros, cjk FROM notas_fts WHERE id LIKE ? ESCAPE '\\'", (prefixo,)
+                )
+            ]
+        return notas, fts
+
+    @staticmethod
+    def _repor_linhas(con: sqlite3.Connection, guardadas: tuple[list, list]) -> None:
+        notas, fts = guardadas
+        if notas:
+            con.executemany(f"INSERT INTO notas VALUES({','.join('?' * len(notas[0]))})", notas)
+        if fts:
+            con.executemany("INSERT INTO notas_fts(id, titulo, corpo, projeto, chaves, ficheiros, cjk) VALUES(?,?,?,?,?,?,?)", fts)
 
     def _gravar(self, con: sqlite3.Connection, nota: store.Nota, mtime_ns: int, tamanho: int) -> None:
         con.execute(
@@ -307,9 +487,21 @@ class Indice:
         )
         con.execute("DELETE FROM notas_fts WHERE id=?", (nota.id,))
         chaves = " ".join([nota.tarefa, nota.epico, *nota.etiquetas])
+        titulo = _texto_fts(nota.titulo)
+        corpo = _texto_fts(nota.corpo)
+        if len(corpo) > LIMITE_CORPO:  # um log colado numa nota: o índice guarda só o início
+            corpo = corpo[:LIMITE_CORPO] + "\n\n…"
         con.execute(
-            "INSERT INTO notas_fts(id, titulo, corpo, projeto, chaves, ficheiros) VALUES(?,?,?,?,?,?)",
-            (nota.id, nota.titulo, nota.corpo, f"{nota.projeto} {store.pasta_projeto(nota.projeto)}", chaves, " ".join(nota.ficheiros)),
+            "INSERT INTO notas_fts(id, titulo, corpo, projeto, chaves, ficheiros, cjk) VALUES(?,?,?,?,?,?,?)",
+            (
+                nota.id,
+                titulo,
+                corpo,
+                _texto_fts(f"{nota.projeto} {store.pasta_projeto(nota.projeto)}"),
+                _texto_fts(chaves),
+                _texto_fts(" ".join(nota.ficheiros)),
+                _cjk(f"{titulo}\n{corpo}"),
+            ),
         )
 
     def _refazer_arestas(self, con: sqlite3.Connection) -> None:
@@ -413,14 +605,17 @@ class Indice:
         limite: int = 10,
         tarefa: str | None = None,
         epico: str | None = None,
+        excertos: bool = True,
     ) -> list[dict]:
+        """`excertos=False` não calcula os excertos (a UI não os mostra)."""
         limite = max(1, min(int(limite or 10), 500))
         filtros, args = self._filtros(projeto, tipo, tarefa, epico)
         e_filtros = (" AND " + " AND ".join(filtros)) if filtros else ""
-        consulta = _consulta_fts(texto or "")
-        chaves = chaves_no_texto(texto or "")
+        texto = _texto_fts(texto)[:LIMITE_CONSULTA]
+        consulta = _consulta_fts(texto)
+        chaves = chaves_no_texto(texto)
         pontos: dict[str, float] = {}
-        excertos: dict[str, str] = {}
+        com_fts: set[str] = set()
         with self.ligar() as con:
             # 1) Chaves de tickets: a tarefa, o épico e o resto do épico.
             for chave in chaves:
@@ -443,50 +638,69 @@ class Indice:
                         [e, e, *args],
                     ):
                         pontos[nid] = max(pontos.get(nid, 0.0), PONTOS_CHAVE["mesmo_epico"])
-            # 2) Texto (FTS5).
+            # 2) Texto (FTS5). Só o bm25 aqui: o snippet() é caro e só se faz para os resultados finais.
             if consulta:
                 for r in con.execute(
-                    f"""SELECT n.id, bm25(notas_fts, {_PESOS_BM25}) AS rank,
-                               snippet(notas_fts, 2, '«', '»', '…', 16) AS excerto
+                    f"""SELECT n.id, bm25(notas_fts, {_PESOS_BM25}) AS rank
                         FROM notas_fts JOIN notas n ON n.id = notas_fts.id
                         WHERE notas_fts MATCH ?{e_filtros} ORDER BY rank LIMIT ?""",
                     [consulta, *args, max(limite, 200)],
                 ):
                     pontos[r["id"]] = pontos.get(r["id"], 0.0) + max(0.0, -r["rank"])
-                    excertos[r["id"]] = r["excerto"]
+                    com_fts.add(r["id"])
             elif not chaves:
                 for (nid,) in con.execute(
                     f"SELECT n.id FROM notas n WHERE 1=1{e_filtros} ORDER BY n.data DESC LIMIT ?", [*args, limite]
                 ):
                     pontos[nid] = 0.0
             linhas = self._linhas(con, list(pontos))
-            corpos = self._corpos(con, [i for i in pontos if i not in excertos])
-        # Bónus pelo nome da memória: desempata quando o BM25 não distingue
-        # (poucas notas, ou todas com as mesmas palavras no projeto).
-        palavras = [p for p in re.findall(r"\w+", _normal(_CHAVE_NO_TEXTO.sub(" ", texto or ""))) if len(p) > 1]
-        palavras = [p for p in palavras if p not in _PALAVRAS_VAZIAS] or palavras
-        if palavras:
-            for nid, r in linhas.items():
-                titulo = _normal(r["titulo"])
-                pontos[nid] += sum(1.0 for p in palavras if p in titulo)
+            # Bónus pelo nome da memória: desempata quando o BM25 não distingue
+            # (poucas notas, ou todas com as mesmas palavras no projeto).
+            palavras = [p for p in _palavras(_normal(_CHAVE_NO_TEXTO.sub(" ", texto))) if len(p) > 1 or _CJK.fullmatch(p)]
+            palavras = list(dict.fromkeys(p for p in palavras if p not in _PALAVRAS_VAZIAS)) or palavras
+            if palavras:
+                for nid, r in linhas.items():
+                    titulo = _normal(r["titulo"])
+                    pontos[nid] += sum(1.0 for p in palavras if p in titulo)
+            finais = [nid for nid in pontos if nid in linhas]
+            finais.sort(key=lambda nid: linhas[nid]["data"], reverse=True)
+            finais.sort(key=lambda nid: -pontos[nid])
+            finais = finais[:limite]
+            excerto_de: dict[str, str] = {}
+            if excertos:
+                excerto_de = self._excertos(con, consulta, [i for i in finais if i in com_fts])
+                excerto_de.update(self._corpos(con, [i for i in finais if not excerto_de.get(i)], 160))
         resultado = []
-        for nid, valor in pontos.items():
-            if nid not in linhas:
-                continue
-            excerto = excertos.get(nid) or corpos.get(nid, "")[:160]
-            resultado.append({**_linha_resumo(linhas[nid]), "excerto": " ".join(excerto.split()), "pontuacao": round(valor, 4)})
-        resultado.sort(key=lambda x: x["data"], reverse=True)
-        resultado.sort(key=lambda x: -x["pontuacao"])
-        return resultado[:limite]
+        for nid in finais:
+            excerto = excerto_de.get(nid) or ""
+            resultado.append({**_linha_resumo(linhas[nid]), "excerto": " ".join(excerto.split()), "pontuacao": round(pontos[nid], 4)})
+        return resultado
+
+    @staticmethod
+    def _excertos(con: sqlite3.Connection, consulta: str, ids: list[str]) -> dict[str, str]:
+        """O excerto à volta das palavras encontradas, só para estas notas (e só para as que não são enormes)."""
+        excertos: dict[str, str] = {}
+        if not consulta or not ids:
+            return excertos
+        for r in con.execute(
+            f"""SELECT notas_fts.id AS id,
+                       CASE WHEN n.tamanho <= ? THEN snippet(notas_fts, 2, '«', '»', '…', 16) END AS excerto
+                FROM notas_fts JOIN notas n ON n.id = notas_fts.id
+                WHERE notas_fts MATCH ? AND notas_fts.id IN ({','.join('?' * len(ids))})""",
+            [LIMITE_EXCERTO, consulta, *ids],
+        ):
+            if r["excerto"]:
+                excertos[r["id"]] = r["excerto"]
+        return excertos
 
     def procurar_agrupado(self, texto: str, limite: int = 8) -> dict:
         """Pesquisa para a UI: memórias, projetos e tarefas/épicos, mais os nós a destacar."""
-        texto = (texto or "").strip()
+        texto = _texto_fts(texto).strip()[:LIMITE_CONSULTA]
         if not texto:
             return {"memorias": [], "projetos": [], "chaves": [], "ids": [], "nos": []}
-        memorias = self.procurar(texto, limite=200)
+        memorias = self.procurar(texto, limite=200, excertos=False)
         alvo = _normal(texto)
-        alvo_slug = store.slug(texto) if re.search(r"\w", texto) else ""
+        alvo_slug = _slug_real(texto) or ""
         chaves_texto = set(chaves_no_texto(texto))
         with self.ligar() as con:
             projetos = []
@@ -538,11 +752,13 @@ class Indice:
         return linhas
 
     @staticmethod
-    def _corpos(con: sqlite3.Connection, ids: list[str]) -> dict[str, str]:
+    def _corpos(con: sqlite3.Connection, ids: list[str], maximo: int) -> dict[str, str]:
+        """O início do corpo de cada nota (`maximo` carateres)."""
         corpos = {}
         for i in range(0, len(ids), 500):
             bloco = ids[i : i + 500]
-            for r in con.execute(f"SELECT id, corpo FROM notas_fts WHERE id IN ({','.join('?' * len(bloco))})", bloco):
+            sql = f"SELECT id, substr(corpo, 1, ?) AS corpo FROM notas_fts WHERE id IN ({','.join('?' * len(bloco))})"
+            for r in con.execute(sql, [maximo, *bloco]):
                 corpos[r["id"]] = r["corpo"]
         return corpos
 
@@ -694,10 +910,19 @@ def _linha_resumo(r: sqlite3.Row) -> dict:
         "url": r["url"],
         "etiquetas": json.loads(r["etiquetas"]),
         "data": r["data"],
-        "custo_usd": r["custo_usd"],
+        # Infinity/NaN não são JSON: partiam o painel da UI (Response.json() recusa-os).
+        "custo_usd": r["custo_usd"] if r["custo_usd"] is None or math.isfinite(r["custo_usd"]) else None,
         "ficheiros": json.loads(r["ficheiros"]),
         "ligacoes": json.loads(r["ligacoes"]),
     }
+
+
+def _slug_real(texto: str) -> str | None:
+    """O slug, ou None quando não sobra nada (títulos só em hindi, hebraico, '[[]]'...).
+
+    store.slug() devolve então "note", e todas essas memórias tinham o mesmo nome.
+    """
+    return store.slug(texto) if re.search(r"[a-z0-9]", store.sem_acentos(str(texto or "")).lower()) else None
 
 
 class _Resolvedor:
@@ -712,20 +937,23 @@ class _Resolvedor:
             chaves = {
                 nome.lower(),
                 re.sub(r"^\d{4}-\d{2}-\d{2}-", "", nome).lower(),
-                n["titulo"].strip().lower(),
-                store.slug(n["titulo"]),
+                unicodedata.normalize("NFC", n["titulo"]).strip().lower(),
+                _slug_real(n["titulo"]),
+                _slug_real(nome),
             }
+            chaves.discard(None)
+            chaves.discard("")
             for chave in chaves:
                 self.por_nome.setdefault(chave, []).append((projeto, nid))
 
     def resolver(self, alvo: str, projeto: str | None) -> str | None:
-        alvo = alvo.strip()
+        alvo = unicodedata.normalize("NFC", alvo.strip())
         if alvo.endswith(".md"):
             alvo = alvo[:-3]
         if alvo in self.ids:
             return alvo
-        for chave in (alvo.lower(), store.slug(alvo)):
-            candidatos = self.por_nome.get(chave)
+        for chave in (alvo.lower(), _slug_real(alvo)):
+            candidatos = self.por_nome.get(chave) if chave else None
             if candidatos:
                 # Prefere o mesmo projeto; depois a mais recente (ids têm a data).
                 mesmos = [c for c in candidatos if c[0] == projeto] or candidatos

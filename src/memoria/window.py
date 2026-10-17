@@ -8,6 +8,7 @@ Se faltar, ou se a janela falhar, a mesma UI abre no browser em 127.0.0.1.
 from __future__ import annotations
 
 import os
+import sqlite3
 import subprocess
 import sys
 import time
@@ -100,7 +101,15 @@ def correr(browser: bool = False, selftest: bool = False, timeout: float = 60.0,
         _info(t("jan.sem_ui", pasta=pasta_ui()))
         return 2
     mem = Memoria()
-    mem.sincronizar(forcar=True)
+    try:
+        mem.sincronizar(forcar=True)
+    except (sqlite3.Error, OSError) as erro:  # a janela abre na mesma (as notas estão no disco); o erro diz o que fazer
+        from memoria.index import indice_ocupado
+
+        if indice_ocupado(erro):
+            _info(t("erro.indice_ocupado"))
+        else:
+            _info(t("erro.indice", erro=erro) if isinstance(erro, sqlite3.Error) else t("aviso.indexar", erro=erro))
 
     if not browser:
         ok, motivo = janela_disponivel()

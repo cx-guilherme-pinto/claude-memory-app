@@ -106,11 +106,47 @@ def traduzir_argumentos(argv: list[str]) -> list[str]:
 
 
 def _saida_segura() -> None:
+    # Mac e Linux: sempre UTF-8, mesmo com um LANG/LC_ALL antigo (ISO-8859-1) nos dotfiles. Os terminais
+    # são UTF-8; com a codificação do locale, o hebraico e o hindi saíam como '?' e os caminhos com
+    # acentos já não eram os do disco. No Windows, a consola trata disso sozinha.
+    extra = {} if sys.platform == "win32" else {"encoding": "utf-8"}
     for fluxo in (sys.stdout, sys.stderr):
         try:
-            fluxo.reconfigure(errors="replace")  # type: ignore[union-attr]
+            fluxo.reconfigure(errors="replace", **extra)  # type: ignore[union-attr]
         except Exception:
             pass
+
+
+def _ler_stdin() -> str:
+    """O texto do stdin: UTF-8 primeiro (o que os pipes trazem), e só depois a codificação do locale."""
+    bruto = getattr(sys.stdin, "buffer", None)
+    if bruto is None:  # ex.: io.StringIO nos testes
+        return sys.stdin.read()
+    dados = bruto.read()
+    try:
+        return dados.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        import locale
+
+        return dados.decode(locale.getpreferredencoding(False) or "utf-8", errors="replace")
+
+
+def _mensagem_de_erro(erro: BaseException) -> str | None:
+    """Uma linha para o participante, em vez de um traceback. None: erro inesperado (o traceback ajuda)."""
+    import sqlite3
+
+    from memoria.index import FTS5Indisponivel, indice_ocupado
+    from memoria.update import ErroUpdate
+
+    if isinstance(erro, (ErroUpdate, FTS5Indisponivel, ValueError, LookupError)):
+        return str(erro)
+    if indice_ocupado(erro):
+        return t("erro.indice_ocupado")
+    if isinstance(erro, sqlite3.Error):
+        return t("erro.indice", erro=erro)
+    if isinstance(erro, OSError):  # disco cheio, sem permissão...
+        return str(erro)
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,13 +163,11 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         return 130
     except Exception as erro:  # mensagens curtas para humanos
-        from memoria.index import FTS5Indisponivel
-        from memoria.update import ErroUpdate
-
-        if isinstance(erro, (ErroUpdate, FTS5Indisponivel, ValueError, LookupError)):
-            print(f"{PROGRAMA}: {erro}", file=sys.stderr)
-            return 1
-        raise
+        mensagem = _mensagem_de_erro(erro)
+        if mensagem is None:
+            raise
+        print(f"{PROGRAMA}: {mensagem}", file=sys.stderr)
+        return 1
 
 
 def _executar(args: argparse.Namespace) -> int:
@@ -145,7 +179,7 @@ def _executar(args: argparse.Namespace) -> int:
     if args.command == "add":
         from memoria.service import Memoria
 
-        texto = args.text if args.text is not None else ("" if sys.stdin.isatty() else sys.stdin.read())
+        texto = args.text if args.text is not None else ("" if sys.stdin.isatty() else _ler_stdin())
         r = Memoria().adicionar(
             tipo=args.type,
             titulo=args.title,
@@ -173,7 +207,8 @@ def _executar(args: argparse.Namespace) -> int:
             args.text, projeto=args.project, tipo=args.type, limite=args.limit, tarefa=args.task, epico=args.epic
         )
         if args.json:
-            print(json.dumps([externo(r) for r in resultados], ensure_ascii=False, indent=2))
+            # ensure_ascii: JSON válido em qualquer locale ou página de código (\u escapes).
+            print(json.dumps([externo(r) for r in resultados], ensure_ascii=True, indent=2))
         else:
             for r in resultados:
                 chave = " ".join(x for x in (r["tarefa"], f"[{r['epico']}]" if r["epico"] else "") if x)

@@ -10,6 +10,10 @@ Os nomes antigos (memoria_procurar, ...) já não são expostos: só as skills d
 
 from __future__ import annotations
 
+import io
+import json
+import re
+import sqlite3
 import sys
 import time
 from typing import Annotated
@@ -80,6 +84,22 @@ def _compacto(itens: list[dict]) -> list[dict]:
     return [{k: v for k, v in externo(i).items() if v not in (None, "", [], {})} for i in itens]
 
 
+# Erros que viram uma mensagem para o modelo (ToolError). Os outros chegavam como um
+# "Error executing tool" sem explicação, e o modelo voltava a tentar (memórias duplicadas).
+ERROS_FERRAMENTA = (ValueError, LookupError, OSError, RuntimeError, sqlite3.Error)
+
+
+def mensagem_erro(erro: BaseException) -> str:
+    from memoria.i18n import t
+    from memoria.index import indice_ocupado
+
+    if indice_ocupado(erro):
+        return t("erro.indice_ocupado")
+    if isinstance(erro, sqlite3.Error):
+        return t("erro.indice", erro=erro)
+    return str(erro)
+
+
 def criar_servidor(memoria: Memoria | None = None):
     from mcp.server import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
@@ -114,9 +134,9 @@ def criar_servidor(memoria: Memoria | None = None):
         filtros = {"projeto": project, "tipo": type, "tarefa": task, "epico": epic}
         try:
             resultados = mem.procurar(texto, projeto=project, tipo=type, limite=limit, tarefa=task, epico=epic)
-        except ValueError as erro:
-            registo.gravar("memory_search", texto=texto, filtros=filtros, erro=str(erro), duracao_ms=_ms(inicio))
-            raise ToolError(str(erro)) from erro
+        except ERROS_FERRAMENTA as erro:
+            registo.gravar("memory_search", texto=texto, filtros=filtros, erro=mensagem_erro(erro), duracao_ms=_ms(inicio))
+            raise ToolError(mensagem_erro(erro)) from erro
         registo.gravar("memory_search", texto=texto, filtros=filtros, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "results": _compacto(resultados)}
 
@@ -155,10 +175,15 @@ def criar_servidor(memoria: Memoria | None = None):
                 etiquetas=tags,
                 custo_usd=cost_usd,
             )
-        except ValueError as erro:
-            registo.gravar("memory_add", texto=title, filtros={"projeto": project, "tarefa": task}, erro=str(erro))
-            raise ToolError(str(erro)) from erro
-        nova = mem.nota(resultado["id"]) or {"id": resultado["id"], "titulo": title, "projeto": project}
+        except ERROS_FERRAMENTA as erro:
+            registo.gravar("memory_add", texto=title, filtros={"projeto": project, "tarefa": task}, erro=mensagem_erro(erro))
+            raise ToolError(mensagem_erro(erro)) from erro
+        # A memória já está gravada: daqui em diante, nada pode fazer parecer que falhou.
+        try:
+            nova = mem.nota(resultado["id"])
+        except ERROS_FERRAMENTA:
+            nova = None
+        nova = nova or {"id": resultado["id"], "titulo": title, "projeto": project}
         registo.gravar(
             "memory_add",
             texto=nova.get("titulo", ""),
@@ -182,17 +207,78 @@ def criar_servidor(memoria: Memoria | None = None):
         limit: Annotated[int, Field(ge=1, le=100, description="Maximum number of results.")] = 10,
     ) -> dict:
         inicio = time.perf_counter()
-        # No registo fica o id da memória de partida (não o caminho completo do disco).
-        origem = mem.indice.resolver(ref) or ref
+        origem = ref
         try:
+            # No registo fica o id da memória de partida (não o caminho completo do disco).
+            origem = mem.resolver(ref) or ref
             resultados = mem.relacionadas(ref, limite=limit)
-        except LookupError as erro:
-            registo.gravar("memory_related", texto=origem, erro=str(erro), duracao_ms=_ms(inicio))
-            raise ToolError(str(erro)) from erro
+        except ERROS_FERRAMENTA as erro:
+            registo.gravar("memory_related", texto=origem, erro=mensagem_erro(erro), duracao_ms=_ms(inicio))
+            raise ToolError(mensagem_erro(erro)) from erro
         registo.gravar("memory_related", texto=origem, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "results": _compacto(resultados)}
 
     return servidor
+
+
+# --- stdin sem surrogates soltos ------------------------------------------------
+# O JSON.stringify do Node escreve um surrogate solto como "\ud83d". O SDK do MCP (pydantic) recusa
+# essa linha e deita o pedido fora sem responder: o Claude Code ficava à espera da ferramenta.
+# Estas linhas passam pelo json do Python (que as aceita) e o surrogate vira U+FFFD.
+_ESCAPE_SURROGATE = re.compile(r"\\u[dD][89a-fA-F][0-9a-fA-F]{2}")
+
+
+def _sem_surrogates(valor):
+    if isinstance(valor, str):
+        return store.sem_surrogates(valor)
+    if isinstance(valor, list):
+        return [_sem_surrogates(v) for v in valor]
+    if isinstance(valor, dict):
+        return {_sem_surrogates(k): _sem_surrogates(v) for k, v in valor.items()}
+    return valor
+
+
+def linha_limpa(linha: str) -> str:
+    if not _ESCAPE_SURROGATE.search(linha):  # o caso normal: nada a fazer
+        return linha
+    try:
+        return json.dumps(_sem_surrogates(json.loads(linha)), ensure_ascii=False) + "\n"
+    except ValueError:
+        return linha  # não é JSON: o SDK trata dela como antes
+
+
+class _EntradaLimpa:
+    """As linhas do stdin, já sem surrogates soltos (ver linha_limpa)."""
+
+    def __init__(self, entrada):
+        self._entrada = entrada
+
+    async def __aiter__(self):
+        async for linha in self._entrada:
+            yield linha_limpa(linha)
+
+
+class _TextoSemFechar(io.TextIOWrapper):
+    """Fechar este wrapper não fecha o sys.stdin.buffer (igual ao do SDK)."""
+
+    def close(self) -> None:
+        try:
+            self.detach()
+        except ValueError:
+            pass
+
+
+async def _servir_stdio(servidor) -> None:
+    import anyio
+    from mcp.server.stdio import stdio_server
+
+    interno = getattr(servidor, "_lowlevel_server", None)
+    if interno is None:  # outra versão do SDK: o caminho normal
+        await servidor.run_stdio_async()
+        return
+    entrada = anyio.wrap_file(_TextoSemFechar(sys.stdin.buffer, encoding="utf-8", errors="replace"))
+    async with stdio_server(stdin=_EntradaLimpa(entrada)) as (leitura, escrita):
+        await interno.run(leitura, escrita, interno.create_initialization_options())
 
 
 def correr_stdio() -> int:
@@ -200,7 +286,7 @@ def correr_stdio() -> int:
     import anyio
 
     from memoria.i18n import t
-    from memoria.index import FTS5Indisponivel, verificar_fts5
+    from memoria.index import ESPERA_CURTA, FTS5Indisponivel, verificar_fts5
 
     # Antes do protocolo arrancar, tudo vai explicitamente para o stderr.
     # Durante o protocolo, o stdio_server do mcp desvia o fd 1 para o stderr:
@@ -212,12 +298,13 @@ def correr_stdio() -> int:
         return 2
     mem = Memoria()
     try:
-        mem.sincronizar(forcar=True)
+        # Espera pouco por um lock: o Claude Code desiste de um servidor que não responde em 30 s.
+        mem.sincronizar(forcar=True, espera=ESPERA_CURTA)
     except Exception as erro:  # o servidor arranca na mesma; o erro aparece nas ferramentas
         print(f"agent-memory mcp: {t('aviso.indexar', erro=erro)}", file=sys.stderr)
     servidor = criar_servidor(mem)
     try:
-        anyio.run(servidor.run_stdio_async)
+        anyio.run(_servir_stdio, servidor)
     except KeyboardInterrupt:
         pass
     return 0

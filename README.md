@@ -57,7 +57,8 @@ Every release also has one zip per platform, with Python inside:
 Unzip and open. No admin rights and no network needed. The workshop setup does this for you.
 
 - Connect it to Claude Code: `selftest` prints the right `claude mcp add` command.
-  On Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; on Windows, `agent-memory.cmd selftest`.
+  On Mac, `…/Memoria.app/Contents/MacOS/memoria selftest` (the portable app keeps its old file name and shows as Agent Memory);
+  on Windows, `agent-memory.cmd selftest`. After the one-line install, it's just `agent-memory selftest`.
 - Prefer the one-line install command. A zip downloaded in a browser needs approval in
   System Settings → Privacy & Security: macOS blocks the app because it isn't signed.
   To unblock it in Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
@@ -149,7 +150,7 @@ In `~/.agent-memory` (or the folder set in `AGENT_MEMORY_HOME`):
 ~/.agent-memory/
   <project>/<YYYY-MM-DD>-<slug>.md   one note per file
   config.json                        update URLs (optional)
-  .index/index-v2.sqlite             index; safe to delete
+  .index/index-v3.sqlite             index; safe to delete
   .index/activity.sqlite             MCP call log ("Claude activity" view)
   preferences.json                   language chosen in the picker
 ```
@@ -248,6 +249,11 @@ Keys read (an environment variable with the same name overrides them):
 - **Company proxy**: uv and `agent-memory update` use `HTTPS_PROXY` and the system certificates.
   For uv, also set `UV_SYSTEM_CERTS=1`.
 - **The window doesn't open**: `agent-memory --browser` opens the same interface in the browser.
+- **"The search index of your memories is damaged"**: the app rebuilds the index from the notes by itself.
+  If the message stays (on Windows, another process still has the file open), close Claude Code and the app,
+  then run `agent-memory reindex`. The notes are never touched.
+- **"Warning: memory skipped"**: a note the app can't read (an error in the YAML header, not UTF-8, outside a
+  project folder, a symlink to outside the folder). Fix the file: the app picks it up by itself.
 
 ## Development
 

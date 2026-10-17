@@ -57,7 +57,8 @@ Commands `~/.local/bin` (Mac/Linux) या `%USERPROFILE%\.local\bin` (Windows) 
 Unzip करें और खोलें। न admin चाहिए, न नेटवर्क। Workshop का setup यह खुद कर देता है।
 
 - Claude Code से जोड़ने के लिए: `selftest` सही `claude mcp add` command दिखाता है।
-  Mac पर `…/Memoria.app/Contents/MacOS/memoria selftest`; Windows पर `agent-memory.cmd selftest`।
+  Mac पर `…/Memoria.app/Contents/MacOS/memoria selftest` (पोर्टेबल ऐप का फ़ाइल नाम पुराना ही रहता है, और यह Agent Memory नाम से दिखता है);
+  Windows पर `agent-memory.cmd selftest`। एक लाइन वाले इंस्टॉल के बाद बस `agent-memory selftest`।
 - एक लाइन वाले install command का इस्तेमाल करें। ब्राउज़र से डाउनलोड किए zip के लिए
   System Settings → Privacy & Security में approval चाहिए: macOS ऐप को ब्लॉक करता है (signed नहीं है)।
   Terminal से अनब्लॉक करें: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`।
@@ -147,7 +148,7 @@ Command line से: `agent-memory language hi`। `AGENT_MEMORY_LANG` variable 
 ~/.agent-memory/
   <project>/<YYYY-MM-DD>-<slug>.md   हर note की एक फ़ाइल
   config.json                        update URLs (ऑप्शनल)
-  .index/index-v2.sqlite             index; डिलीट कर सकते हैं
+  .index/index-v3.sqlite             index; डिलीट कर सकते हैं
   .index/activity.sqlite             MCP कॉल्स का log ("Claude की एक्टिविटी")
   preferences.json                   picker में चुनी भाषा
 ```
@@ -241,6 +242,11 @@ URLs `~/.agent-memory/config.json` से आते हैं और वहा�
 - **कंपनी का proxy**: uv और `agent-memory update` `HTTPS_PROXY` और सिस्टम certificates इस्तेमाल करते हैं।
   uv के लिए `UV_SYSTEM_CERTS=1` भी सेट करें।
 - **विंडो नहीं खुलती**: `agent-memory --browser` वही इंटरफ़ेस ब्राउज़र में खोलता है।
+- **"मेमोरी का सर्च इंडेक्स खराब है"**: ऐप नोट्स से index खुद फिर से बना लेता है। अगर मैसेज बना रहे
+  (Windows पर कोई दूसरा प्रोसेस फ़ाइल को अभी भी खोले हुए है), तो Claude Code और ऐप बंद करें,
+  फिर `agent-memory reindex` चलाएँ। नोट्स को कभी छुआ नहीं जाता।
+- **"वॉर्निंग: मेमोरी स्किप की गई"**: ऐसा नोट जिसे ऐप पढ़ नहीं पाता (YAML हेडर में एरर, UTF-8 नहीं, प्रोजेक्ट
+  फ़ोल्डर के बाहर, फ़ोल्डर के बाहर जाने वाला symlink)। फ़ाइल ठीक करें, ऐप उसे खुद ले लेगा।
 
 ## डेवलपमेंट
 

@@ -118,6 +118,34 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "ל-SQLite של Python הזה אין FTS5 (sqlite {versao}, שגיאה: {erro}). "
         "התקינו מחדש עם Python שמנוהל על ידי uv: uv tool install --force --managed-python --python 3.12 <wheel>",
     ),
+    "erro.indice": _m(
+        "o índice de pesquisa das memórias está estragado ({erro}). As notas estão a salvo, em Markdown. "
+        "Fecha o Claude Code e a app e corre: agent-memory reindex",
+        "the search index of your memories is damaged ({erro}). Your notes are safe in Markdown. "
+        "Close Claude Code and the app, then run: agent-memory reindex",
+        "मेमोरी का सर्च इंडेक्स खराब है ({erro})। आपके नोट्स Markdown में सुरक्षित हैं। "
+        "Claude Code और ऐप बंद करें, फिर चलाएँ: agent-memory reindex",
+        "אינדקס החיפוש של הזיכרונות פגום ({erro}). ההערות שלכם שמורות ב-Markdown. "
+        "סגרו את Claude Code ואת האפליקציה, ואז הריצו: agent-memory reindex",
+    ),
+    "erro.indice_ocupado": _m(
+        "o índice está ocupado: outro processo do Agent Memory está a usá-lo. Tenta outra vez daqui a uns segundos.",
+        "the index is busy: another Agent Memory process is using it. Try again in a few seconds.",
+        "इंडेक्स बिज़ी है: Agent Memory का कोई दूसरा प्रोसेस इसे इस्तेमाल कर रहा है। कुछ सेकंड बाद फिर से कोशिश करें।",
+        "האינדקס תפוס: תהליך אחר של Agent Memory משתמש בו. נסו שוב בעוד כמה שניות.",
+    ),
+    "erro.codificacao": _m(
+        "não está em UTF-8. Grava-a em UTF-8 (no editor: Guardar como, codificação UTF-8).",
+        "it is not UTF-8 text. Save it as UTF-8 (in your editor: Save As, encoding UTF-8).",
+        "यह UTF-8 टेक्स्ट नहीं है। इसे UTF-8 में सेव करें (एडिटर में: Save As, एन्कोडिंग UTF-8)।",
+        "זה לא טקסט UTF-8. שמרו אותו כ-UTF-8 (בעורך: Save As, קידוד UTF-8).",
+    ),
+    "erro.cabecalho_grande": _m(
+        "o cabeçalho YAML é demasiado grande (falta o '---' que o fecha?)",
+        "the YAML header is too large (is the closing '---' missing?)",
+        "YAML हेडर बहुत बड़ा है (क्या बंद करने वाली '---' लाइन नहीं है?)",
+        "כותרת ה-YAML גדולה מדי (חסרה שורת ה-'---' הסוגרת?)",
+    ),
     "erro.zip_caminho": _m(
         "Caminho fora da pasta no zip: {ficheiro}",
         "Path outside the folder in the zip: {ficheiro}",
@@ -142,6 +170,36 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "warning while indexing: {erro}",
         "इंडेक्स करते समय वॉर्निंग: {erro}",
         "אזהרה בזמן בניית האינדקס: {erro}",
+    ),
+    "aviso.indice_refeito": _m(
+        "Aviso: o índice de pesquisa estava estragado ({erro}) e foi refeito a partir das notas.",
+        "Warning: the search index was damaged ({erro}) and was rebuilt from your notes.",
+        "वॉर्निंग: सर्च इंडेक्स खराब था ({erro}), उसे आपके नोट्स से फिर से बनाया गया।",
+        "אזהרה: אינדקס החיפוש היה פגום ({erro}) ונבנה מחדש מההערות שלכם.",
+    ),
+    "aviso.indice_falhou": _m(
+        "Aviso: a memória foi gravada, mas o índice de pesquisa não foi atualizado ({erro}). Fica atualizado na próxima pesquisa.",
+        "Warning: the memory was saved, but the search index was not updated ({erro}). It is updated on the next search.",
+        "वॉर्निंग: मेमोरी सेव हो गई, लेकिन सर्च इंडेक्स अपडेट नहीं हुआ ({erro})। अगली सर्च पर यह अपडेट हो जाएगा।",
+        "אזהרה: הזיכרון נשמר, אבל אינדקס החיפוש לא עודכן ({erro}). הוא יתעדכן בחיפוש הבא.",
+    ),
+    "aviso.fora_da_pasta": _m(
+        "fica fora da pasta das memórias (ligação simbólica?). Move a pasta para dentro em vez de a ligar.",
+        "it is outside the memory folder (a symlink?). Move the folder inside instead of linking it.",
+        "यह मेमोरी फ़ोल्डर के बाहर है (symlink?)। इसे लिंक करने की बजाय फ़ोल्डर को अंदर ले आएँ।",
+        "הוא מחוץ לתיקיית הזיכרונות (symlink?). העבירו את התיקייה פנימה במקום לקשר אליה.",
+    ),
+    "aviso.pasta_ilegivel": _m(
+        "pasta sem permissão de leitura: as memórias dela ficam como estavam no índice.",
+        "the folder cannot be read (permissions): its memories stay as they were in the index.",
+        "फ़ोल्डर पढ़ा नहीं जा सकता (परमिशन): इसकी मेमोरी इंडेक्स में पहले जैसी रहेंगी।",
+        "אי אפשר לקרוא את התיקייה (הרשאות): הזיכרונות שלה נשארים באינדקס כמו שהיו.",
+    ),
+    "aviso.fora_de_projeto": _m(
+        "as memórias têm de estar dentro da pasta de um projeto (ex.: <pasta dos dados>/<projeto>/).",
+        "memories must be inside a project folder (e.g. <data folder>/<project>/).",
+        "मेमोरी किसी प्रोजेक्ट फ़ोल्डर के अंदर होनी चाहिए (जैसे <data folder>/<project>/)।",
+        "זיכרונות חייבים להיות בתוך תיקיית פרויקט (למשל <data folder>/<project>/).",
     ),
     "aviso.memoria_ignorada": _m(
         "Aviso: memória ignorada: {erro}",
@@ -309,6 +367,24 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "Cannot write to {pasta}: {erro}",
         "{pasta} में लिखा नहीं जा सकता: {erro}",
         "אי אפשר לכתוב ב-{pasta}: {erro}",
+    ),
+    "st.indice": _m(
+        "Índice das tuas memórias ({total} memórias)",
+        "Index of your memories ({total} memories)",
+        "आपकी मेमोरी का इंडेक्स ({total} मेमोरी)",
+        "האינדקס של הזיכרונות שלכם ({total} זיכרונות)",
+    ),
+    "st.indice_ocupado": _m(
+        "Índice das tuas memórias (em uso por outro processo)",
+        "Index of your memories (in use by another process)",
+        "आपकी मेमोरी का इंडेक्स (किसी दूसरे प्रोसेस के इस्तेमाल में)",
+        "האינדקס של הזיכרונות שלכם (בשימוש של תהליך אחר)",
+    ),
+    "st.indice_erro": _m(
+        "Índice das tuas memórias: {erro}. As notas estão a salvo. Fecha o Claude Code e a app e corre: agent-memory reindex",
+        "Index of your memories: {erro}. Your notes are safe. Close Claude Code and the app, then run: agent-memory reindex",
+        "आपकी मेमोरी का इंडेक्स: {erro}। आपके नोट्स सुरक्षित हैं। Claude Code और ऐप बंद करें, फिर चलाएँ: agent-memory reindex",
+        "האינדקס של הזיכרונות שלכם: {erro}. ההערות שלכם שמורות. סגרו את Claude Code ואת האפליקציה, ואז הריצו: agent-memory reindex",
     ),
     "st.copia_temporaria": _m(
         "A app corre de uma cópia temporária do macOS. Move-a para Aplicações.",

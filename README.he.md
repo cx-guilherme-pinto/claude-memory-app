@@ -57,7 +57,8 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto
 מחלצים ופותחים. לא צריך הרשאות מנהל ולא רשת. ה-setup של הסדנה עושה את זה לבד.
 
 - חיבור ל-Claude Code: ה-`selftest` מציג את פקודת `claude mcp add` הנכונה.
-  ב-Mac: `…/Memoria.app/Contents/MacOS/memoria selftest`; ב-Windows: `agent-memory.cmd selftest`.
+  ב-Mac: `…/Memoria.app/Contents/MacOS/memoria selftest` (לאפליקציה הניידת נשאר שם הקובץ הישן, והיא מופיעה בשם Agent Memory);
+  ב-Windows: `agent-memory.cmd selftest`. אחרי ההתקנה בשורה אחת, פשוט `agent-memory selftest`.
 - עדיף להתקין עם פקודת השורה האחת. zip שהורד בדפדפן דורש אישור ב-
   System Settings → Privacy & Security: ה-Mac חוסם את האפליקציה כי היא לא חתומה.
   כדי לשחרר ב-Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
@@ -148,7 +149,7 @@ claude mcp add --scope user agent-memory -- "$HOME/.local/bin/agent-memory" mcp
 ~/.agent-memory/
   <project>/<YYYY-MM-DD>-<slug>.md   קובץ אחד לכל הערה
   config.json                        כתובות עדכון (לא חובה)
-  .index/index-v2.sqlite             אינדקס; אפשר למחוק
+  .index/index-v3.sqlite             אינדקס; אפשר למחוק
   .index/activity.sqlite             רישום קריאות ה-MCP ("הפעילות של Claude")
   preferences.json                   השפה שנבחרה בבורר
 ```
@@ -242,6 +243,11 @@ agent-memory update
 - **Proxy של החברה**: uv ו-`agent-memory update` משתמשים ב-`HTTPS_PROXY` ובתעודות של המערכת.
   עבור uv, הגדירו גם `UV_SYSTEM_CERTS=1`.
 - **החלון לא נפתח**: `agent-memory --browser` פותחת את אותו ממשק בדפדפן.
+- **"אינדקס החיפוש של הזיכרונות פגום"**: האפליקציה בונה את האינדקס מחדש מההערות בעצמה. אם ההודעה נשארת
+  (ב-Windows, תהליך אחר עדיין מחזיק את הקובץ פתוח), סגרו את Claude Code ואת האפליקציה והריצו `agent-memory reindex`.
+  ההערות אף פעם לא משתנות.
+- **"אזהרה: זיכרון דולג"**: הערה שהאפליקציה לא מצליחה לקרוא (שגיאה בכותרת ה-YAML, לא UTF-8, מחוץ לתיקיית פרויקט,
+  symlink אל מחוץ לתיקייה). תקנו את הקובץ, והאפליקציה תקלוט אותו לבד.
 
 ## פיתוח
 

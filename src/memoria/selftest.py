@@ -81,6 +81,8 @@ def verificar_base() -> bool:
         resultados.append(_linha(True, t("st.pasta", pasta=home)))
     except OSError as erro:
         resultados.append(_linha(False, t("st.sem_escrita", pasta=home, erro=erro)))
+    else:
+        resultados.append(_indice_real(home))
 
     from memoria import portatil
 
@@ -91,6 +93,22 @@ def verificar_base() -> bool:
         resultados.append(_linha(True, t("st.portatil", plataforma=dados["plataforma"], raiz=portatil.raiz())))
 
     return all(resultados)
+
+
+def _indice_real(home: Path) -> bool:
+    """O índice das memórias desta pessoa abre (e, se estava estragado, refaz-se). As notas não mudam."""
+    from memoria.index import indice_ocupado
+    from memoria.service import Memoria
+
+    try:
+        estado = Memoria(home).sincronizar(forcar=True, espera=5)
+    except Exception as erro:
+        if indice_ocupado(erro):  # outro processo está a escrever: o índice existe e está a ser usado
+            return _linha(True, t("st.indice_ocupado"))
+        return _linha(False, t("st.indice_erro", erro=f"{type(erro).__name__}: {erro}"))
+    if estado is None:
+        return _linha(True, t("st.indice_ocupado"))
+    return _linha(True, t("st.indice", total=estado["total"]))
 
 
 def _mcp_ok(mem) -> bool:

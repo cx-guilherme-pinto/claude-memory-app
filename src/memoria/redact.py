@@ -41,7 +41,16 @@ _PADROES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"(?i)\b(Bearer|Basic|token)(\s+)((?=[A-Za-z0-9._~+/=-]*\d)[A-Za-z0-9._~+/=-]{16,})"),
     ),
     # Credenciais dentro de URLs: https://utilizador:segredo@servidor
-    ("url", re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)([^\s@/]{3,})(@)")),
+    # Uma só tentativa por sequência de [a-z0-9+.-], e só se ela acabar em "://": recomeçar em cada \b
+    # dentro de uma sequência longa sem espaços era quadrático (dezenas de segundos para 40 KB).
+    # O grupo atómico escolhe o mesmo início do esquema que o \b escolhia; o texto antes fica no grupo 1.
+    (
+        "url",
+        re.compile(
+            r"(?i)(?<![a-z0-9+.-])(?=[a-z0-9+.-]*+://)"
+            r"((?>[a-z0-9+.-]*?\b[a-z])[a-z0-9+.-]*+://[^\s:/@]+:)([^\s@/]{3,})(@)"
+        ),
+    ),
 ]
 
 # chave = valor / chave: valor, em texto, YAML, JSON, .env e linhas de comando.
@@ -51,8 +60,10 @@ _CHAVES = (
     r"private[-_]?key|auth[-_]?token|access[-_]?token|refresh[-_]?token|token|"
     r"aws_secret_access_key|credential|credentials"
 )
+# A chave começa no início de uma sequência de [A-Za-z0-9_.-] (igual ao padrão "url" acima): apanha
+# tudo o que o \b apanhava, mas sem recomeçar dentro da sequência, o que era quadrático.
 _ATRIBUICAO = re.compile(
-    r"(?i)(?P<chave>[\"']?\b[A-Za-z0-9_.-]*(?:" + _CHAVES + r")\b[\"']?)"
+    r"(?i)(?P<chave>[\"']?(?<![A-Za-z0-9_.-])[A-Za-z0-9_.-]*(?:" + _CHAVES + r")\b[\"']?)"
     r"(?P<sep>\s*[:=]\s*|\s+)"
     r"(?P<valor>\"[^\"\n]{4,}\"|'[^'\n]{4,}'|[^\s\"',;)}\]]{4,})"
 )

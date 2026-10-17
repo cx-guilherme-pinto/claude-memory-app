@@ -25,6 +25,8 @@ historico). Para fora (ficheiros novos, MCP, CLI), usa os ingleses: ver TIPO_EXT
 
 from __future__ import annotations
 
+import codecs
+import math
 import os
 import re
 import unicodedata
@@ -227,16 +229,37 @@ class Nota:
 
 def id_de(caminho: Path, home: Path) -> str:
     rel = caminho.resolve().relative_to(home.resolve())
-    return rel.with_suffix("").as_posix()
+    # NFC: o macOS pode devolver nomes decompostos (NFD); uma [[ligação]] escrita à mão vem em NFC.
+    return unicodedata.normalize("NFC", rel.with_suffix("").as_posix())
+
+
+# Um cabeçalho com mais do que isto não é de uma nota (o YAML em Python puro levava minutos).
+MAX_CABECALHO = 64_000
+
+
+def ler_texto(caminho: Path) -> str:
+    """O texto de uma nota: UTF-8 (com ou sem BOM) ou UTF-16 com BOM (o "Unicode" do Bloco de Notas)."""
+    dados = caminho.read_bytes()
+    if dados.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return dados.decode("utf-16")
+    try:
+        return dados.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ValueError(t("erro.codificacao")) from None
 
 
 def ler_nota(caminho: Path, home: Path) -> Nota:
-    texto = caminho.read_text("utf-8-sig")
+    texto = ler_texto(caminho)
     meta: dict = {}
     corpo = texto
     m = _FRONTMATTER.match(texto)
     if m:
-        dados = yaml.safe_load(m.group(1)) or {}
+        if len(m.group(1)) > MAX_CABECALHO:
+            raise ValueError(t("erro.cabecalho_grande"))
+        try:
+            dados = yaml.safe_load(m.group(1)) or {}
+        except yaml.YAMLError as erro:
+            raise ValueError(_erro_yaml(erro)) from None  # uma linha, como no editor
         if not isinstance(dados, dict):
             raise ValueError(t("erro.frontmatter_mapa"))
         meta = dados
@@ -245,12 +268,18 @@ def ler_nota(caminho: Path, home: Path) -> Nota:
     try:
         tipo = normalizar_tipo(tipo_lido)
     except ValueError:
-        tipo = str(tipo_lido)
+        tipo = str(tipo_lido).strip()
+        # Um tipo escrito à mão que é o nome de um nó de contexto (tarefa, projeto...) fazia a UI
+        # desenhar a memória como esse nó, e o corpo nunca abria.
+        if not tipo or tipo in TIPOS_CONTEXTO:
+            tipo = "historico"
     custo = campo(meta, "cost_usd")
     try:
         custo = float(custo) if custo not in (None, "") else None
     except (TypeError, ValueError):
         custo = None
+    if custo is not None and not math.isfinite(custo):
+        custo = None  # Infinity/NaN não são JSON válido (a UI deixava de mostrar a nota e as relacionadas)
     data_txt = _data_iso(campo(meta, "date"))
     if not data_txt:
         data_txt = _data_do_nome(caminho) or datetime.fromtimestamp(
@@ -279,14 +308,35 @@ def _data_do_nome(caminho: Path) -> str:
     return m.group(1) if m else ""
 
 
-def listar_ficheiros(home: Path):
-    """Todos os .md em <pasta dos dados>/<projeto>/ (ignora pastas escondidas)."""
+def listar_ficheiros(home: Path, problemas: list | None = None):
+    """Todos os .md em <pasta dos dados>/<projeto>/ (ignora pastas escondidas).
+
+    `problemas` recebe (caminho, motivo) do que não se pôde ver: "pasta_ilegivel" (sem permissão)
+    e "fora_de_projeto" (um .md solto na pasta dos dados). Ver as mensagens aviso.<motivo>.
+    """
+    if problemas is None:
+        problemas = []
     if not home.is_dir():
         return
-    for pasta in sorted(home.iterdir()):
-        if not pasta.is_dir() or pasta.name.startswith("."):
+    try:
+        pastas = sorted(home.iterdir())
+    except OSError:
+        problemas.append((home, "pasta_ilegivel"))
+        return
+    for pasta in pastas:
+        if pasta.name.startswith("."):
+            continue
+        if not pasta.is_dir():
+            if pasta.suffix.lower() == ".md":
+                problemas.append((pasta, "fora_de_projeto"))
+            continue
+        try:
+            os.listdir(pasta)  # o glob() devolve [] numa pasta sem permissão, sem erro nenhum
+        except OSError:
+            problemas.append((pasta, "pasta_ilegivel"))
             continue
         for ficheiro in sorted(pasta.glob("*.md")):
+            # is_file(): nem FIFOs, nem ligações em ciclo, nem pastas com nome .md.
             if ficheiro.is_file() and not ficheiro.name.startswith("."):
                 yield ficheiro
 
@@ -335,12 +385,15 @@ def escrever_nota(
         meta["tags"] = _etiquetas(etiquetas)
     meta["files"] = _lista(ficheiros)
     meta["date"] = agora.isoformat(timespec="seconds")
-    if custo_usd is not None and custo_usd != "":
+    if custo_usd is not None and custo_usd != "" and math.isfinite(float(custo_usd)):
         meta["cost_usd"] = round(float(custo_usd), 6)
     meta["links"] = [x for x in (limpar_ligacao(v) for v in _lista(ligacoes)) if x]
 
     cabecalho = yaml.safe_dump(meta, allow_unicode=True, sort_keys=False, width=1000)
     conteudo = f"---\n{cabecalho}---\n\n{str(texto or '').strip()}\n"
+    # Antes de criar o ficheiro: um texto que não dá UTF-8 (surrogates de um terminal Latin-1)
+    # deixava um .md vazio, que depois aparecia como memória.
+    dados = sem_surrogates(conteudo).encode("utf-8")
 
     pasta = home / pasta_projeto(projeto)
     pasta.mkdir(parents=True, exist_ok=True)
@@ -350,14 +403,31 @@ def escrever_nota(
         destino = pasta / nome
         try:
             # 'x' falha se já existir: nunca reescreve uma memória.
-            with open(destino, "x", encoding="utf-8", newline="\n") as f:
-                f.write(conteudo)
-                f.flush()
-                os.fsync(f.fileno())
-            return destino.resolve()
+            f = open(destino, "xb")  # noqa: SIM115
         except FileExistsError:
             continue
+        try:
+            with f:
+                f.write(dados)
+                f.flush()
+                os.fsync(f.fileno())
+        except BaseException:
+            # Disco cheio, limite de tamanho...: nunca fica uma nota vazia ou cortada.
+            try:
+                destino.unlink()
+            except OSError:
+                pass
+            raise
+        return destino.resolve()
     raise RuntimeError(t("erro.demasiadas", base=base))
+
+
+_SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def sem_surrogates(texto: str) -> str:
+    """Troca os surrogates soltos (não são UTF-8) por U+FFFD."""
+    return _SURROGATE.sub("\ufffd", texto)
 
 
 # --- edição na app -------------------------------------------------------------
@@ -381,15 +451,18 @@ def validar_texto(texto: str) -> None:
     try:
         dados = yaml.safe_load(m.group(1)) or {}
     except yaml.YAMLError as erro:
-        linha = getattr(getattr(erro, "problem_mark", None), "line", None)
-        if linha is None:
-            raise ValueError(t("erro.yaml")) from None
-        raise ValueError(t("erro.yaml_linha", linha=linha + 2)) from None
+        raise ValueError(_erro_yaml(erro)) from None
     if not isinstance(dados, dict):
         raise ValueError(t("erro.cabecalho_mapa"))
     normalizar_tipo(campo(dados, "type", ""))
     if not str(campo(dados, "title") or "").strip():
         raise ValueError(t("erro.falta_titulo_cabecalho"))
+
+
+def _erro_yaml(erro: yaml.YAMLError) -> str:
+    """A mensagem de um erro no cabeçalho, com a linha do ficheiro (o cabeçalho começa na linha 2)."""
+    linha = getattr(getattr(erro, "problem_mark", None), "line", None)
+    return t("erro.yaml") if linha is None else t("erro.yaml_linha", linha=linha + 2)
 
 
 def gravar_atomico(caminho: Path, texto: str) -> None:

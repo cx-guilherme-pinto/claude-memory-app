@@ -22,12 +22,42 @@ Todas as alterações relevantes ficam aqui. As versões seguem [SemVer](https:/
   - tipos `lesson`, `do`, `dont` e `history`;
   - as notas novas levam o cabeçalho em inglês (`type`, `title`, `project`, `task`, `epic`, `url`, `tags`,
     `files`, `date`, `cost_usd`, `links`);
-  - pasta dos dados `~/.agent-memory` (`AGENT_MEMORY_HOME`), com `.index/index-v2.sqlite`, `.index/activity.sqlite`
+  - pasta dos dados `~/.agent-memory` (`AGENT_MEMORY_HOME`), com `.index/index-v3.sqlite`, `.index/activity.sqlite`
     e `preferences.json`;
   - variáveis `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE` e `AGENT_MEMORY_DOWNLOAD_TOKEN`;
   - a marca da redação é `[REDACTED:<tipo>]`;
   - o zip portátil do Windows traz `agent-memory.cmd` e `README.pt.txt` (era `LEIA-ME.txt`).
 - As respostas de erro do servidor web são em inglês (`{"error": "not found"}`).
+
+### Corrigido
+
+Encontrado por um teste de caos do kit do workshop (ambientes estragados de propósito):
+
+- Um índice de pesquisa estragado (uma cópia mal feita, um problema do disco ou do antivírus) refaz-se sozinho a partir
+  das notas. O `reindex` já não abre o ficheiro estragado. Se não der para o refazer (no Windows, outro processo tem o
+  ficheiro aberto), a CLI, as ferramentas MCP e o `selftest` dizem-no numa linha: fecha o Claude Code e a app e corre
+  `agent-memory reindex`. O registo da atividade recupera da mesma maneira.
+- Outro processo a escrever no índice já não prende as pesquisas (abrir o índice escrevia nele sempre), e uma nota
+  gravada nunca aparece como falhada (o modelo tentava outra vez e criava duplicados). O `reindex` corre numa só
+  transação: entretanto, os outros processos continuam a ver o índice anterior. Um índice ocupado dá "o índice está
+  ocupado" em vez de um traceback.
+- Pesquisa em hindi (os sinais das vogais partiam as palavras) e em japonês e chinês (sem espaços entre as palavras).
+  O índice passa para `index-v3.sqlite` e é refeito a partir das notas na primeira utilização.
+- Uma nota enorme (um log colado) já não prende a pesquisa, o servidor MCP nem a janela: os excertos só se calculam para
+  os resultados finais e para notas com menos de 32 KB, o índice guarda o primeiro 1 MB, e o `add` e o editor recusam
+  mais de 1 MB com uma mensagem.
+- A redação de segredos é linear: 40 KB sem espaços levavam um minuto e prendiam o servidor MCP.
+- Um surrogate solto numa linha JSON-RPC (`\ud83d`) ficava sem resposta; agora vira U+FFFD.
+- As notas que a app não consegue usar são avisadas em vez de desaparecerem: uma pasta sem permissão de leitura (as
+  memórias dela ficam no índice), uma ligação simbólica para fora da pasta, um `.md` fora da pasta de um projeto, um
+  ficheiro que não está em UTF-8. Os ficheiros UTF-16 com BOM (Bloco de Notas do Windows) são lidos.
+- Um `cost_usd: .inf` escrito à mão estragava o painel da nota na app (JSON inválido); um `type: tarefa` escrito à mão
+  (o nome de um nó de contexto) escondia a nota. `[[]]` e ligações com um título não latino já não resolvem para uma
+  nota qualquer. Os nomes de ficheiro decompostos (NFD) do macOS resolvem a partir das ligações.
+- Uma escrita falhada (disco cheio, um surrogate de um terminal Latin-1) já não deixa um `.md` vazio ou cortado.
+  Os erros do disco na CLI são uma linha, não um traceback.
+- Com um `LC_ALL` antigo (ISO-8859-1) no Mac/Linux, o texto que entra no `add` por um pipe é lido como UTF-8, a saída é
+  UTF-8 e o `search --json` é JSON só com ASCII.
 
 ### Compatibilidade
 

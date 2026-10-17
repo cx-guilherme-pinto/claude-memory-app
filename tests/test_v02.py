@@ -112,7 +112,7 @@ def test_notas_e_indice_da_v01(home: Path):
     achado = mem.procurar("cache")[0]
     assert achado["tarefa"] == "ABC-1" and achado["epico"] == "" and achado["etiquetas"] == [] and achado["url"] == ""
     assert (home / ".index" / NOME_FICHEIRO).is_file()
-    assert NOME_FICHEIRO == "index-v2.sqlite"
+    assert NOME_FICHEIRO == "index-v3.sqlite"
     mem.reindexar()
     assert not antigo.exists() and not antigo_v2.exists()
     assert registo_antigo.exists()  # o registo MCP nunca é apagado

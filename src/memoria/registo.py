@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 from memoria import config
+from memoria.index import indice_estragado
 from memoria.redact import redigir
 
 NOME_FICHEIRO = "activity.sqlite"
@@ -122,21 +123,49 @@ class Registo:
             except OSError:
                 pass
 
-    @contextmanager
-    def _ligar(self):
-        if self._antigo:
-            self._copiar_antigo()
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+    def _abrir(self) -> sqlite3.Connection:
         con = sqlite3.connect(self.caminho, timeout=5)
         con.row_factory = sqlite3.Row
         try:
             con.execute("PRAGMA journal_mode=WAL")
             con.execute("PRAGMA busy_timeout=5000")
             con.executescript(_ESQUEMA)
+        except BaseException:
+            con.close()
+            raise
+        return con
+
+    def _repor(self) -> None:
+        """Registo estragado (ficheiro corrompido): começa de novo. É acessório; as notas não mudam."""
+        for sufixo in ("-wal", "-shm", ""):
+            try:
+                self.caminho.with_name(self.caminho.name + sufixo).unlink()
+            except OSError:
+                pass
+
+    @contextmanager
+    def _ligar(self):
+        if self._antigo:
+            self._copiar_antigo()
+        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            con = self._abrir()
+        except sqlite3.DatabaseError as erro:
+            if not indice_estragado(erro):
+                raise
+            self._repor()
+            con = self._abrir()
+        estragado = False
+        try:
             yield con
             con.commit()
+        except BaseException as erro:
+            estragado = indice_estragado(erro)
+            raise
         finally:
             con.close()
+            if estragado:
+                self._repor()  # a próxima chamada já encontra um registo novo
 
     def gravar(
         self,
@@ -213,8 +242,17 @@ class Registo:
         meia_noite = datetime.fromtimestamp(agora).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         if self._antigo:
             self._copiar_antigo()
+        vazio = {"hoje": 0, "total": 0, "por_minuto": 0.0, "distintas": 0, "ultima": None, "recordadas": []}
         if not self.caminho.exists():
-            return {"hoje": 0, "total": 0, "por_minuto": 0.0, "distintas": 0, "ultima": None, "recordadas": []}
+            return vazio
+        try:
+            return self._resumo(limite, agora, meia_noite)
+        except sqlite3.DatabaseError as erro:
+            if not indice_estragado(erro):
+                raise
+            return vazio  # o _ligar já o repôs: a vista "Atividade" volta a funcionar
+
+    def _resumo(self, limite: int, agora: float, meia_noite: float) -> dict:
         with self._ligar() as con:
             total = con.execute("SELECT valor FROM contadores WHERE chave='chamadas'").fetchone()
             hoje = con.execute("SELECT count(*) FROM chamadas WHERE quando >= ?", (meia_noite,)).fetchone()[0]

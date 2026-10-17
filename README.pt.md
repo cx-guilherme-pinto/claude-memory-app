@@ -56,7 +56,8 @@ Cada release traz também um zip por plataforma, com o Python lá dentro:
 Extrai e abre. Não precisa de admin nem de rede. O setup do workshop faz isto sozinho.
 
 - Ligar ao Claude Code: o `selftest` mostra o comando `claude mcp add` certo.
-  No Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; no Windows, `agent-memory.cmd selftest`.
+  No Mac, `…/Memoria.app/Contents/MacOS/memoria selftest` (a app portátil mantém o nome antigo do ficheiro e aparece como Agent Memory);
+  no Windows, `agent-memory.cmd selftest`. Depois da instalação de uma linha, é só `agent-memory selftest`.
 - Instala com o comando de uma linha. Descarregar pelo browser exige aprovação em
   Definições do Sistema → Privacidade e Segurança: o Mac bloqueia a app (não tem assinatura).
   Desbloqueia no Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
@@ -149,7 +150,7 @@ Em `~/.agent-memory` (ou na pasta indicada por `AGENT_MEMORY_HOME`):
 ~/.agent-memory/
   <projeto>/<AAAA-MM-DD>-<slug>.md   uma nota por ficheiro
   config.json                        URLs de atualização (opcional)
-  .index/index-v2.sqlite             índice; pode ser apagado
+  .index/index-v3.sqlite             índice; pode ser apagado
   .index/activity.sqlite             registo das chamadas MCP (vista "Atividade do Claude")
   preferences.json                   língua escolhida no seletor
 ```
@@ -248,6 +249,11 @@ Chaves lidas (uma variável de ambiente com o mesmo nome sobrepõe-se):
 - **Proxy da empresa**: o uv e o `agent-memory update` usam `HTTPS_PROXY` e os certificados do sistema.
   Para o uv, define também `UV_SYSTEM_CERTS=1`.
 - **A janela não abre**: `agent-memory --browser` abre a mesma interface no browser.
+- **"o índice de pesquisa das memórias está estragado"**: a app refaz o índice sozinha, a partir das notas.
+  Se a mensagem continuar (no Windows, outro processo ainda tem o ficheiro aberto), fecha o Claude Code e a app
+  e corre `agent-memory reindex`. As notas nunca mudam.
+- **"Aviso: memória ignorada"**: uma nota que a app não consegue ler (erro no cabeçalho YAML, não está em UTF-8,
+  fora da pasta de um projeto, ligação simbólica para fora da pasta). Corrige o ficheiro: a app apanha-o sozinha.
 
 ## Desenvolvimento
 

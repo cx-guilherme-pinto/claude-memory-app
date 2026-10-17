@@ -21,12 +21,42 @@ All notable changes are listed here. Versions follow [SemVer](https://semver.org
   - types `lesson`, `do`, `dont` and `history`;
   - new notes are written with an English header (`type`, `title`, `project`, `task`, `epic`, `url`, `tags`,
     `files`, `date`, `cost_usd`, `links`);
-  - data folder `~/.agent-memory` (`AGENT_MEMORY_HOME`), with `.index/index-v2.sqlite`, `.index/activity.sqlite`
+  - data folder `~/.agent-memory` (`AGENT_MEMORY_HOME`), with `.index/index-v3.sqlite`, `.index/activity.sqlite`
     and `preferences.json`;
   - variables `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE` and `AGENT_MEMORY_DOWNLOAD_TOKEN`;
   - the redaction mark is `[REDACTED:<kind>]`;
   - the portable Windows zip has `agent-memory.cmd` and `README.pt.txt` (was `LEIA-ME.txt`).
 - The web server's error answers are in English (`{"error": "not found"}`).
+
+### Fixed
+
+Found by a chaos test of the workshop kit (broken environments on purpose):
+
+- A damaged search index (a bad copy, a disk or antivirus problem) is rebuilt from the notes by itself.
+  `reindex` no longer opens the damaged file. If it can't be rebuilt (on Windows, another process has the file open),
+  the CLI, the MCP tools and `selftest` say so in one line: close Claude Code and the app, then run `agent-memory reindex`.
+  The activity log recovers the same way.
+- Another process writing to the index no longer blocks searches (opening the index wrote to it every time),
+  and a note that was saved is never reported as failed (the model retried and made duplicates).
+  `reindex` runs in one transaction: other processes keep seeing the old index meanwhile.
+  A busy index gives "the index is busy" instead of a traceback.
+- Search in Hindi (the vowel signs split the words) and in Japanese and Chinese (no spaces between words).
+  The index moves to `index-v3.sqlite` and is rebuilt from the notes on first use.
+- A huge note (a pasted log) no longer freezes the search, the MCP server or the window: excerpts are only computed
+  for the final results and for notes under 32 KB, the index keeps the first 1 MB, and `add` and the editor refuse
+  more than 1 MB with a message.
+- Secret redaction is linear: 40 KB without spaces took a minute and froze the MCP server.
+- A lone surrogate in a JSON-RPC line (`\ud83d`) got no answer at all; it is now replaced with U+FFFD.
+- Notes the app can't use are reported instead of disappearing: a folder without read permission (its memories
+  stay in the index), a symlink to outside the folder, a `.md` outside a project folder, a file that isn't UTF-8.
+  UTF-16 files with a BOM (Windows Notepad) are read.
+- A hand-written `cost_usd: .inf` broke the note's panel in the app (invalid JSON); a hand-written `type: tarefa`
+  (the name of a context node) hid the note. `[[]]` and links with a non-Latin title no longer resolve to a random note.
+  Decomposed (NFD) file names on macOS resolve from links.
+- A failed write (disk full, a surrogate from a Latin-1 terminal) no longer leaves an empty or cut `.md`.
+  Disk errors in the CLI are one line, not a traceback.
+- With a legacy `LC_ALL` (ISO-8859-1) on Mac/Linux, text piped into `add` is read as UTF-8, the output is UTF-8,
+  and `search --json` is ASCII-only JSON.
 
 ### Compatibility
 
