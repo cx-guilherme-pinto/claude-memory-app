@@ -353,3 +353,18 @@ def test_ingles_sem_portugues(home: Path, navegador, monkeypatch):
     finally:
         contexto.close()
         servidor.parar()
+
+
+def test_ui_diz_que_a_app_foi_fechada(home: Path, navegador, monkeypatch):
+    """O servidor do modo browser termina sem batimento (5 minutos): a página diz isso, nunca fica em branco."""
+    gerar(home, 12)
+    servidor, contexto, pagina = _abrir(home, navegador, monkeypatch, "en")
+    try:
+        servidor.parar()
+        # O painel carrega-se só quando é preciso: com o servidor parado, esse pedido falha.
+        pagina.locator(".recentes li button").first.click()
+        pagina.wait_for_selector(".fechada", timeout=15000)
+        assert "Agent Memory was closed." in pagina.locator(".fechada").inner_text()
+        assert "Failed to fetch" not in pagina.locator("body").inner_text()
+    finally:
+        contexto.close()

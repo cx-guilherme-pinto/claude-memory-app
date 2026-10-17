@@ -135,18 +135,28 @@ def _mensagem_de_erro(erro: BaseException) -> str | None:
     """Uma linha para o participante, em vez de um traceback. None: erro inesperado (o traceback ajuda)."""
     import sqlite3
 
-    from memoria.index import FTS5Indisponivel, indice_ocupado
+    from memoria import config
+    from memoria.index import FTS5Indisponivel, comando_permissoes, mensagem_indice
     from memoria.update import ErroUpdate
 
     if isinstance(erro, (ErroUpdate, FTS5Indisponivel, ValueError, LookupError)):
         return str(erro)
-    if indice_ocupado(erro):
-        return t("erro.indice_ocupado")
     if isinstance(erro, sqlite3.Error):
-        return t("erro.indice", erro=erro)
-    if isinstance(erro, OSError):  # disco cheio, sem permissão...
+        return mensagem_indice(erro, config.memoria_home())
+    if isinstance(erro, PermissionError):  # ex.: a pasta das memórias ficou do root depois de um sudo
+        return t("erro.sem_permissao", erro=erro, comando=comando_permissoes(config.memoria_home()))
+    if isinstance(erro, OSError):  # disco cheio...
         return str(erro)
     return None
+
+
+def _avisar_pastas_ignoradas() -> None:
+    """Notas noutra pasta de dados (MEMORIA_HOME, ~/.memoria...) que não aparecem: avisa no stderr."""
+    from memoria import config
+
+    home = config.memoria_home()
+    for origem, pasta, n in config.pastas_ignoradas(home):
+        print(t("aviso.pasta_ignorada", pasta=pasta, origem=origem, n=n, em_uso=home), file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -175,6 +185,9 @@ def _executar(args: argparse.Namespace) -> int:
         from memoria import window
 
         return window.correr(browser=args.browser, t0=T0)
+
+    if args.command in ("add", "search", "reindex"):
+        _avisar_pastas_ignoradas()
 
     if args.command == "add":
         from memoria.service import Memoria

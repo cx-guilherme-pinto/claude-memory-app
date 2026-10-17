@@ -72,8 +72,10 @@ AGENT_MEMORY_HOME=$(mktemp -d) uv run agent-memory --browser
 
 ## Contract with the kit (don't change without telling the workshop)
 
-- Data folder: `AGENT_MEMORY_HOME`; else the old `MEMORIA_HOME`; else `~/.memoria` if it exists and `~/.agent-memory`
-  doesn't (nothing is ever moved); else `~/.agent-memory`.
+- Data folder: `AGENT_MEMORY_HOME`; else the old `MEMORIA_HOME`; else `~/.memoria` if it exists (or is a symlink)
+  and `~/.agent-memory` has no notes (`<dir not starting with .>/*.md`; nothing is ever moved); else `~/.agent-memory`.
+  A `~` or relative value counts from the home folder, never from the working directory.
+  Other data folders with notes that are not shown are reported (`selftest` `[WARN]`, stderr, UI); `selftest` stays 0.
 - Notes in `<data folder>/<project folder>/<YYYY-MM-DD>-<slug>.md`.
 - Frontmatter written by v0.5: `type` (`lesson` | `do` | `dont` | `history`), `title`, `project`,
   `task`?, `epic`?, `url`?, `tags`?, `files: []`, `date` (ISO), `cost_usd`?, `links: []`.

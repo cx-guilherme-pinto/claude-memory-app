@@ -3,8 +3,9 @@
 Pasta dos dados (notas, índice, config.json), a primeira que se aplicar:
 1. variável de ambiente AGENT_MEMORY_HOME;
 2. variável antiga MEMORIA_HOME (instalações até à v0.4);
-3. ~/.memoria, se existir e ~/.agent-memory ainda não existir (nunca se move nada);
+3. ~/.memoria, se existir e ~/.agent-memory não tiver notas (nunca se move nada);
 4. ~/.agent-memory.
+Um valor com ~ ou relativo conta a partir da pasta pessoal (nunca da pasta onde o processo corre).
 
 Ordem de leitura de cada chave de configuração (a primeira que existir ganha):
 1. variável de ambiente com o mesmo nome;
@@ -63,16 +64,83 @@ def ambiente_sem_update() -> dict[str, str]:
     return {nome: "1" for nome in ENV_SEM_UPDATE}
 
 
+def _pasta_do_ambiente(valor: str) -> Path:
+    """O valor de AGENT_MEMORY_HOME/MEMORIA_HOME como caminho absoluto.
+
+    Um "~/..." entre aspas no .zshrc chega com o ~ literal, e um caminho relativo dependia da pasta onde
+    cada processo arrancava (uma memória por pasta de trabalho). Os dois contam a partir da pasta pessoal.
+    """
+    caminho = Path(valor.strip()).expanduser()
+    return caminho if caminho.is_absolute() else Path.home() / caminho
+
+
+def contar_notas(pasta: Path) -> int:
+    """Notas em <pasta>/<projeto>/*.md (as que a app mostra). 0 se a pasta não existir ou não der para ler."""
+    try:
+        return sum(1 for _ in pasta.glob("[!.]*/*.md"))
+    except OSError:
+        return 0
+
+
+def _tem_notas(pasta: Path) -> bool:
+    try:
+        return next(iter(pasta.glob("[!.]*/*.md")), None) is not None
+    except OSError:
+        return False
+
+
 def memoria_home() -> Path:
     valor = ambiente((ENV_HOME, ENV_HOME_ANTIGA))
-    if valor:
-        return Path(valor).expanduser()
+    if valor.strip():
+        return _pasta_do_ambiente(valor)
     casa = Path.home()
     nova, antiga = casa / PASTA_DADOS, casa / PASTA_DADOS_ANTIGA
-    # Quem já tinha notas em ~/.memoria continua lá: nunca se move nem apaga nada.
-    if not nova.exists() and antiga.is_dir():
-        return antiga
+    # Quem já tinha notas em ~/.memoria continua lá: nunca se move nem apaga nada. Decide pelo conteúdo:
+    # uma ~/.agent-memory sem notas (só config.json ou .index, de um setup ou de uma pesquisa) não esconde
+    # as notas antigas, e um link ~/.memoria partido (pasta na nuvem por sincronizar) continua a ser a pasta.
+    if antiga.is_dir() or antiga.is_symlink():
+        if not nova.exists() or (not _tem_notas(nova) and (not antiga.is_dir() or _tem_notas(antiga))):
+            return antiga
     return nova
+
+
+def pastas_ignoradas(home: Path | None = None) -> list[tuple[str, Path, int]]:
+    """Outras pastas de dados com notas que a app não mostra: (de onde vem, pasta, número de notas).
+
+    Ex.: MEMORIA_HOME quando AGENT_MEMORY_HOME também está definida, ou ~/.memoria ao lado de uma
+    ~/.agent-memory com notas. A pasta em uso fica como está: só se avisa (nunca se move nada).
+    """
+    try:
+        em_uso = Path(home or memoria_home()).resolve()
+    except OSError:
+        return []
+    candidatas = [(nome, _pasta_do_ambiente(os.environ[nome])) for nome in (ENV_HOME, ENV_HOME_ANTIGA) if os.environ.get(nome, "").strip()]
+    casa = Path.home()
+    candidatas += [(f"~/{nome}", casa / nome) for nome in (PASTA_DADOS, PASTA_DADOS_ANTIGA)]
+    vistas = {em_uso}
+    saida = []
+    for origem, pasta in candidatas:
+        try:
+            real = pasta.resolve()
+        except OSError:
+            continue
+        if real in vistas or not real.is_dir():
+            continue
+        vistas.add(real)
+        n = contar_notas(real)
+        if n:
+            saida.append((origem, pasta, n))
+    return saida
+
+
+def verificar_pasta(home: Path) -> None:
+    """Falha com uma frase clara se a pasta dos dados é uma ligação partida (pasta na nuvem por sincronizar)
+    ou um ficheiro. Nunca se cria nada no lugar dela (a app passava a usar outra pasta para sempre)."""
+    home = Path(home)
+    if not home.is_dir() and (home.is_symlink() or home.exists()):
+        from memoria.i18n import t
+
+        raise OSError(t("erro.pasta_indisponivel", pasta=home))
 
 
 def pasta_interna(home: Path | None = None) -> Path:
@@ -118,6 +186,9 @@ def config_utilizador() -> dict[str, str]:
     from memoria.i18n import t
 
     caminho = config_path()
+    if not caminho.is_file() and caminho.parent == Path.home() / PASTA_DADOS_ANTIGA:
+        # Um setup antigo escreveu o config.json numa ~/.agent-memory ainda sem notas, ao lado de ~/.memoria.
+        caminho = Path.home() / PASTA_DADOS / "config.json"
     try:
         dados = json.loads(caminho.read_text("utf-8"))
     except FileNotFoundError:

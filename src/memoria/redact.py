@@ -36,6 +36,23 @@ _PADROES: list[tuple[str, re.Pattern[str]]] = [
         "jwt",
         re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"),
     ),
+    # Atlassian (Jira/Confluence, o token do acli): ATATT3xFfGF0... e ATCTT... (Connect).
+    ("atlassian", re.compile(r"\bAT[AC]TT[A-Za-z0-9_=-]{20,}")),
+    # Webhooks do Slack: o URL inteiro é o segredo.
+    ("slack", re.compile(r"\bhttps://hooks\.slack\.com/(?:services|workflows|triggers)/[A-Za-z0-9/_-]{20,}")),
+    # Palavras-passe em linhas de comando: o valor sai, a opção fica.
+    #   curl -u utilizador:segredo / --user utilizador:segredo
+    ("cli-password", re.compile(r"(?<!\S)((?:-u|--user)(?:\s+|=)[^\s:'\"]+:)([^\s'\"]{4,})")),
+    #   mysql -pSEGREDO (colado: com espaço, o mysql pede-a)
+    ("cli-password", re.compile(r"(\b(?:mysql|mysqldump|mysqladmin|mariadb)\b[^\n]{0,200}?\s-p)([^\s'\"]{4,})")),
+    #   docker/podman/helm login ... -p SEGREDO / --password SEGREDO
+    (
+        "cli-password",
+        re.compile(
+            r"(\b(?:docker|podman|helm|nerdctl|buildah|skopeo|oras)\b[^\n]{0,80}?\blogin\b[^\n]{0,200}?\s(?:-p|--password)(?:=|\s+))"
+            r"([^\s'\"]{4,})"
+        ),
+    ),
     (
         "bearer",
         re.compile(r"(?i)\b(Bearer|Basic|token)(\s+)((?=[A-Za-z0-9._~+/=-]*\d)[A-Za-z0-9._~+/=-]{16,})"),
@@ -58,7 +75,7 @@ _CHAVES = (
     r"password|passwd|pwd|pass|senha|palavra[-_ ]?passe|passphrase|secret|"
     r"client[-_]?secret|api[-_]?key|apikey|access[-_]?key|secret[-_]?key|"
     r"private[-_]?key|auth[-_]?token|access[-_]?token|refresh[-_]?token|token|"
-    r"aws_secret_access_key|credential|credentials"
+    r"aws_secret_access_key|credential|credentials|account[-_]?key|shared[-_]?access[-_]?key"
 )
 # A chave começa no início de uma sequência de [A-Za-z0-9_.-] (igual ao padrão "url" acima): apanha
 # tudo o que o \b apanhava, mas sem recomeçar dentro da sequência, o que era quadrático.
@@ -69,6 +86,9 @@ _ATRIBUICAO = re.compile(
 )
 # Sem separador ':'/'=' só redigimos se o valor parecer mesmo um segredo.
 _PARECE_SEGREDO = re.compile(r"^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9._~+/=-]{12,}$")
+# Depois de "password"/"senha" (ex.: .netrc "password Abc12345"): basta ter 6+ caracteres e um dígito.
+_CHAVE_SENHA = re.compile(r"(?i)(?:password|passwd|pwd|pass|senha)[\"']?$")
+_PARECE_SENHA = re.compile(r"^(?=.*\d)\S{6,}$")
 
 
 def redigir(texto: str) -> tuple[str, int]:
@@ -80,6 +100,10 @@ def redigir(texto: str) -> tuple[str, int]:
         marca = MARCA.format(tipo)
         if tipo == "bearer":
             texto, n = padrao.subn(lambda m, marca=marca: f"{m.group(1)}{m.group(2)}{marca}", texto)
+        elif tipo == "cli-password":
+            texto, n = padrao.subn(
+                lambda m, marca=marca: m.group(0) if any(x in m.group(2) for x in MARCAS) else f"{m.group(1)}{marca}", texto
+            )
         elif tipo == "url":
             texto, n = padrao.subn(lambda m, marca=marca: f"{m.group(1)}{marca}{m.group(3)}", texto)
         else:
@@ -94,7 +118,8 @@ def redigir(texto: str) -> tuple[str, int]:
         if any(marca in valor for marca in MARCAS):
             return m.group(0)
         if not re.search(r"[:=]", m.group("sep")) and not _PARECE_SEGREDO.match(valor):
-            return m.group(0)
+            if not (_CHAVE_SENHA.search(m.group("chave")) and _PARECE_SENHA.match(valor)):
+                return m.group(0)
         contagem += 1
         aspas = valor[0] if valor[0] in "\"'" else ""
         return f"{m.group('chave')}{m.group('sep')}{aspas}{MARCA.format('secret')}{aspas}"

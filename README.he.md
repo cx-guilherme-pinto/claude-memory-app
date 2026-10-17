@@ -194,7 +194,7 @@ The build is 3x faster with the cache. See [[Avoid retries]].
 
 - הפקודה `memoria` (ו-`memoria-gui`), ‏`procurar`, ‏`lingua` ואפשרויות כמו `--tipo` ו-`--projeto` עדיין עובדות. החדשות: `agent-memory`, ‏`search`, ‏`language`, ‏`--type`, ‏`--project` וכן הלאה.
 - MCP: השרת `agent-memory`, הכלים `memory_search`, `memory_add`, `memory_related`. שמות הכלים הישנים (`memoria_procurar`, ...) הוסרו.
-- אם `~/.memoria` קיימת ו-`~/.agent-memory` לא, האפליקציה ממשיכה להשתמש ב-`~/.memoria`. גם `MEMORIA_HOME`, ‏`MEMORIA_LANG`, ‏`MEMORIA_SEM_UPDATE` ו-`MEMORIA_DOWNLOAD_TOKEN` עובדים (החדשים: `AGENT_MEMORY_HOME`, ‏`AGENT_MEMORY_LANG`, ‏`AGENT_MEMORY_NO_UPDATE`, ‏`AGENT_MEMORY_DOWNLOAD_TOKEN`).
+- אם `~/.memoria` קיימת ואין הערות ב-`~/.agent-memory`, האפליקציה ממשיכה להשתמש ב-`~/.memoria`. גם `MEMORIA_HOME`, ‏`MEMORIA_LANG`, ‏`MEMORIA_SEM_UPDATE` ו-`MEMORIA_DOWNLOAD_TOKEN` עובדים (החדשים: `AGENT_MEMORY_HOME`, ‏`AGENT_MEMORY_LANG`, ‏`AGENT_MEMORY_NO_UPDATE`, ‏`AGENT_MEMORY_DOWNLOAD_TOKEN`).
 - הערות עם הכותרת הישנה (`tipo: licao`, `titulo`, `projeto`, ...) נקראות כמו שהן. הערות חדשות נכתבות עם כותרת באנגלית.
 - רישום הפעילות הישן (`.indice/registo.sqlite`) מועתק פעם אחת; השפה שנבחרה קודם (`preferencias.json`) נקראת.
 

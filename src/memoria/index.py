@@ -98,6 +98,34 @@ def indice_ocupado(erro: BaseException) -> bool:
     return "locked" in texto or "busy" in texto
 
 
+def indice_sem_escrita(erro: BaseException) -> bool:
+    """O índice não aceita escrita (SQLITE_READONLY, SQLITE_CANTOPEN): ficheiro ou pasta .index só de leitura,
+    ou de outro utilizador (ex.: depois de um sudo). Refazer o índice não resolve: são as permissões."""
+    if not isinstance(erro, sqlite3.OperationalError):
+        return False
+    codigo = _codigo(erro)
+    if codigo is not None:
+        return codigo in (8, 14)
+    texto = str(erro).lower()
+    return "readonly database" in texto or "unable to open database" in texto
+
+
+def comando_permissoes(pasta: Path) -> str:
+    """O comando que devolve a escrita na pasta das memórias (igual ao que o setup do kit mostra)."""
+    if sys.platform == "win32":
+        return f'attrib -R "{pasta}\\*" /S /D'
+    return f'chmod -R u+rwX "{pasta}"'
+
+
+def mensagem_indice(erro: BaseException, home: Path, chave_estragado: str = "erro.indice") -> str:
+    """A frase para um erro do SQLite: ocupado, sem escrita (permissões) ou estragado (reindex)."""
+    if indice_ocupado(erro):
+        return t("erro.indice_ocupado")
+    if indice_sem_escrita(erro):
+        return t("erro.indice_sem_escrita", pasta=home, erro=erro, comando=comando_permissoes(home))
+    return t(chave_estragado, erro=erro)
+
+
 class Embeddings(Protocol):
     """Ponto de extensão (não usado). Deve devolver um vetor por texto."""
 
@@ -259,12 +287,15 @@ class Indice:
         self.home = Path(home)
         self.caminho = Path(caminho) if caminho else config.pasta_interna(self.home) / NOME_FICHEIRO
         self.embeddings = embeddings  # sempre None
+        # Notas que não se puderam ler (mtime, tamanho): não se voltam a ler nem a avisar até mudarem.
+        self._ignoradas: dict[str, tuple[int, int]] = {}
 
     # ---------------------------------------------------------------- ligação
     @contextmanager
     def ligar(self, espera: float | None = None):
         """Uma ligação ao índice; grava no fim. `espera`: segundos à espera de um lock de outro processo."""
         verificar_fts5()
+        config.verificar_pasta(self.home)  # ligação partida ou um ficheiro: nunca criar nada no lugar dela
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         con = self._abrir(ESPERA if espera is None else espera)
         try:
@@ -379,6 +410,8 @@ class Indice:
         ilegiveis = [caminho for caminho, motivo in problemas if motivo == "pasta_ilegivel"]
         if self.home in ilegiveis:
             do_zero = False  # sem ler a pasta dos dados, refazer tudo seria apagar o índice inteiro
+        if do_zero:
+            self._ignoradas.clear()  # o reindex volta a ler (e a contar) as notas que não se leem
         with self.ligar(espera) as con:
             if do_zero:
                 con.execute("BEGIN IMMEDIATE")
@@ -386,7 +419,10 @@ class Indice:
                 self._apagar_tabelas(con)
                 self._criar_esquema(con)
                 self._repor_linhas(con, guardadas)
-            conhecidas = {r["id"]: (r["mtime_ns"], r["tamanho"]) for r in con.execute("SELECT id, mtime_ns, tamanho FROM notas")}
+            # O caminho também conta: uma pasta copiada com as datas (cp -Rp, Finder, Migration Assistant) para
+            # outro sítio ficava para sempre com os caminhos do sítio antigo.
+            linhas = con.execute("SELECT id, mtime_ns, tamanho, caminho FROM notas")
+            conhecidas = {r["id"]: (r["mtime_ns"], r["tamanho"], r["caminho"]) for r in linhas}
             vistas: set[str] = set()
             alteradas = 0
             for ficheiro in ficheiros:
@@ -400,14 +436,20 @@ class Indice:
                     erros.append(f"{ficheiro}: {t('aviso.fora_da_pasta')}")
                     continue
                 vistas.add(nid)
-                if conhecidas.get(nid) == (st.st_mtime_ns, st.st_size):
+                anterior = conhecidas.get(nid)
+                if anterior and anterior[:2] == (st.st_mtime_ns, st.st_size) and anterior[2] == str(ficheiro.resolve()):
+                    continue
+                if self._ignoradas.get(nid) == (st.st_mtime_ns, st.st_size):
+                    vistas.discard(nid)  # já avisado: só volta a ser lida quando mudar
                     continue
                 try:
                     nota = store.ler_nota(ficheiro, self.home)
                 except Exception as erro:  # ficheiro editado à mão e inválido
                     erros.append(f"{ficheiro}: {erro}")
                     vistas.discard(nid)
+                    self._ignoradas[nid] = (st.st_mtime_ns, st.st_size)
                     continue
+                self._ignoradas.pop(nid, None)
                 self._gravar(con, nota, st.st_mtime_ns, st.st_size)
                 alteradas += 1
             for caminho, motivo in problemas:

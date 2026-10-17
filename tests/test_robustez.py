@@ -288,7 +288,7 @@ def test_notas_com_codificacoes_e_cabecalhos_estranhos(mem: Memoria, home: Path,
     assert [r["titulo"] for r in mem.procurar("utf")] == ["Lição em UTF-16"]
     assert mem.ler_ficheiro("arena/2026-10-01-utf16")["texto"].startswith("---\ntype: lesson")
     assert estado["erros"] == 4
-    assert "UTF-8" in erro and "cp1252" in erro and "binario" in erro and "demasiado grande" in erro
+    assert "UTF-8" in erro and "cp1252" in erro and "binario" in erro and "mais de 64 KB" in erro
     assert "O cabeçalho YAML tem um erro (linha 2)" in erro and "while parsing" not in erro  # uma linha, como no editor
     _strict(mem.grafo())
 

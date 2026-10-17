@@ -19,6 +19,12 @@ def _linha(ok: bool, texto: str) -> bool:
     return ok
 
 
+def _aviso(texto: str) -> bool:
+    """Uma linha [WARN]: não faz falhar o selftest."""
+    print(f"  [{t('st.aviso')}] {texto}")
+    return True
+
+
 def verificar_base() -> bool:
     from memoria.index import FTS5Indisponivel, verificar_fts5
     from memoria.service import Memoria
@@ -75,6 +81,7 @@ def verificar_base() -> bool:
 
     home = config.memoria_home()
     try:
+        config.verificar_pasta(home)  # ligação partida (nuvem por sincronizar) ou um ficheiro
         home.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=home, prefix=".selftest-"):
             pass
@@ -83,6 +90,8 @@ def verificar_base() -> bool:
         resultados.append(_linha(False, t("st.sem_escrita", pasta=home, erro=erro)))
     else:
         resultados.append(_indice_real(home))
+    for origem, pasta, n in config.pastas_ignoradas(home):
+        resultados.append(_aviso(t("st.pasta_ignorada", pasta=pasta, origem=origem, n=n)))
 
     from memoria import portatil
 
@@ -97,7 +106,7 @@ def verificar_base() -> bool:
 
 def _indice_real(home: Path) -> bool:
     """O índice das memórias desta pessoa abre (e, se estava estragado, refaz-se). As notas não mudam."""
-    from memoria.index import indice_ocupado
+    from memoria.index import comando_permissoes, indice_ocupado, indice_sem_escrita
     from memoria.service import Memoria
 
     try:
@@ -105,6 +114,8 @@ def _indice_real(home: Path) -> bool:
     except Exception as erro:
         if indice_ocupado(erro):  # outro processo está a escrever: o índice existe e está a ser usado
             return _linha(True, t("st.indice_ocupado"))
+        if indice_sem_escrita(erro):  # permissões (ex.: depois de um sudo): o reindex não resolve
+            return _linha(False, t("st.indice_sem_escrita", pasta=home, erro=erro, comando=comando_permissoes(home)))
         return _linha(False, t("st.indice_erro", erro=f"{type(erro).__name__}: {erro}"))
     if estado is None:
         return _linha(True, t("st.indice_ocupado"))

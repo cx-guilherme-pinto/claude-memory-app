@@ -46,15 +46,38 @@ export async function ponteEmUso() {
   return ponte;
 }
 
+// No browser, o servidor termina de propósito quando a página deixa de dar sinal (5 minutos, ex.: um
+// separador congelado em segundo plano). Daí em diante o fetch falha ("Failed to fetch", "Load failed"):
+// a página diz que a Agent Memory foi fechada, em vez de um erro cru ou de um mapa parado.
+let fechada = false;
+
+export function memoriaFechada() {
+  return fechada;
+}
+
+function erroFechada() {
+  if (!fechada) {
+    fechada = true;
+    window.dispatchEvent(new Event('memoria-fechada'));
+  }
+  return new Error(t('sessao.fechada'));
+}
+
 async function viaHttp(metodo, args) {
+  if (fechada) throw new Error(t('sessao.fechada'));
   const cabecalhos = { 'Content-Type': 'application/json' };
   if (tokenFragmento) cabecalhos['X-Memoria-Token'] = tokenFragmento;
-  const resposta = await fetch(`/api/${metodo}`, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: cabecalhos,
-    body: JSON.stringify({ args }),
-  });
+  let resposta;
+  try {
+    resposta = await fetch(`/api/${metodo}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: cabecalhos,
+      body: JSON.stringify({ args }),
+    });
+  } catch {
+    throw erroFechada(); // 127.0.0.1 recusou a ligação: o processo da app terminou
+  }
   const dados = await resposta.json().catch(() => ({}));
   if (resposta.status === 403) throw new Error(t('sessao.invalida'));
   if (!resposta.ok) throw new Error(dados.error || dados.erro || `HTTP ${resposta.status}`);
@@ -73,6 +96,12 @@ export async function chamar(metodo, ...args) {
 // No browser, o servidor termina se a página deixar de dar sinal.
 export async function manterVivo() {
   if ((await ponte) !== 'http') return;
-  chamar('batimento').catch(() => {});
-  setInterval(() => chamar('batimento').catch(() => {}), 15000);
+  // Uma falha já dispara 'memoria-fechada' (viaHttp). Ao voltar a um separador congelado, bate logo.
+  const bater = () => {
+    if (!fechada) chamar('batimento').catch(() => {});
+  };
+  bater();
+  setInterval(bater, 15000);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && bater());
+  window.addEventListener('pageshow', bater);
 }

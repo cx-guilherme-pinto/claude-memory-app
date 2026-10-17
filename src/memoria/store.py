@@ -36,6 +36,7 @@ from pathlib import Path
 
 import yaml
 
+from memoria import config
 from memoria.i18n import t
 
 TIPOS = ("licao", "fazer", "nao_fazer", "historico")
@@ -390,11 +391,24 @@ def escrever_nota(
     meta["links"] = [x for x in (limpar_ligacao(v) for v in _lista(ligacoes)) if x]
 
     cabecalho = yaml.safe_dump(meta, allow_unicode=True, sort_keys=False, width=1000)
-    conteudo = f"---\n{cabecalho}---\n\n{str(texto or '').strip()}\n"
+    extra = ""
+    # ler_nota recusa um cabeçalho maior do que MAX_CABECALHO: nunca escrever uma nota que depois não se lê.
+    if len(cabecalho) > MAX_CABECALHO:
+        # Demasiadas ligações para o cabeçalho: as que dão [[nome]] passam para o fim do corpo (contam igual).
+        no_corpo = [x for x in meta["links"] if LIGACAO_CORPO.fullmatch(f"[[{x}]]")]
+        meta["links"] = [x for x in meta["links"] if not LIGACAO_CORPO.fullmatch(f"[[{x}]]")]
+        cabecalho = yaml.safe_dump(meta, allow_unicode=True, sort_keys=False, width=1000)
+        if len(cabecalho) > MAX_CABECALHO:  # o título, as etiquetas ou os ficheiros
+            raise ValueError(t("erro.cabecalho_nota_grande"))
+        extra = "\n\n" + " ".join(f"[[{x}]]" for x in no_corpo)
+    conteudo = f"---\n{cabecalho}---\n\n{str(texto or '').strip()}{extra}\n"
     # Antes de criar o ficheiro: um texto que não dá UTF-8 (surrogates de um terminal Latin-1)
     # deixava um .md vazio, que depois aparecia como memória.
     dados = sem_surrogates(conteudo).encode("utf-8")
+    if len(dados) > TAMANHO_MAXIMO:  # a redação pode fazer o texto crescer (pwd=x -> pwd=[REDACTED:secret])
+        raise ValueError(t("erro.nota_grande"))  # o editor da app não abriria a nota
 
+    config.verificar_pasta(home)
     pasta = home / pasta_projeto(projeto)
     pasta.mkdir(parents=True, exist_ok=True)
     base = f"{agora.date().isoformat()}-{slug(titulo)}"
@@ -448,6 +462,8 @@ def validar_texto(texto: str) -> None:
     m = _FRONTMATTER.match(texto)
     if not m:
         raise ValueError(t("erro.falta_cabecalho"))
+    if len(m.group(1)) > MAX_CABECALHO:  # o índice não leria a nota (ler_nota)
+        raise ValueError(t("erro.cabecalho_grande"))
     try:
         dados = yaml.safe_load(m.group(1)) or {}
     except yaml.YAMLError as erro:

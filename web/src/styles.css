@@ -413,6 +413,8 @@ code { font-family: var(--fonte-mono); font-size: 0.875em; } /* taste-skill-igno
   color: var(--muted);
 }
 .vazio p { margin: 4px 0; max-width: 40ch; }
+/* O servidor do modo browser terminou: cobre a página toda (o mapa já não responde). */
+.vazio.fechada { position: fixed; z-index: 50; background: var(--bg); pointer-events: auto; }
 .vazio .vazio-titulo {
   color: var(--ink);
   font-size: var(--t-titulo);

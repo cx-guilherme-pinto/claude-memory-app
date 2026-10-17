@@ -65,13 +65,37 @@ Encontrado por um teste de caos do kit do workshop (ambientes estragados de prop
   instala: `~/.workshop-claude/bin/git` no Mac; no Windows `%USERPROFILE%\.workshop-claude\git\cmd\git.exe`
   ou o Git for Windows (`%LOCALAPPDATA%\Programs\Git`, `%ProgramFiles%\Git`). A verificação das Command Line Tools
   também exige que `<xcode-select -p>/usr/bin/git` exista (ferramentas apagadas ainda abrem o diálogo).
+- Pasta dos dados (segunda ronda do teste de caos): um `AGENT_MEMORY_HOME`/`MEMORIA_HOME` com `~` ou relativo conta a
+  partir da pasta pessoal (dava uma memória por pasta de trabalho). Uma `~/.agent-memory` vazia (um `config.json` do
+  setup, ou um índice de uma pesquisa) já não esconde as notas de `~/.memoria`, e uma ligação `~/.memoria` partida (uma
+  pasta na nuvem por sincronizar) é avisada e não cria nada. As notas noutra pasta de dados que não aparecem
+  (`MEMORIA_HOME` quando o `AGENT_MEMORY_HOME` ganha, `~/.agent-memory`, `~/.memoria`) são avisadas pelo `selftest`
+  (`[WARN]`), pela CLI, pelo stderr do servidor MCP e pela app.
+- A redação também apanha os tokens de API da Atlassian (`ATATT…`, o token do `acli`), os webhooks do Slack,
+  `curl -u utilizador:segredo`, `mysql -psegredo`, `docker login -p segredo`, o `AccountKey=` do Azure e
+  `password <segredo>` no `.netrc`. Os nomes dos projetos e os títulos também passam por ela: um token nunca vira o nome
+  de uma pasta ou de um ficheiro.
+- O `memory_add` já não diz que gravou uma nota que o índice depois salta: um cabeçalho com mais de 64 KB (um título
+  enorme, milhares de ficheiros ou etiquetas) é recusado com uma mensagem e sem ficheiro; milhares de ligações vão para o
+  corpo como `[[...]]`. O limite de 1 MB é medido depois da redação. O editor também recusa esse cabeçalho, e grava uma
+  nota perto de 1 MB cheia de aspas e barras (o limite do pedido era menor do que o JSON com os escapes).
+- Um índice de pesquisa sem escrita (só de leitura, ou do root depois de um `sudo`) diz isso, com o comando `chmod`,
+  em vez de "estragado, corre o reindex" (o reindex não resolve permissões).
+- Uma pasta dos dados copiada com as datas (`cp -Rp`, Finder, Assistente de Migração) para outro caminho já não devolve
+  os caminhos antigos: o índice compara também o caminho.
+- `update --check` sem rede: um timeout mata o git e os ajudantes dele (o `git-remote-https` ficava a correr num proxy
+  parado), e a mensagem diz a causa (sem rede ou DNS, o proxy e a variável dele, uma página de login do Wi-Fi, faltam as
+  Command Line Tools). As credenciais do proxy nunca aparecem.
+- Modo browser: depois de o servidor parar (5 minutos sem a página), a página diz "A Agent Memory foi fechada" em vez de
+  "Failed to fetch" ou de uma página em branco. O mapa atualiza-se enquanto a página está à vista (as memórias que
+  chegam pelo MCP aparecem).
 
 ### Compatibilidade
 
 Nada muda de sítio e nenhuma nota é reescrita:
 
 - O `memoria` (e o `memoria-gui`) continuam a funcionar, tal como `procurar`, `lingua` e as opções em português (`--tipo`, `--projeto`, `--verificar`, ...). Não aparecem na ajuda.
-- Se `~/.memoria` existir e `~/.agent-memory` não, a app continua a usar `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` e `MEMORIA_DOWNLOAD_TOKEN` continuam a funcionar (os nomes novos ganham).
+- Se `~/.memoria` existir e `~/.agent-memory` não tiver notas (só um `config.json` ou um índice), a app continua a usar `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` e `MEMORIA_DOWNLOAD_TOKEN` continuam a funcionar (os nomes novos ganham).
 - As notas com o cabeçalho antigo em português (`tipo: licao`, `titulo`, `projeto`, `tarefa`, ...) são lidas como estão. Os filtros de tipo aceitam os dois nomes.
 - O registo de atividade antigo (`.indice/registo.sqlite`) é copiado uma vez, nunca movido; as linhas antigas aparecem com os nomes novos das ferramentas. A língua guardada em `preferencias.json` é lida.
 - Os nomes antigos das ferramentas MCP (`memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`) **saíram**: as skills do kit usam os novos. Volta a registar o servidor como `agent-memory` (`claude mcp remove --scope user memoria` e depois `claude mcp add --scope user agent-memory -- <agent-memory> mcp`).

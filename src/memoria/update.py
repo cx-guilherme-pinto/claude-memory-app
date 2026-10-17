@@ -21,6 +21,7 @@ import hashlib
 import os
 import re
 import shutil
+import signal
 import ssl
 import subprocess
 import sys
@@ -108,20 +109,85 @@ def _git() -> str:
     raise ErroUpdate(t("up.sem_clt" if shim else "up.sem_git"))
 
 
+def _correr_git(cmd: list[str], timeout: float) -> subprocess.CompletedProcess:
+    """Como subprocess.run, mas um timeout mata o git E os ajudantes dele (git-remote-https).
+
+    O subprocess.run só mata o git: o git-remote-https ficava preso num proxy que não responde, depois de o
+    agent-memory sair (e no Windows o run() esperava por ele para sempre, pelos pipes que ele ainda tem).
+    """
+    extra: dict = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
+    p = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env={**os.environ, **_AMBIENTE_GIT},
+        **extra,
+    )
+    try:
+        out, err = p.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if os.name == "nt":
+            try:
+                subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        else:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except OSError:
+                pass
+        p.kill()
+        try:
+            p.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        raise
+    return subprocess.CompletedProcess(cmd, p.returncode, out, err)
+
+
+def _proxy() -> tuple[str, str] | None:
+    """(variável, proxy sem utilizador nem palavra-passe) do proxy que o git usa, se houver."""
+    for nome in ("https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY", "http_proxy", "HTTP_PROXY"):
+        valor = os.environ.get(nome, "").strip()
+        if valor:
+            try:
+                u = urlsplit(valor if "://" in valor else "http://" + valor)
+                porta = f":{u.port}" if u.port else ""
+            except ValueError:
+                return nome, "?"
+            return nome, f"{u.scheme}://{u.hostname or '?'}{porta}"  # nunca o utilizador:palavra-passe
+    return None
+
+
+def _explicar(erro: str, repo_url: str) -> str:
+    """O stderr do git ls-remote numa frase com a causa e o passo seguinte."""
+    px = _proxy()
+    host = urlsplit(repo_url).hostname or repo_url
+    if "xcrun: error" in erro or "invalid active developer path" in erro:
+        return f"{t('up.sem_clt')} {t('up.dica_clt')}"
+    if re.search(r"CONNECT tunnel failed, response 30\d|Received HTTP code 30\d", erro):
+        return t("up.portal")
+    if px and re.search(r"Failed to connect to|CONNECT tunnel failed|Received HTTP code|Could not resolve proxy|proxy", erro, re.I):
+        return t("up.proxy", proxy=px[1], var=px[0])
+    if re.search(r"Could not resolve host|Failed to connect to|Network is unreachable|Couldn't connect", erro):
+        return t("up.sem_rede", host=host)
+    return t("up.ls_remote", erro=erro[:300])
+
+
 def ultima_tag(repo_url: str, timeout: float = 30) -> str | None:
     try:
-        r = subprocess.run(
-            [_git(), "ls-remote", "--tags", "--refs", repo_url],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env={**os.environ, **_AMBIENTE_GIT},
-            stdin=subprocess.DEVNULL,
-        )
+        r = _correr_git([_git(), "ls-remote", "--tags", "--refs", repo_url], timeout)
     except subprocess.TimeoutExpired as erro:
-        raise ErroUpdate(t("up.git_lento", s=f"{timeout:.0f}")) from erro
+        px = _proxy()
+        host = urlsplit(repo_url).hostname or repo_url
+        dica = t("up.proxy", proxy=px[1], var=px[0]) if px else t("up.sem_rede", host=host)
+        raise ErroUpdate(f"{t('up.git_lento', s=f'{timeout:.0f}')} {dica}") from erro
     if r.returncode != 0:
-        raise ErroUpdate(t("up.ls_remote", erro=r.stderr.strip()[:300]))
+        raise ErroUpdate(_explicar(r.stderr.strip(), repo_url))
     tags = tags_de_ls_remote(r.stdout)
     return tags[-1] if tags else None
 

@@ -94,6 +94,10 @@ class Api:
             "modo": self._modo,
             "tipos": list(store.TIPOS),
             "selftest": self._selftest,
+            # Outras pastas de dados com notas que esta app não mostra (MEMORIA_HOME, ~/.memoria...): a UI avisa.
+            "ignoradas": [
+                {"origem": origem, "pasta": str(pasta), "n": n} for origem, pasta, n in config.pastas_ignoradas(self._mem.home)
+            ],
             **i18n.info(),
         }
 
@@ -375,7 +379,9 @@ class ServidorUI:
                 if metodo not in METODOS:
                     return self._json(HTTPStatus.NOT_FOUND, {"error": "unknown method"})
                 tamanho = int(self.headers.get("Content-Length") or 0)
-                if tamanho > 1_000_000:
+                # Uma nota de TAMANHO_MAXIMO bytes cresce no JSON (\" \\ \n e \u00XX): o editor abria-a e depois
+                # não a conseguia gravar. O limite da nota aplica-se em guardar_ficheiro, com a mensagem certa.
+                if tamanho > 6 * store.TAMANHO_MAXIMO + 65_536:
                     return self._json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "request too large"})
                 try:
                     corpo = json.loads(self.rfile.read(tamanho) or b"{}")

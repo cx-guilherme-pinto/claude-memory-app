@@ -64,13 +64,35 @@ Found by a chaos test of the workshop kit (broken environments on purpose):
   kit's setup installs: `~/.workshop-claude/bin/git` on Mac; on Windows `%USERPROFILE%\.workshop-claude\git\cmd\git.exe`
   or Git for Windows (`%LOCALAPPDATA%\Programs\Git`, `%ProgramFiles%\Git`). The Command Line Tools check also
   needs `<xcode-select -p>/usr/bin/git` to exist (deleted tools still open the dialog).
+- Data folder (second chaos round): a `~` or relative `AGENT_MEMORY_HOME`/`MEMORIA_HOME` counts from the home folder
+  (it gave one memory per working directory). An empty `~/.agent-memory` (a `config.json` from the setup, or an index
+  from one search) no longer hides the notes in `~/.memoria`, and a broken `~/.memoria` link (a cloud folder not synced
+  yet) is reported and creates nothing. Notes in another data folder that are not shown (`MEMORIA_HOME` when
+  `AGENT_MEMORY_HOME` wins, `~/.agent-memory`, `~/.memoria`) are reported by `selftest` (`[WARN]`), the CLI, the MCP
+  server's stderr and the app.
+- Redaction also covers Atlassian API tokens (`ATATT…`, the `acli` token), Slack webhooks, `curl -u user:secret`,
+  `mysql -psecret`, `docker login -p secret`, Azure `AccountKey=` and `password <secret>` in `.netrc`. Project names and
+  titles go through it too, so a token never becomes a folder or file name.
+- `memory_add` no longer reports success for a note the index then skips: a header over 64 KB (huge title, thousands
+  of files or tags) is refused with a message and no file; thousands of links go into the body as `[[...]]`. The
+  1 MB limit is checked after redaction. The editor refuses such a header too, and saves a note near 1 MB that is
+  full of quotes and backslashes (the request limit was smaller than the escaped JSON).
+- A search index that cannot be written (read-only, or owned by root after a `sudo`) says so with the `chmod` command
+  instead of "damaged, run reindex" (reindex can't fix permissions).
+- A data folder copied with its dates (`cp -Rp`, Finder, Migration Assistant) to another path no longer returns the old
+  paths: the index compares the path too.
+- `update --check` without a network: a timeout kills git and its helpers (`git-remote-https` was left running on a
+  stalled proxy), and the message names the cause (no network or DNS, the proxy and its variable, a Wi-Fi login page,
+  missing Command Line Tools). Proxy credentials are never shown.
+- Browser mode: after the server stops (5 minutes without the page), the page says "Agent Memory was closed" instead of
+  "Failed to fetch" or a blank page. The map refreshes while the page is visible (memories added over MCP show up).
 
 ### Compatibility
 
 Nothing moves and no note is rewritten:
 
 - `memoria` (and `memoria-gui`) still work, and so do `procurar`, `lingua` and the Portuguese options (`--tipo`, `--projeto`, `--verificar`, ...). They don't show in the help.
-- If `~/.memoria` exists and `~/.agent-memory` doesn't, the app keeps using `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` and `MEMORIA_DOWNLOAD_TOKEN` still work (the new names win).
+- If `~/.memoria` exists and `~/.agent-memory` has no notes (only a `config.json` or an index), the app keeps using `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` and `MEMORIA_DOWNLOAD_TOKEN` still work (the new names win).
 - Notes with the old Portuguese header (`tipo: licao`, `titulo`, `projeto`, `tarefa`, ...) are read as they are. The type filters accept both names.
 - The old activity log (`.indice/registo.sqlite`) is copied once, never moved; old rows show the new tool names. The language saved in `preferencias.json` is read.
 - The old MCP tool names (`memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`) are **gone**: the kit's skills use the new ones. Re-register the server as `agent-memory` (`claude mcp remove --scope user memoria`, then `claude mcp add --scope user agent-memory -- <agent-memory> mcp`).

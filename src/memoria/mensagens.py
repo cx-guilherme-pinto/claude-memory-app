@@ -52,6 +52,28 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "יותר מדי זיכרונות בשם {base}.",
     ),
     "erro.nota_grande": _m("A nota é demasiado grande.", "The note is too large.", "नोट बहुत बड़ा है।", "ההערה גדולה מדי."),
+    "erro.cabecalho_nota_grande": _m(
+        "O título, as etiquetas ou os ficheiros são demasiado longos para uma memória (cabeçalho com mais de 64 KB).",
+        "The title, tags or files are too long for one memory (header over 64 KB).",
+        "एक मेमोरी के लिए टाइटल, टैग या फ़ाइलें बहुत लंबी हैं (हेडर 64 KB से ज़्यादा)।",
+        "הכותרת, התגיות או הקבצים ארוכים מדי לזיכרון אחד (כותרת עליונה מעל 64 KB).",
+    ),
+    "erro.pasta_indisponivel": _m(
+        "A pasta das memórias {pasta} não está disponível: é uma ligação partida (uma pasta na nuvem ainda por sincronizar?) "
+        "ou um ficheiro, não uma pasta. As notas não foram tocadas.",
+        "The memory folder {pasta} is not available: it is a broken link (a cloud folder not synced yet?) "
+        "or a file, not a folder. Your notes were not touched.",
+        "मेमोरी फ़ोल्डर {pasta} उपलब्ध नहीं है: यह एक टूटा हुआ लिंक है (क्लाउड फ़ोल्डर अभी सिंक नहीं हुआ?) "
+        "या फ़ोल्डर नहीं, एक फ़ाइल है। आपके नोट्स को छुआ नहीं गया।",
+        "תיקיית הזיכרונות {pasta} לא זמינה: זה קישור שבור (תיקיית ענן שעוד לא סונכרנה?) "
+        "או קובץ ולא תיקייה. ההערות שלכם לא נגעו בהן.",
+    ),
+    "erro.sem_permissao": _m(
+        "sem permissão de escrita ({erro}). As notas estão a salvo. Corrige as permissões com: {comando}",
+        "cannot write there ({erro}). Your notes are safe. Fix the permissions with: {comando}",
+        "वहाँ लिखा नहीं जा सकता ({erro})। आपके नोट्स सुरक्षित हैं। परमिशन ठीक करें: {comando}",
+        "אי אפשר לכתוב שם ({erro}). ההערות שלכם שמורות. תקנו את ההרשאות עם: {comando}",
+    ),
     "erro.falta_cabecalho": _m(
         "Falta o cabeçalho no início: linhas '---' com type, title e project.",
         "The header is missing at the top: '---' lines with type, title and project.",
@@ -134,6 +156,16 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "इंडेक्स बिज़ी है: Agent Memory का कोई दूसरा प्रोसेस इसे इस्तेमाल कर रहा है। कुछ सेकंड बाद फिर से कोशिश करें।",
         "האינדקס תפוס: תהליך אחר של Agent Memory משתמש בו. נסו שוב בעוד כמה שניות.",
     ),
+    "erro.indice_sem_escrita": _m(
+        "sem escrita no índice de pesquisa em {pasta} ({erro}): é só de leitura ou de outro utilizador (ex.: depois de um sudo). "
+        "As notas estão a salvo, em Markdown. Corrige as permissões com: {comando} (o reindex não resolve)",
+        "cannot write to the search index in {pasta} ({erro}): it is read-only or belongs to another user (for example after sudo). "
+        "Your notes are safe in Markdown. Fix the permissions with: {comando} (reindex does not fix this)",
+        "{pasta} में सर्च इंडेक्स में लिखा नहीं जा सकता ({erro}): यह read-only है या किसी दूसरे यूज़र का है (जैसे sudo के बाद)। "
+        "आपके नोट्स Markdown में सुरक्षित हैं। परमिशन ठीक करें: {comando} (reindex से यह ठीक नहीं होता)",
+        "אי אפשר לכתוב לאינדקס החיפוש ב-{pasta} ({erro}): הוא לקריאה בלבד או שייך למשתמש אחר (למשל אחרי sudo). "
+        "ההערות שלכם שמורות ב-Markdown. תקנו את ההרשאות עם: {comando} (reindex לא פותר את זה)",
+    ),
     "erro.codificacao": _m(
         "não está em UTF-8. Grava-a em UTF-8 (no editor: Guardar como, codificação UTF-8).",
         "it is not UTF-8 text. Save it as UTF-8 (in your editor: Save As, encoding UTF-8).",
@@ -141,10 +173,10 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "זה לא טקסט UTF-8. שמרו אותו כ-UTF-8 (בעורך: Save As, קידוד UTF-8).",
     ),
     "erro.cabecalho_grande": _m(
-        "o cabeçalho YAML é demasiado grande (falta o '---' que o fecha?)",
-        "the YAML header is too large (is the closing '---' missing?)",
-        "YAML हेडर बहुत बड़ा है (क्या बंद करने वाली '---' लाइन नहीं है?)",
-        "כותרת ה-YAML גדולה מדי (חסרה שורת ה-'---' הסוגרת?)",
+        "o cabeçalho YAML tem mais de 64 KB (demasiadas ligações, ficheiros ou etiquetas?)",
+        "the YAML header is over 64 KB (too many links, files or tags?)",
+        "YAML हेडर 64 KB से ज़्यादा है (बहुत सारे लिंक, फ़ाइलें या टैग?)",
+        "כותרת ה-YAML גדולה מ-64 KB (יותר מדי קישורים, קבצים או תגיות?)",
     ),
     "erro.zip_caminho": _m(
         "Caminho fora da pasta no zip: {ficheiro}",
@@ -183,6 +215,16 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "वॉर्निंग: मेमोरी सेव हो गई, लेकिन सर्च इंडेक्स अपडेट नहीं हुआ ({erro})। अगली सर्च पर यह अपडेट हो जाएगा।",
         "אזהרה: הזיכרון נשמר, אבל אינדקס החיפוש לא עודכן ({erro}). הוא יתעדכן בחיפוש הבא.",
     ),
+    "aviso.indice_sem_escrita": _m(
+        "Aviso: a memória foi gravada, mas não há escrita no índice de pesquisa em {pasta} ({erro}). "
+        "Corrige as permissões com: {comando}",
+        "Warning: the memory was saved, but the search index in {pasta} cannot be written ({erro}). "
+        "Fix the permissions with: {comando}",
+        "वॉर्निंग: मेमोरी सेव हो गई, लेकिन {pasta} में सर्च इंडेक्स में लिखा नहीं जा सकता ({erro})। "
+        "परमिशन ठीक करें: {comando}",
+        "אזהרה: הזיכרון נשמר, אבל אי אפשר לכתוב לאינדקס החיפוש ב-{pasta} ({erro}). "
+        "תקנו את ההרשאות עם: {comando}",
+    ),
     "aviso.fora_da_pasta": _m(
         "fica fora da pasta das memórias (ligação simbólica?). Move a pasta para dentro em vez de a ligar.",
         "it is outside the memory folder (a symlink?). Move the folder inside instead of linking it.",
@@ -206,6 +248,16 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "Warning: memory skipped: {erro}",
         "वॉर्निंग: मेमोरी स्किप की गई: {erro}",
         "אזהרה: זיכרון דולג: {erro}",
+    ),
+    "aviso.pasta_ignorada": _m(
+        "Aviso: {pasta} ({origem}) tem {n} memórias que não aparecem: esta app usa {em_uso}. "
+        "Move-as para lá, ou aponta AGENT_MEMORY_HOME para a pasta que queres.",
+        "Warning: {pasta} ({origem}) has {n} memories that are not shown: this app uses {em_uso}. "
+        "Move them there, or point AGENT_MEMORY_HOME to the folder you want.",
+        "वॉर्निंग: {pasta} ({origem}) में {n} मेमोरी हैं जो नहीं दिखतीं: यह ऐप {em_uso} इस्तेमाल करता है। "
+        "उन्हें वहाँ ले जाएँ, या AGENT_MEMORY_HOME को उस फ़ोल्डर पर सेट करें जो आप चाहते हैं।",
+        "אזהרה: ב-{pasta} ({origem}) יש {n} זיכרונות שלא מוצגים: האפליקציה הזו משתמשת ב-{em_uso}. "
+        "העבירו אותם לשם, או כוונו את AGENT_MEMORY_HOME לתיקייה שאתם רוצים.",
     ),
     # -------------------------------------------------------------------- CLI
     "cli.descricao": _m(
@@ -345,6 +397,7 @@ MENSAGENS: dict[str, dict[str, str]] = {
     # --------------------------------------------------------------- selftest
     "st.ok": _m("OK", "OK", "OK", "OK"),
     "st.falhou": _m("FALHOU", "FAILED", "फ़ेल", "נכשל"),
+    "st.aviso": _m("AVISO", "WARN", "वॉर्निंग", "אזהרה"),
     "st.sqlite": _m(
         "SQLite {versao} com FTS5",
         "SQLite {versao} with FTS5",
@@ -362,6 +415,16 @@ MENSAGENS: dict[str, dict[str, str]] = {
     "st.urls_ok": _m("URLs de atualização ({host})", "Update URLs ({host})", "अपडेट URL ({host})", "כתובות עדכון ({host})"),
     "st.urls_erro": _m("URLs de atualização: {erro}", "Update URLs: {erro}", "अपडेट URL: {erro}", "כתובות עדכון: {erro}"),
     "st.pasta": _m("Pasta das memórias: {pasta}", "Memory folder: {pasta}", "मेमोरी फ़ोल्डर: {pasta}", "תיקיית הזיכרונות: {pasta}"),
+    "st.pasta_ignorada": _m(
+        "{pasta} ({origem}) tem {n} memórias que não aparecem (a pasta em uso é a de cima). "
+        "Move-as para lá, ou aponta AGENT_MEMORY_HOME para a pasta que queres.",
+        "{pasta} ({origem}) has {n} memories that are not shown (the folder in use is the one above). "
+        "Move them there, or point AGENT_MEMORY_HOME to the folder you want.",
+        "{pasta} ({origem}) में {n} मेमोरी हैं जो नहीं दिखतीं (इस्तेमाल हो रहा फ़ोल्डर ऊपर वाला है)। "
+        "उन्हें वहाँ ले जाएँ, या AGENT_MEMORY_HOME को उस फ़ोल्डर पर सेट करें जो आप चाहते हैं।",
+        "ב-{pasta} ({origem}) יש {n} זיכרונות שלא מוצגים (התיקייה שבשימוש היא זו שלמעלה). "
+        "העבירו אותם לשם, או כוונו את AGENT_MEMORY_HOME לתיקייה שאתם רוצים.",
+    ),
     "st.sem_escrita": _m(
         "Sem escrita em {pasta}: {erro}",
         "Cannot write to {pasta}: {erro}",
@@ -379,6 +442,12 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "Index of your memories (in use by another process)",
         "आपकी मेमोरी का इंडेक्स (किसी दूसरे प्रोसेस के इस्तेमाल में)",
         "האינדקס של הזיכרונות שלכם (בשימוש של תהליך אחר)",
+    ),
+    "st.indice_sem_escrita": _m(
+        "Sem escrita no índice de pesquisa em {pasta} ({erro}). As notas estão a salvo. Corrige as permissões com: {comando}",
+        "Cannot write to the search index in {pasta} ({erro}). Your notes are safe. Fix the permissions with: {comando}",
+        "{pasta} में सर्च इंडेक्स में लिखा नहीं जा सकता ({erro})। आपके नोट्स सुरक्षित हैं। परमिशन ठीक करें: {comando}",
+        "אי אפשר לכתוב לאינדקס החיפוש ב-{pasta} ({erro}). ההערות שלכם שמורות. תקנו את ההרשאות עם: {comando}",
     ),
     "st.indice_erro": _m(
         "Índice das tuas memórias: {erro}. As notas estão a salvo. Fecha o Claude Code e a app e corre: agent-memory reindex",
@@ -563,6 +632,30 @@ MENSAGENS: dict[str, dict[str, str]] = {
         "git ls-remote failed: {erro}",
         "git ls-remote फ़ेल: {erro}",
         "git ls-remote נכשל: {erro}",
+    ),
+    "up.sem_rede": _m(
+        "Sem rede ou sem DNS: não foi possível chegar a {host}. Confirma o Wi-Fi ou a VPN e tenta outra vez.",
+        "No network or DNS: could not reach {host}. Check the Wi-Fi or VPN and try again.",
+        "नेटवर्क या DNS नहीं: {host} तक नहीं पहुँच सके। Wi-Fi या VPN चेक करें और फिर से कोशिश करें।",
+        "אין רשת או DNS: אי אפשר להגיע ל-{host}. בדקו את ה-Wi-Fi או את ה-VPN ונסו שוב.",
+    ),
+    "up.proxy": _m(
+        "O proxy {proxy} (de {var}) recusou ou não respondeu. Confirma-o, ou tira a variável {var} e tenta outra vez.",
+        "The proxy {proxy} (from {var}) refused or did not answer. Check it, or unset {var} and try again.",
+        "प्रॉक्सी {proxy} ({var} से) ने मना किया या जवाब नहीं दिया। इसे चेक करें, या {var} हटाकर फिर से कोशिश करें।",
+        "ה-proxy {proxy} (מ-{var}) סירב או לא ענה. בדקו אותו, או בטלו את {var} ונסו שוב.",
+    ),
+    "up.portal": _m(
+        "A rede está a redirecionar para uma página de login do Wi-Fi. Abre o browser, faz login e tenta outra vez.",
+        "The network redirects to a Wi-Fi login page. Open a browser, sign in, and try again.",
+        "नेटवर्क Wi-Fi लॉगिन पेज पर भेज रहा है। ब्राउज़र खोलें, साइन इन करें और फिर से कोशिश करें।",
+        "הרשת מפנה לדף התחברות של ה-Wi-Fi. פתחו דפדפן, התחברו ונסו שוב.",
+    ),
+    "up.dica_clt": _m(
+        "Corre: xcode-select --install",
+        "Run: xcode-select --install",
+        "चलाएँ: xcode-select --install",
+        "הריצו: xcode-select --install",
     ),
     "up.download_falhou": _m(
         "O download falhou ({codigo}): {url}",

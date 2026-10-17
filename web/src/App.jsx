@@ -1,7 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { chamar, manterVivo, ponteEmUso } from './api.js';
+import { chamar, manterVivo, memoriaFechada, ponteEmUso } from './api.js';
 import Atividade from './Atividade.jsx';
+import Falha from './Falha.jsx';
 import NovaMemoria from './NovaMemoria.jsx';
 import Procura from './Procura.jsx';
 import { LINGUAS, aplicarLingua, lingua, t, tx } from './i18n.jsx';
@@ -84,10 +85,17 @@ export default function App() {
   const [aviso, setAviso] = useState(null);
   // 'mapa' ou 'atividade' (o que o Claude chamou pelo MCP).
   const [vista, setVista] = useState('mapa');
+  // O servidor do modo browser terminou (página parada mais de 5 minutos): ver api.js.
+  const [fechada, setFechada] = useState(memoriaFechada);
+  const assinatura = useRef('');
 
   // ------------------------------------------------------------ carregar
   const carregar = useCallback(async () => {
     const g = await chamar('grafo');
+    // Igual ao que já está desenhado: não mexe no grafo (cada troca de dados volta a agitar a simulação).
+    const nova = `${g.nos.length}|${g.ligacoes.length}|${g.nos.map((n) => `${n.id}\u0001${n.rotulo || ''}\u0001${n.tipo}`).join('\u0002')}`;
+    if (nova === assinatura.current) return g;
+    assinatura.current = nova;
     setDados((anterior) => {
       // Mantém os objetos (e as posições) dos nós que já existiam.
       const antigos = new Map((anterior?.nos || []).map((n) => [n.id, n]));
@@ -121,6 +129,27 @@ export default function App() {
       vivo = false;
     };
   }, [carregar]);
+
+  useEffect(() => {
+    const quandoFechada = () => setFechada(true);
+    window.addEventListener('memoria-fechada', quandoFechada);
+    return () => window.removeEventListener('memoria-fechada', quandoFechada);
+  }, []);
+
+  // Durante um swarm, as memórias novas chegam pelo MCP: o mapa atualiza-se enquanto a página está à vista
+  // (e logo ao voltar a ela). O carregar só redesenha se alguma coisa mudou.
+  useEffect(() => {
+    if (!info || aReproduzir) return undefined;
+    const atualizar = () => {
+      if (document.visibilityState === 'visible' && !memoriaFechada()) carregar().catch(() => {});
+    };
+    const id = setInterval(atualizar, 15000);
+    document.addEventListener('visibilitychange', atualizar);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', atualizar);
+    };
+  }, [info, aReproduzir, carregar]);
 
   // Aviso de versão nova: em segundo plano, nunca bloqueia.
   useEffect(() => {
@@ -469,6 +498,12 @@ export default function App() {
 
   return (
     <div className="app">
+      {fechada && (
+        <div className="vazio fechada" role="alert">
+          <p className="vazio-titulo">{t('sessao.fechada.titulo')}</p>
+          <p>{t('sessao.fechada')}</p>
+        </div>
+      )}
       <aside className="coluna" aria-label="Agent Memory">
         <header className="cabeca">
           <div className="cabeca-topo">
@@ -606,6 +641,15 @@ export default function App() {
               {mensagem}
             </p>
           )}
+          {(info?.ignoradas || []).map((p) => (
+            <p key={p.pasta} className="aviso-versao" role="status" dir="auto">
+              {tx(
+                'aviso.ignoradas',
+                { memorias: t('plural.memorias', { n: p.n }) },
+                { pasta: <code>{p.pasta}</code>, home: <code>{info.home}</code> },
+              )}
+            </p>
+          ))}
           {aviso && (
             <p className="aviso-versao" role="status">
               {tx('aviso.versao', { versao: String(aviso.ultima || '').replace(/^v/, '') }, { comando: <code>agent-memory update</code> })}
@@ -660,17 +704,19 @@ export default function App() {
           )}
 
           {noSelecionado && (
-            <Suspense fallback={<aside className="painel" aria-busy="true" />}>
-              <Painel
-                key={noSelecionado.id}
-                no={noSelecionado}
-                vizinhos={vizinhos}
-                onFechar={() => setSelecionado(null)}
-                onAbrir={abrirRef}
-                onAlterada={carregar}
-                idEpico={(chave) => dados?.nos.find((n) => n.tipo === 'epico' && n.epico === chave)?.id}
-              />
-            </Suspense>
+            <Falha key={noSelecionado.id} className="painel">
+              <Suspense fallback={<aside className="painel" aria-busy="true" />}>
+                <Painel
+                  key={noSelecionado.id}
+                  no={noSelecionado}
+                  vizinhos={vizinhos}
+                  onFechar={() => setSelecionado(null)}
+                  onAbrir={abrirRef}
+                  onAlterada={carregar}
+                  idEpico={(chave) => dados?.nos.find((n) => n.tipo === 'epico' && n.epico === chave)?.id}
+                />
+              </Suspense>
+            </Falha>
           )}
         </div>
 

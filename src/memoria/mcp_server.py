@@ -89,14 +89,16 @@ def _compacto(itens: list[dict]) -> list[dict]:
 ERROS_FERRAMENTA = (ValueError, LookupError, OSError, RuntimeError, sqlite3.Error)
 
 
-def mensagem_erro(erro: BaseException) -> str:
+def mensagem_erro(erro: BaseException, home=None) -> str:
+    from memoria import config
     from memoria.i18n import t
-    from memoria.index import indice_ocupado
+    from memoria.index import comando_permissoes, mensagem_indice
 
-    if indice_ocupado(erro):
-        return t("erro.indice_ocupado")
+    home = home or config.memoria_home()
     if isinstance(erro, sqlite3.Error):
-        return t("erro.indice", erro=erro)
+        return mensagem_indice(erro, home)
+    if isinstance(erro, PermissionError):
+        return t("erro.sem_permissao", erro=erro, comando=comando_permissoes(home))
     return str(erro)
 
 
@@ -135,8 +137,8 @@ def criar_servidor(memoria: Memoria | None = None):
         try:
             resultados = mem.procurar(texto, projeto=project, tipo=type, limite=limit, tarefa=task, epico=epic)
         except ERROS_FERRAMENTA as erro:
-            registo.gravar("memory_search", texto=texto, filtros=filtros, erro=mensagem_erro(erro), duracao_ms=_ms(inicio))
-            raise ToolError(mensagem_erro(erro)) from erro
+            registo.gravar("memory_search", texto=texto, filtros=filtros, erro=mensagem_erro(erro, mem.home), duracao_ms=_ms(inicio))
+            raise ToolError(mensagem_erro(erro, mem.home)) from erro
         registo.gravar("memory_search", texto=texto, filtros=filtros, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "results": _compacto(resultados)}
 
@@ -176,8 +178,8 @@ def criar_servidor(memoria: Memoria | None = None):
                 custo_usd=cost_usd,
             )
         except ERROS_FERRAMENTA as erro:
-            registo.gravar("memory_add", texto=title, filtros={"projeto": project, "tarefa": task}, erro=mensagem_erro(erro))
-            raise ToolError(mensagem_erro(erro)) from erro
+            registo.gravar("memory_add", texto=title, filtros={"projeto": project, "tarefa": task}, erro=mensagem_erro(erro, mem.home))
+            raise ToolError(mensagem_erro(erro, mem.home)) from erro
         # A memória já está gravada: daqui em diante, nada pode fazer parecer que falhou.
         try:
             nova = mem.nota(resultado["id"])
@@ -213,8 +215,8 @@ def criar_servidor(memoria: Memoria | None = None):
             origem = mem.resolver(ref) or ref
             resultados = mem.relacionadas(ref, limite=limit)
         except ERROS_FERRAMENTA as erro:
-            registo.gravar("memory_related", texto=origem, erro=mensagem_erro(erro), duracao_ms=_ms(inicio))
-            raise ToolError(mensagem_erro(erro)) from erro
+            registo.gravar("memory_related", texto=origem, erro=mensagem_erro(erro, mem.home), duracao_ms=_ms(inicio))
+            raise ToolError(mensagem_erro(erro, mem.home)) from erro
         registo.gravar("memory_related", texto=origem, memorias=resultados, duracao_ms=_ms(inicio))
         return {"total": len(resultados), "results": _compacto(resultados)}
 
@@ -297,6 +299,10 @@ def correr_stdio() -> int:
         print(f"agent-memory mcp: {erro}", file=sys.stderr)
         return 2
     mem = Memoria()
+    from memoria import config
+
+    for origem, pasta, n in config.pastas_ignoradas(mem.home):
+        print(f"agent-memory mcp: {t('aviso.pasta_ignorada', pasta=pasta, origem=origem, n=n, em_uso=mem.home)}", file=sys.stderr)
     try:
         # Espera pouco por um lock: o Claude Code desiste de um servidor que não responde em 30 s.
         mem.sincronizar(forcar=True, espera=ESPERA_CURTA)

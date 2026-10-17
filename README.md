@@ -198,7 +198,7 @@ Nothing moves and nothing is rewritten. The old names keep working:
 | `memoria` command (and `memoria-gui`) | `agent-memory` (and `agent-memory-gui`); `memoria` still works |
 | `procurar`, `lingua`, `--tipo`, `--titulo`, `--projeto`, `--texto`, `--tarefa`, `--epico`, `--etiqueta`, `--ficheiro`, `--ligacao`, `--custo`, `--limite`, `--verificar`, `--forcar`, `--versao` | `search`, `language`, `--type`, `--title`, `--project`, `--text`, `--task`, `--epic`, `--tag`, `--file`, `--link`, `--cost`, `--limit`, `--check`, `--force`, `--version` (the old ones are still accepted) |
 | MCP server `memoria`: `memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas` | MCP server `agent-memory`: `memory_search`, `memory_add`, `memory_related` (the old tool names are gone) |
-| `~/.memoria`, `MEMORIA_HOME` | `~/.agent-memory`, `AGENT_MEMORY_HOME`. If `~/.memoria` exists and `~/.agent-memory` doesn't, the app keeps using `~/.memoria`. `MEMORIA_HOME` still works. |
+| `~/.memoria`, `MEMORIA_HOME` | `~/.agent-memory`, `AGENT_MEMORY_HOME`. If `~/.memoria` exists and `~/.agent-memory` has no notes, the app keeps using `~/.memoria`. `MEMORIA_HOME` still works. |
 | `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE`, `MEMORIA_DOWNLOAD_TOKEN` | `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE`, `AGENT_MEMORY_DOWNLOAD_TOKEN` (the old ones still work) |
 | Header `tipo: licao`, `titulo`, `projeto`, `tarefa`, `epico`, `etiquetas`, `ficheiros`, `data`, `custo_usd`, `ligacoes` | `type: lesson`, `title`, `project`, `task`, `epic`, `tags`, `files`, `date`, `cost_usd`, `links`. Old notes are read as they are. |
 | `.indice/`, `registo.sqlite`, `preferencias.json` | `.index/`, `activity.sqlite`, `preferences.json`. The old activity log is copied once; the old language choice is read. |

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from memoria import config, store
 from memoria.i18n import t
-from memoria.index import ESPERA_CURTA, Indice, indice_estragado, indice_ocupado
+from memoria.index import ESPERA_CURTA, Indice, comando_permissoes, indice_estragado, indice_ocupado, indice_sem_escrita
 from memoria.redact import redigir, redigir_valor
 
 # Intervalo mínimo entre verificações do disco (edições feitas à mão).
@@ -88,7 +88,10 @@ class Memoria:
         try:
             self.sincronizar(forcar=True, espera=ESPERA_CURTA)
         except sqlite3.Error as erro:
-            print(t("aviso.indice_falhou", erro=erro), file=sys.stderr)
+            if indice_sem_escrita(erro):  # permissões: a próxima pesquisa também falharia
+                print(t("aviso.indice_sem_escrita", pasta=self.home, erro=erro, comando=comando_permissoes(self.home)), file=sys.stderr)
+            else:
+                print(t("aviso.indice_falhou", erro=erro), file=sys.stderr)
 
     def adicionar(
         self,
@@ -108,6 +111,7 @@ class Memoria:
         """Redige segredos, escreve o Markdown e atualiza o índice."""
         if len(str(texto or "").encode("utf-8", "replace")) > store.TAMANHO_MAXIMO:
             raise ValueError(t("erro.nota_grande"))  # um log colado: a CLI e o MCP mostram a mensagem
+        # (escrever_nota volta a medir depois da redação, que pode fazer o texto crescer)
         texto, n_texto = redigir(store.sem_surrogates(texto or ""))
         titulo, n_titulo = redigir(store.sem_surrogates(titulo or ""))
         if not titulo.strip():
@@ -182,7 +186,10 @@ class Memoria:
         if not nota:
             raise LookupError(t("erro.memoria_nao_encontrada", ref=ref))
         caminho = Path(nota["caminho"]).resolve()
-        caminho.relative_to(self.home.resolve())  # ValueError se estiver fora
+        try:
+            caminho.relative_to(self.home.resolve())
+        except ValueError:  # fora da pasta dos dados (ou um índice de outro sítio): nunca abrir
+            raise LookupError(t("erro.memoria_nao_encontrada", ref=ref)) from None
         return caminho
 
     def ler_ficheiro(self, ref: str) -> dict:

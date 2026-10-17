@@ -193,7 +193,7 @@ explicit link (`[[...]]` या `links`), वही टास्क, वही e
 
 - `memoria` command (और `memoria-gui`), `procurar`, `lingua` और `--tipo`, `--projeto` जैसे options अब भी चलते हैं। नए: `agent-memory`, `search`, `language`, `--type`, `--project` वगैरह।
 - MCP: server `agent-memory`, tools `memory_search`, `memory_add`, `memory_related`। पुराने tool नाम (`memoria_procurar`, ...) हटा दिए गए हैं।
-- अगर `~/.memoria` है और `~/.agent-memory` नहीं, तो ऐप `~/.memoria` ही इस्तेमाल करता है। `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` और `MEMORIA_DOWNLOAD_TOKEN` भी चलते हैं (नए: `AGENT_MEMORY_HOME`, `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE`, `AGENT_MEMORY_DOWNLOAD_TOKEN`)।
+- अगर `~/.memoria` है और `~/.agent-memory` में कोई नोट नहीं, तो ऐप `~/.memoria` ही इस्तेमाल करता है। `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` और `MEMORIA_DOWNLOAD_TOKEN` भी चलते हैं (नए: `AGENT_MEMORY_HOME`, `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE`, `AGENT_MEMORY_DOWNLOAD_TOKEN`)।
 - पुराने हेडर (`tipo: licao`, `titulo`, `projeto`, ...) वाले notes वैसे ही पढ़े जाते हैं। नए notes English हेडर के साथ लिखे जाते हैं।
 - पुराना activity log (`.indice/registo.sqlite`) एक बार कॉपी होता है; पहले चुनी भाषा (`preferencias.json`) पढ़ी जाती है।
 
