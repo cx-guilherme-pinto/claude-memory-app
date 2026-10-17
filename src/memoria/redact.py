@@ -1,19 +1,21 @@
 """Redação de segredos antes de escrever uma memória.
 
 Substitui tokens, chaves de API, JWTs, blocos de chave privada e padrões
-do tipo password=... por [REDIGIDO:<tipo>]. Mais vale redigir a mais.
+do tipo password=... por [REDACTED:<tipo>]. Mais vale redigir a mais.
+Até à v0.4 a marca era [REDIGIDO:<tipo>]: continua a ser reconhecida (não se redige duas vezes).
 """
 
 from __future__ import annotations
 
 import re
 
-MARCA = "[REDIGIDO:{}]"
+MARCA = "[REDACTED:{}]"
+MARCAS = ("[REDACTED:", "[REDIGIDO:")
 
 # (tipo, regex). A ordem importa: os padrões específicos vêm primeiro.
 _PADROES: list[tuple[str, re.Pattern[str]]] = [
     (
-        "chave-privada",
+        "private-key",
         re.compile(
             r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----"
             r"[\s\S]*?(?:-----END (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----|\Z)"
@@ -78,13 +80,13 @@ def redigir(texto: str) -> tuple[str, int]:
     def atribuicao(m: re.Match[str]) -> str:
         nonlocal contagem
         valor = m.group("valor")
-        if "[REDIGIDO:" in valor:
+        if any(marca in valor for marca in MARCAS):
             return m.group(0)
         if not re.search(r"[:=]", m.group("sep")) and not _PARECE_SEGREDO.match(valor):
             return m.group(0)
         contagem += 1
         aspas = valor[0] if valor[0] in "\"'" else ""
-        return f"{m.group('chave')}{m.group('sep')}{aspas}{MARCA.format('segredo')}{aspas}"
+        return f"{m.group('chave')}{m.group('sep')}{aspas}{MARCA.format('secret')}{aspas}"
 
     texto = _ATRIBUICAO.sub(atribuicao, texto)
     return texto, total + contagem

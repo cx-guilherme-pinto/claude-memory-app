@@ -31,7 +31,7 @@ from importlib import resources
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from memoria import __version__, i18n, store
+from memoria import __version__, config, i18n, store
 from memoria.i18n import t
 from memoria.service import Memoria
 
@@ -165,7 +165,7 @@ class Api:
 
     def verificar_atualizacao(self) -> dict:
         """Corre em segundo plano; nunca bloqueia a UI."""
-        if self._selftest or os.environ.get("MEMORIA_SEM_UPDATE"):
+        if self._selftest or config.sem_update():
             return {"atual": __version__, "disponivel": False}
         with self._trinco_update:
             if self._update is None:
@@ -250,7 +250,7 @@ class ServidorUI:
         servidor = self
 
         class Handler(BaseHTTPRequestHandler):
-            server_version = "memoria"
+            server_version = "agent-memory"
             sys_version = ""
 
             def log_message(self, *args) -> None:  # silencioso: nada no stdout/stderr
@@ -303,7 +303,7 @@ class ServidorUI:
 
             def do_GET(self) -> None:  # noqa: N802
                 if not self._host_valido():
-                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "host inválido"})
+                    return self._json(HTTPStatus.FORBIDDEN, {"error": "invalid host"})
                 partes = urlsplit(self.path)
                 caminho = partes.path
                 if caminho in ("", "/", "/index.html"):
@@ -312,9 +312,9 @@ class ServidorUI:
                 try:
                     alvo.relative_to(servidor.raiz)
                 except ValueError:
-                    return self._json(HTTPStatus.NOT_FOUND, {"erro": "não encontrado"})
+                    return self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
                 if not alvo.is_file():
-                    return self._json(HTTPStatus.NOT_FOUND, {"erro": "não encontrado"})
+                    return self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
                 corpo = alvo.read_bytes()
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", TIPOS_MIME.get(alvo.suffix, "application/octet-stream"))
@@ -366,25 +366,25 @@ class ServidorUI:
 
             def do_POST(self) -> None:  # noqa: N802
                 if not self._host_valido() or not self._origem_valida():
-                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "origem inválida"})
+                    return self._json(HTTPStatus.FORBIDDEN, {"error": "invalid origin"})
                 if not self._autenticado():
-                    return self._json(HTTPStatus.FORBIDDEN, {"erro": "sessão inválida"})
+                    return self._json(HTTPStatus.FORBIDDEN, {"error": "invalid session"})
                 if not self.path.startswith("/api/"):
-                    return self._json(HTTPStatus.NOT_FOUND, {"erro": "não encontrado"})
+                    return self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
                 metodo = self.path[len("/api/"):].split("?", 1)[0]
                 if metodo not in METODOS:
-                    return self._json(HTTPStatus.NOT_FOUND, {"erro": "método desconhecido"})
+                    return self._json(HTTPStatus.NOT_FOUND, {"error": "unknown method"})
                 tamanho = int(self.headers.get("Content-Length") or 0)
                 if tamanho > 1_000_000:
-                    return self._json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"erro": "pedido grande demais"})
+                    return self._json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "request too large"})
                 try:
                     corpo = json.loads(self.rfile.read(tamanho) or b"{}")
                     args = corpo.get("args", []) if isinstance(corpo, dict) else []
                     resultado = getattr(servidor.api, metodo)(*args)
                 except (ValueError, LookupError, TypeError) as erro:
-                    return self._json(HTTPStatus.BAD_REQUEST, {"erro": str(erro)})
+                    return self._json(HTTPStatus.BAD_REQUEST, {"error": str(erro)})
                 except Exception as erro:
-                    return self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"erro": f"{type(erro).__name__}: {erro}"})
+                    return self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"{type(erro).__name__}: {erro}"})
                 return self._json(HTTPStatus.OK, {"resultado": resultado})
 
         return Handler

@@ -6,15 +6,20 @@ Cada chamada a uma ferramenta MCP grava:
 - as memórias que devolveu (id, título, projeto, tarefa, épico), uma linha por memória.
   Uma chamada sem resultados deixa uma linha sem memória, para se ver o que não se encontrou.
 
-Fica em $MEMORIA_HOME/.indice/registo.sqlite, separado do índice: `memoria reindex`
+Fica em <pasta dos dados>/.index/activity.sqlite, separado do índice: `agent-memory reindex`
 não o apaga. É local, como tudo o resto. Tem limite: as linhas mais antigas saem,
 mas o total de chamadas é um contador à parte e não se perde.
+Até à v0.4 ficava em .indice/registo.sqlite: na primeira vez, a v0.5 copia-o (não o move).
+
+As ferramentas gravam-se com os nomes novos (memory_search, memory_add, memory_related);
+as linhas antigas (memoria_procurar, ...) aparecem com os nomes novos.
 
 Gravar nunca pode partir uma ferramenta MCP: os erros vão para o stderr e mais nada.
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 import time
@@ -22,7 +27,17 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from memoria import config
 from memoria.redact import redigir
+
+NOME_FICHEIRO = "activity.sqlite"
+NOME_FICHEIRO_ANTIGO = "registo.sqlite"
+# Nomes das ferramentas até à v0.4 -> os de agora.
+FERRAMENTAS_ANTIGAS = {
+    "memoria_procurar": "memory_search",
+    "memoria_adicionar": "memory_add",
+    "memoria_relacionadas": "memory_related",
+}
 
 MAX_CHAMADAS = 20_000
 MAX_RECORDADAS = 10_000
@@ -66,12 +81,51 @@ def _limpo(valor, maximo: int = MAX_TEXTO) -> str:
     return texto if len(texto) <= maximo else texto[: maximo - 1] + "…"
 
 
+def ferramenta_atual(nome: str) -> str:
+    return FERRAMENTAS_ANTIGAS.get(nome, nome)
+
+
 class Registo:
     def __init__(self, home: Path, caminho: Path | None = None):
-        self.caminho = Path(caminho) if caminho else Path(home) / ".indice" / "registo.sqlite"
+        self._antigo: Path | None = None
+        if caminho:
+            self.caminho = Path(caminho)
+        else:
+            self.caminho = config.pasta_interna(home) / NOME_FICHEIRO
+            self._antigo = Path(home) / config.PASTA_INTERNA_ANTIGA / NOME_FICHEIRO_ANTIGO
+
+    def _copiar_antigo(self) -> None:
+        """Primeira vez na v0.5: copia o registo da v0.4 (a cópia do SQLite é segura com escritas a decorrer)."""
+        antigo, self._antigo = self._antigo, None
+        if not antigo or self.caminho.exists() or not antigo.is_file():
+            return
+        temporario = self.caminho.with_name(f".{self.caminho.name}.{os.getpid()}.copy")
+        try:
+            self.caminho.parent.mkdir(parents=True, exist_ok=True)
+            # Ligação normal (não "ro"): ao fechar, o SQLite apaga os -wal/-shm que abriu e a pasta antiga fica como estava.
+            origem = sqlite3.connect(antigo, timeout=5)
+            try:
+                destino = sqlite3.connect(temporario)
+                try:
+                    origem.backup(destino)
+                finally:
+                    destino.close()
+            finally:
+                origem.close()
+            if not self.caminho.exists():
+                temporario.replace(self.caminho)
+        except (sqlite3.Error, OSError):
+            pass  # sem histórico antigo: começa vazio
+        finally:
+            try:
+                temporario.unlink()
+            except OSError:
+                pass
 
     @contextmanager
     def _ligar(self):
+        if self._antigo:
+            self._copiar_antigo()
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         con = sqlite3.connect(self.caminho, timeout=5)
         con.row_factory = sqlite3.Row
@@ -149,7 +203,7 @@ class Registo:
                     con.execute("DELETE FROM recordadas WHERE id <= ?", (ultima - MAX_RECORDADAS,))
         except Exception as e:  # o registo é acessório
             try:
-                print(f"memoria: registo MCP: {type(e).__name__}: {e}", file=sys.stderr)
+                print(f"agent-memory: MCP activity log: {type(e).__name__}: {e}", file=sys.stderr)
             except Exception:
                 pass
 
@@ -157,6 +211,8 @@ class Registo:
         """Os números do topo e as últimas memórias recordadas (mais recentes primeiro)."""
         agora = time.time() if agora is None else agora
         meia_noite = datetime.fromtimestamp(agora).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        if self._antigo:
+            self._copiar_antigo()
         if not self.caminho.exists():
             return {"hoje": 0, "total": 0, "por_minuto": 0.0, "distintas": 0, "ultima": None, "recordadas": []}
         with self._ligar() as con:
@@ -179,7 +235,7 @@ class Registo:
             "recordadas": [
                 {
                     "quando": r["quando"],
-                    "ferramenta": r["ferramenta"],
+                    "ferramenta": ferramenta_atual(r["ferramenta"]),
                     "texto": r["texto"],
                     "memoria": r["memoria"],
                     "titulo": r["titulo"],

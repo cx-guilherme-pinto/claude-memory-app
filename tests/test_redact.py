@@ -29,7 +29,7 @@ SEGREDOS = [
 def test_segredos_conhecidos(tipo, texto):
     redigido, n = redigir(texto)
     assert n >= 1
-    assert "[REDIGIDO:" in redigido
+    assert "[REDACTED:" in redigido
     # Nenhum pedaço do segredo sobrevive.
     segredo = max(texto.split(), key=len)
     assert segredo not in redigido
@@ -43,7 +43,7 @@ def test_chave_privada():
     redigido, n = redigir(texto)
     assert n == 1
     assert "b3BlbnNzaC1rZXktdjEAAAAABG5vbmU" not in redigido
-    assert redigido.startswith("antes\n[REDIGIDO:chave-privada]") and redigido.endswith("depois")
+    assert redigido.startswith("antes\n[REDACTED:private-key]") and redigido.endswith("depois")
 
 
 def test_chave_privada_sem_fim():
@@ -87,7 +87,7 @@ def test_sem_falsos_positivos(texto):
 
 def test_redigir_valor_recursivo():
     dados = {"a": ["sk-ant-api03-ABCDEFGHIJKLMNOP"], "b": 3}
-    assert redigir_valor(dados) == {"a": ["[REDIGIDO:anthropic]"], "b": 3}
+    assert redigir_valor(dados) == {"a": ["[REDACTED:anthropic]"], "b": 3}
 
 
 def test_memoria_adicionar_redige_antes_de_escrever(mem):

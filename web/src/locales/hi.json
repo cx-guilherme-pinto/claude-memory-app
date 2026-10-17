@@ -128,7 +128,7 @@
   "atividade.abrir": "मेमोरी खोलें",
   "atividade.vazio_titulo": "Claude ने अभी तक Agent Memory इस्तेमाल नहीं की है।",
   "atividade.vazio_texto": "जब Claude Code MCP tools कॉल करेगा, कॉल्स यहाँ दिखेंगी।",
-  "ferramenta.memoria_procurar": "सर्च",
-  "ferramenta.memoria_relacionadas": "रिलेटेड",
-  "ferramenta.memoria_adicionar": "सेव किया"
+  "ferramenta.memory_search": "सर्च",
+  "ferramenta.memory_related": "रिलेटेड",
+  "ferramenta.memory_add": "सेव किया"
 }

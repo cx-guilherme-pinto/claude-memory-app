@@ -1,8 +1,14 @@
 """Caminhos e configuração.
 
-Ordem de leitura de cada chave (a primeira que existir ganha):
+Pasta dos dados (notas, índice, config.json), a primeira que se aplicar:
+1. variável de ambiente AGENT_MEMORY_HOME;
+2. variável antiga MEMORIA_HOME (instalações até à v0.4);
+3. ~/.memoria, se existir e ~/.agent-memory ainda não existir (nunca se move nada);
+4. ~/.agent-memory.
+
+Ordem de leitura de cada chave de configuração (a primeira que existir ganha):
 1. variável de ambiente com o mesmo nome;
-2. $MEMORIA_HOME/config.json (escrito pelo setup do workshop);
+2. <pasta dos dados>/config.json (escrito pelo setup do workshop);
 3. release.conf embutido no pacote no momento do build.
 
 Nenhum URL está escrito no código Python.
@@ -17,9 +23,20 @@ from importlib import resources
 from pathlib import Path
 from urllib.parse import urlsplit
 
-ENV_HOME = "MEMORIA_HOME"
+ENV_HOME = "AGENT_MEMORY_HOME"
+ENV_HOME_ANTIGA = "MEMORIA_HOME"
+PASTA_DADOS = ".agent-memory"
+PASTA_DADOS_ANTIGA = ".memoria"
+# Pasta escondida dentro da pasta dos dados: índice, registo MCP e log da janela.
+PASTA_INTERNA = ".index"
+PASTA_INTERNA_ANTIGA = ".indice"
 
-# Chaves que `memoria update` lê. Os nomes são os mesmos do repos.conf do workshop.
+# Variáveis de ambiente: o nome novo e o antigo (ainda aceite).
+ENV_LINGUA = ("AGENT_MEMORY_LANG", "MEMORIA_LANG")
+ENV_SEM_UPDATE = ("AGENT_MEMORY_NO_UPDATE", "MEMORIA_SEM_UPDATE")
+ENV_TOKEN = ("AGENT_MEMORY_DOWNLOAD_TOKEN", "MEMORIA_DOWNLOAD_TOKEN")
+
+# Chaves que `agent-memory update` lê. Os nomes são os mesmos do repos.conf do workshop.
 CHAVES_UPDATE = (
     "MEMORY_APP_REPO_URL",  # obrigatório: URL git do repositório (com ou sem .git)
     "RELEASE_DOWNLOAD_URL",  # padrão: {repo}/releases/download/{version}/{file}
@@ -28,9 +45,38 @@ CHAVES_UPDATE = (
 )
 
 
+def ambiente(nomes: tuple[str, ...]) -> str:
+    """Valor da primeira variável de ambiente definida (nome novo primeiro, depois o antigo)."""
+    for nome in nomes:
+        valor = os.environ.get(nome)
+        if valor:
+            return valor
+    return ""
+
+
+def sem_update() -> bool:
+    return bool(ambiente(ENV_SEM_UPDATE))
+
+
+def ambiente_sem_update() -> dict[str, str]:
+    """Para um processo filho (o selftest de uma versão nova): os dois nomes, a nova e a antiga entendem."""
+    return {nome: "1" for nome in ENV_SEM_UPDATE}
+
+
 def memoria_home() -> Path:
-    valor = os.environ.get(ENV_HOME)
-    return Path(valor).expanduser() if valor else Path.home() / ".memoria"
+    valor = ambiente((ENV_HOME, ENV_HOME_ANTIGA))
+    if valor:
+        return Path(valor).expanduser()
+    casa = Path.home()
+    nova, antiga = casa / PASTA_DADOS, casa / PASTA_DADOS_ANTIGA
+    # Quem já tinha notas em ~/.memoria continua lá: nunca se move nem apaga nada.
+    if not nova.exists() and antiga.is_dir():
+        return antiga
+    return nova
+
+
+def pasta_interna(home: Path | None = None) -> Path:
+    return Path(home or memoria_home()) / PASTA_INTERNA
 
 
 def config_path() -> Path:
@@ -40,7 +86,7 @@ def config_path() -> Path:
 def indice_path() -> Path:
     from memoria.index import NOME_FICHEIRO
 
-    return memoria_home() / ".indice" / NOME_FICHEIRO
+    return pasta_interna() / NOME_FICHEIRO
 
 
 def ler_conf(texto: str) -> dict[str, str]:

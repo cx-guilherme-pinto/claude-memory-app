@@ -35,6 +35,65 @@ def test_precedencia_env_config_release(home: Path, monkeypatch):
     assert config.definicoes()["MEMORY_APP_REPO_URL"] == "https://github.com/o/n.git"
 
 
+# ------------------------------------------------------------ pasta dos dados
+@pytest.fixture
+def sem_pasta_no_ambiente(monkeypatch, tmp_path):
+    casa = tmp_path / "outra-casa"
+    casa.mkdir()
+    monkeypatch.setenv("HOME", str(casa))
+    monkeypatch.setenv("USERPROFILE", str(casa))
+    monkeypatch.delenv("AGENT_MEMORY_HOME", raising=False)
+    monkeypatch.delenv("MEMORIA_HOME", raising=False)
+    return casa
+
+
+def test_pasta_por_omissao_e_agent_memory(sem_pasta_no_ambiente):
+    casa = sem_pasta_no_ambiente
+    assert config.memoria_home() == casa / ".agent-memory"
+    assert config.config_path() == casa / ".agent-memory" / "config.json"
+    assert config.pasta_interna() == casa / ".agent-memory" / ".index"
+
+
+def test_pasta_antiga_continua_se_a_nova_nao_existir(sem_pasta_no_ambiente):
+    casa = sem_pasta_no_ambiente
+    (casa / ".memoria").mkdir()
+    assert config.memoria_home() == casa / ".memoria"  # nada se move
+    (casa / ".agent-memory").mkdir()
+    assert config.memoria_home() == casa / ".agent-memory"  # a nova, quando existe, ganha
+    assert (casa / ".memoria").is_dir()
+
+
+def test_variaveis_de_ambiente_da_pasta(sem_pasta_no_ambiente, monkeypatch, tmp_path):
+    (sem_pasta_no_ambiente / ".memoria").mkdir()
+    monkeypatch.setenv("MEMORIA_HOME", str(tmp_path / "antiga"))
+    assert config.memoria_home() == tmp_path / "antiga"
+    monkeypatch.setenv("AGENT_MEMORY_HOME", str(tmp_path / "nova"))
+    assert config.memoria_home() == tmp_path / "nova"  # o nome novo ganha ao antigo
+
+
+@pytest.mark.parametrize("nome", ["AGENT_MEMORY_NO_UPDATE", "MEMORIA_SEM_UPDATE"])
+def test_sem_update_aceita_os_dois_nomes(monkeypatch, nome):
+    monkeypatch.delenv("AGENT_MEMORY_NO_UPDATE", raising=False)
+    monkeypatch.delenv("MEMORIA_SEM_UPDATE", raising=False)
+    assert not config.sem_update()
+    monkeypatch.setenv(nome, "1")
+    assert config.sem_update()
+    assert config.ambiente_sem_update() == {"AGENT_MEMORY_NO_UPDATE": "1", "MEMORIA_SEM_UPDATE": "1"}
+
+
+def test_executavel_prefere_agent_memory(tmp_path: Path, monkeypatch):
+    sufixo = ".exe" if sys.platform == "win32" else ""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    antigo = bin_ / f"memoria{sufixo}"
+    antigo.write_text("")
+    monkeypatch.setattr(update.sys, "argv", [str(antigo)])
+    assert update.executavel_memoria() == str(antigo.resolve())  # só o antigo: usa-o
+    novo = bin_ / f"agent-memory{sufixo}"
+    novo.write_text("")
+    assert update.executavel_memoria() == str(novo.resolve())
+
+
 def test_config_invalido_e_ignorado(home: Path, capsys):
     home.mkdir(parents=True, exist_ok=True)
     (home / "config.json").write_text("{nao é json", "utf-8")
@@ -234,7 +293,7 @@ def test_update_repo_privado_usa_token(tmp_path: Path, home: Path, uv_falso, mon
     try:
         with pytest.raises(update.ErroUpdate, match="não há credenciais"):
             update.atualizar()
-        monkeypatch.setenv("MEMORIA_DOWNLOAD_TOKEN", "segredo-de-teste")
+        monkeypatch.setenv("AGENT_MEMORY_DOWNLOAD_TOKEN", "segredo-de-teste")
         assert update.atualizar() == 0
     finally:
         srv.fechar()
@@ -257,7 +316,7 @@ def test_script_windows_espera_e_instala(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(update.subprocess, "Popen", lambda cmd, **kw: lancados.append(cmd))
     cmd = ["C:\\Users\\João\\.local\\bin\\uv.exe", "tool", "install", "--force", "--python", "3.12", "C:\\t\\m.whl"]
     assert update._instalar_depois_de_sair(cmd, tmp_path) == 0
-    script = (tmp_path / "instalar.ps1").read_bytes()
+    script = (tmp_path / "install.ps1").read_bytes()
     assert script.startswith(b"\xef\xbb\xbf")  # BOM: o PowerShell 5.1 lê os acentos
     texto = script.decode("utf-8-sig")
     assert "Wait-Process -Id" in texto and "'tool' 'install' '--force'" in texto and "reindex" in texto

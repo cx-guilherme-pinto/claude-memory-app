@@ -20,6 +20,7 @@ faz push para os dois. As releases v0.1.0 a v0.4.0 estão a ser copiadas para l�
 | 0.2.3 | Editar a memória dentro da app |
 | 0.3.0 | 4 línguas (pt, en, hi, he), hebraico RTL, seletor de língua |
 | 0.4.0 | Vista "Atividade do Claude" (registo das chamadas MCP) |
+| 0.5.0 (ainda por publicar) | Nome *Agent Memory*; nomes técnicos em inglês: comando `agent-memory`, servidor MCP `agent-memory` com `memory_search`/`memory_add`/`memory_related`, cabeçalho das notas em inglês e `~/.agent-memory`. Os nomes antigos continuam aceites (ver o CHANGELOG) |
 
 Assets de cada release: wheel, `constraints.txt`, `install.sh`, `install.ps1`, `SHA256SUMS`
 e os 3 zips portáteis.
@@ -38,30 +39,30 @@ Verificado:
 ## O que falta
 
 1. **Testar no Windows a sério.** Só houve verificação estática: `install.ps1`, o zip portátil,
-   o WebView2, o pythonnet, o `memoria-gui.exe` e a troca de pasta no `memoria update`.
+   o WebView2, o pythonnet, o `agent-memory-gui.exe` e a troca de pasta no `agent-memory update`.
 2. **Testar no Mac Intel e no Windows ARM.** Os wheels existem (ver `scripts/lock.sh`), mas não houve teste real.
 3. **Rever o hindi e o hebraico com quem fala a língua:** `web/src/locales/hi.json`, `he.json`,
    `src/memoria/mensagens.py`, `README.hi.md` e `README.he.md`.
 4. **Mensagens dos instaladores noutras línguas.** O `install.sh` e o `install.ps1` só falam inglês
-   (o `.ps1` tem de ficar ASCII). O zip do Windows traz `README.txt` (inglês) e `LEIA-ME.txt` (português).
+   (o `.ps1` tem de ficar ASCII). O zip do Windows traz `README.txt` (inglês) e `README.pt.txt` (português).
 5. **Correr o workflow de CI pela primeira vez** (`.github/workflows/release.yml`). No Gitea não havia
    runner: todas as releases foram feitas à mão com os mesmos scripts.
 6. **Assinatura Apple real** (Developer ID + notarização): só foi testada a assinatura ad hoc.
 
 ## Riscos
 
-- **Repositório privado ou interno.** Os instaladores, o setup do kit e o `memoria update` descarregam
+- **Repositório privado ou interno.** Os instaladores, o setup do kit e o `agent-memory update` descarregam
   por `{repo}/releases/download/<tag>/<ficheiro>`. No GitHub esse URL só funciona sem login num
   repositório público. Num repositório privado ou interno, os participantes não conseguem instalar
   nem atualizar. Soluções: publicar as releases num repositório público, ou acrescentar um download
   pela API (com token) ao `update.py` e aos instaladores.
 - **Gatekeeper, SmartScreen e EDR.** Os zips não são assinados. Pelo setup (curl ou Invoke-WebRequest)
   não ficam em quarentena. Descarregados pelo browser, o macOS bloqueia-os.
-- **Proxies com inspeção de TLS.** O uv precisa de `UV_SYSTEM_CERTS=1`. O `memoria update` usa os
+- **Proxies com inspeção de TLS.** O uv precisa de `UV_SYSTEM_CERTS=1`. O `agent-memory update` usa os
   certificados do sistema (truststore). O `git ls-remote` do update usa a configuração do git.
 - **`cryptography` fixado em 46.0.3** (`constraints.in`): é a última versão com wheels para Mac Intel
   e Windows ARM. Vem do `mcp`, mas o servidor stdio não o usa.
-- **Atualizar no Windows com o Claude Code aberto.** O `memoria mcp` prende os ficheiros. O script de
+- **Atualizar no Windows com o Claude Code aberto.** O `agent-memory mcp` prende os ficheiros. O script de
   troca espera até 3 minutos e pede para fechar a Agent Memory e o Claude Code.
 - **Testes de canvas no Chromium headless.** Os animation frames nem sempre correm. Os testes usam
   o valor visto no momento do desenho (`tests/test_browser.py`, `_esperar_desenho`).

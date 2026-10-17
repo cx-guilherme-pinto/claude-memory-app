@@ -153,8 +153,10 @@ def modelos_windows(pasta: Path, site: Path, versao: str, menor: str) -> None:
     (pasta / "pythonw.exe").rename(pasta / "Memoria.exe")
     copiar_crlf(MODELOS / "windows" / "python._pth", pasta / f"{dll}._pth")
     shutil.copyfile(MODELOS / "windows" / "sitecustomize.py", site / "sitecustomize.py")
-    copiar_crlf(MODELOS / "windows" / "memoria.cmd", pasta / "memoria.cmd")
-    for leia in ("README.txt", "LEIA-ME.txt"):
+    # agent-memory.cmd desde a v0.5; memoria.cmd é o nome antigo (scripts e registos MCP de antes).
+    for cmd in ("agent-memory.cmd", "memoria.cmd"):
+        copiar_crlf(MODELOS / "windows" / cmd, pasta / cmd)
+    for leia in ("README.txt", "README.pt.txt"):
         copiar_crlf(MODELOS / "windows" / leia, pasta / leia, bom=True, versao=versao)
 
 
@@ -257,7 +259,7 @@ def data_fixa() -> tuple[int, ...]:
 
 
 def testar(zip_: Path, plataforma: str) -> None:
-    """No Mac: extrai como o setup (ditto) e corre o selftest com uma MEMORIA_HOME temporária."""
+    """No Mac: extrai como o setup (ditto) e corre o selftest com uma pasta de dados temporária."""
     if platform.system() != "Darwin" or not plataforma.startswith("macos"):
         return
     if plataforma == "macos-x86_64" and platform.machine() == "arm64":
@@ -267,7 +269,7 @@ def testar(zip_: Path, plataforma: str) -> None:
     with tempfile.TemporaryDirectory(prefix="memoria-portatil-") as tmp:
         subprocess.run(["ditto", "-x", "-k", str(zip_), tmp], check=True)
         lancador = Path(tmp) / "Memoria.app" / "Contents" / "MacOS" / "memoria"
-        env = {**os.environ, "MEMORIA_HOME": str(Path(tmp) / "home"), "MEMORIA_SEM_UPDATE": "1"}
+        env = {**os.environ, "AGENT_MEMORY_HOME": str(Path(tmp) / "home"), "AGENT_MEMORY_NO_UPDATE": "1"}
         r = subprocess.run([str(lancador), "selftest"], env=env, capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             falha(f"selftest de {zip_.name} falhou:\n{r.stdout}{r.stderr}")

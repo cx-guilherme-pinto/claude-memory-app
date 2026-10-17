@@ -106,7 +106,7 @@ export default function Atividade({ onAbrir }) {
                   </span>
                   <span role="cell" className="registo-memoria">
                     {titulo}
-                    {r.texto && r.ferramenta === 'memoria_procurar' && (
+                    {r.texto && r.ferramenta === 'memory_search' && (
                       <span className="fraco pequeno registo-pesquisa" dir="auto">
                         {t('atividade.pesquisa', { texto: r.texto })}
                       </span>

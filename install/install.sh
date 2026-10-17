@@ -10,22 +10,23 @@
 #   3. corre `uv tool install` com o Python 3.12 gerido pelo uv;
 #   4. cria ~/Applications/Agent Memory.app (Mac) ou um atalho .desktop (Linux).
 #
-# Repositório privado (só em desenvolvimento): exporta MEMORIA_DOWNLOAD_TOKEN.
+# Repositório privado (só em desenvolvimento): exporta AGENT_MEMORY_DOWNLOAD_TOKEN
+# (ou a antiga MEMORIA_DOWNLOAD_TOKEN).
 # O token vai para o curl pelo stdin e nunca é impresso.
 set -eu
 
 # >>> config: gerado a partir de release.conf por scripts/render_installers.py. Não editar à mão.
 [ -n "${MEMORY_APP_REPO_URL:-}" ] || MEMORY_APP_REPO_URL='https://github.com/cx-guilherme-pinto/claude-memory-app.git'
-[ -n "${MEMORY_APP_VERSION:-}" ] || MEMORY_APP_VERSION='v0.4.1'
+[ -n "${MEMORY_APP_VERSION:-}" ] || MEMORY_APP_VERSION='v0.5.0'
 [ -n "${RELEASE_DOWNLOAD_URL:-}" ] || RELEASE_DOWNLOAD_URL='{repo}/releases/download/{version}/{file}'
 [ -n "${UV_VERSION:-}" ] || UV_VERSION='0.13.1'
 [ -n "${PYTHON_VERSION:-}" ] || PYTHON_VERSION='3.12'
-BUILD_VERSION='v0.4.1'
+BUILD_VERSION='v0.5.0'
 WHEEL_SHA256=''
 # <<< config
 
 UV_INSTALLER_URL="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-installer.sh"
-MEMORIA_DOWNLOAD_TOKEN="${MEMORIA_DOWNLOAD_TOKEN:-}"
+DOWNLOAD_TOKEN="${AGENT_MEMORY_DOWNLOAD_TOKEN:-${MEMORIA_DOWNLOAD_TOKEN:-}}"
 
 diz() { printf '%s\n' "$*"; }
 falha() { printf 'Error: %s\n' "$*" >&2; exit 1; }
@@ -46,8 +47,8 @@ url_asset() {
 }
 
 baixar() {
-  if [ -n "$MEMORIA_DOWNLOAD_TOKEN" ]; then
-    printf 'header = "Authorization: token %s"\n' "$MEMORIA_DOWNLOAD_TOKEN" |
+  if [ -n "$DOWNLOAD_TOKEN" ]; then
+    printf 'header = "Authorization: token %s"\n' "$DOWNLOAD_TOKEN" |
       curl --config - -fsSL --retry 3 --proto '=https' --proto-redir '=https' -o "$2" "$1"
   else
     curl -fsSL --retry 3 --proto '=https' --proto-redir '=https' -o "$2" "$1"
@@ -76,7 +77,7 @@ fi
 diz "uv: $("$UV" --version)"
 
 # --- 2. download e verificação ----------------------------------------------
-tmp="$(mktemp -d 2>/dev/null || mktemp -d -t memoria)"
+tmp="$(mktemp -d 2>/dev/null || mktemp -d -t agent-memory)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 wheel="memoria-${MEMORY_APP_VERSION#v}-py3-none-any.whl"
 
@@ -97,8 +98,10 @@ diz "SHA-256 verified."
 "$UV" tool install --force --managed-python --python "$PYTHON_VERSION" \
   "$tmp/$wheel" --constraints "$tmp/constraints.txt" || falha "uv tool install failed."
 bin="$("$UV" tool dir --bin)"
-memoria="$bin/memoria"
-[ -x "$memoria" ] || falha "$memoria not found."
+# O comando chama-se agent-memory desde a v0.5 (memoria continua, para versões antigas).
+memoria="$bin/agent-memory"
+[ -x "$memoria" ] || memoria="$bin/memoria"
+[ -x "$memoria" ] || falha "$bin/agent-memory not found."
 
 # --- 4. atalho -------------------------------------------------------------
 case "$(uname -s)" in
@@ -134,7 +137,11 @@ LAUNCHER
   Linux)
     pasta="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
     mkdir -p "$pasta"
-    cat > "$pasta/memoria.desktop" <<DESKTOP
+    # O atalho antigo (memoria.desktop, ate a v0.4) sai, se for o nosso.
+    if [ -f "$pasta/memoria.desktop" ] && grep -q '^Comment=Claude Code memories$' "$pasta/memoria.desktop"; then
+      rm -f "$pasta/memoria.desktop"
+    fi
+    cat > "$pasta/agent-memory.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Agent Memory
@@ -143,7 +150,7 @@ Exec="$memoria"
 Terminal=false
 Categories=Development;
 DESKTOP
-    diz "Shortcut: $pasta/memoria.desktop"
+    diz "Shortcut: $pasta/agent-memory.desktop"
     ;;
 esac
 
@@ -153,7 +160,7 @@ esac
 diz ""
 diz "Agent Memory $MEMORY_APP_VERSION installed."
 diz "To connect it to Claude Code:"
-diz "  claude mcp add --scope user memoria -- \"$memoria\" mcp"
+diz "  claude mcp add --scope user agent-memory -- \"$memoria\" mcp"
 case ":$PATH:" in
   *":$bin:"*) ;;
   *) diz "Note: $bin is not on PATH. Open a new terminal or add it." ;;

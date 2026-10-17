@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     char caminho[PATH_MAX], real[PATH_MAX], python[PATH_MAX];
     uint32_t tamanho = sizeof(caminho);
     if (_NSGetExecutablePath(caminho, &tamanho) != 0 || realpath(caminho, real) == NULL) {
-        fprintf(stderr, "memoria: não encontrei o caminho do lançador.\n");
+        fprintf(stderr, "agent-memory: could not find the launcher path.\n");
         return 1;
     }
     char *barra = strrchr(real, '/'); /* .../Contents/MacOS/memoria */
@@ -42,6 +42,6 @@ int main(int argc, char *argv[]) {
     }
     args[n] = NULL;
     execv(python, args);
-    fprintf(stderr, "memoria: não consegui correr %s: %s\n", python, strerror(errno));
+    fprintf(stderr, "agent-memory: could not run %s: %s\n", python, strerror(errno));
     return 1;
 }

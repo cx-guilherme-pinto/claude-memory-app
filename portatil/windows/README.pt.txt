@@ -9,15 +9,16 @@ Se aparecer "O Windows protegeu o computador"
 
 Verificar e ligar ao Claude Code
   No PowerShell, nesta pasta:
-    .\memoria.cmd selftest
+    .\agent-memory.cmd selftest
   O selftest mostra o comando "claude mcp add" certo para esta pasta.
 
 Atualizar
   Fecha o Claude Code e corre:
-    .\memoria.cmd update
+    .\agent-memory.cmd update
 
 Notas
-  As memórias ficam em %USERPROFILE%\.memoria, fora desta pasta.
+  As memórias ficam em %USERPROFILE%\.agent-memory, fora desta pasta
+  (ou em %USERPROFILE%\.memoria, se já a tinhas da v0.4 ou anterior).
   Depois de ligar ao Claude Code, não movas esta pasta.
   Se a janela não abrir (falta o WebView2), a Agent Memory abre no browser.
 

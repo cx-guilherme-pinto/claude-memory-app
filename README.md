@@ -5,7 +5,9 @@
 Agent Memory keeps what Claude Code learns as Markdown files on your computer.
 It shows those notes as a graph and gives them back to Claude Code through an MCP server.
 
-Until v0.4 the app was called *Memória*. The command (`memoria`), the MCP server (`memoria`) and the data folder (`~/.memoria`) keep their names.
+Until v0.4 the app was called *Memória*. Since v0.5 the names are in English too: the `agent-memory` command,
+the `agent-memory` MCP server with the `memory_search`, `memory_add` and `memory_related` tools, and the `~/.agent-memory` folder.
+The old names still work (see [Coming from v0.4](#coming-from-v04)).
 
 - **Lessons**, rules (**do**, **don't**) and task **history**.
 - Each note can be linked to a ticket (Jira, GitHub) and its epic.
@@ -22,13 +24,13 @@ No administrator rights needed.
 **macOS** (Intel and Apple Silicon) and Linux, in Terminal:
 
 ```bash
-curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.sh | sh
+curl -fsSL https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.5.0/install.sh | sh
 ```
 
 **Windows 10/11**, in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.4.1/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/cx-guilherme-pinto/claude-memory-app/releases/download/v0.5.0/install.ps1 | iex"
 ```
 <!-- <<< instalar -->
 
@@ -54,47 +56,50 @@ Every release also has one zip per platform, with Python inside:
 
 Unzip and open. No admin rights and no network needed. The workshop setup does this for you.
 
-- Connect it to Claude Code: `memoria selftest` prints the right `claude mcp add` command.
-  On Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; on Windows, `memoria.cmd selftest`.
+- Connect it to Claude Code: `selftest` prints the right `claude mcp add` command.
+  On Mac, `…/Memoria.app/Contents/MacOS/memoria selftest`; on Windows, `agent-memory.cmd selftest`.
 - Prefer the one-line install command. A zip downloaded in a browser needs approval in
   System Settings → Privacy & Security: macOS blocks the app because it isn't signed.
   To unblock it in Terminal: `xattr -dr com.apple.quarantine ~/Applications/Memoria.app`.
   On Windows, at "Windows protected your PC", click "More info" and then "Run anyway".
 - Once it's connected to Claude Code, don't move the app.
+- The zips, the app folder and its launchers keep the `Memoria` name: older portable copies can still update in place.
 
 Details and decisions: [docs/portatil.md](docs/portatil.md).
 
 ## Connect to Claude Code
 
 ```bash
-claude mcp add --scope user memoria -- "$HOME/.local/bin/memoria" mcp
+claude mcp add --scope user agent-memory -- "$HOME/.local/bin/agent-memory" mcp
 ```
 
-On Windows: `claude mcp add --scope user memoria -- "%USERPROFILE%\.local\bin\memoria.exe" mcp`.
+On Windows: `claude mcp add --scope user agent-memory -- "%USERPROFILE%\.local\bin\agent-memory.exe" mcp`.
 
-MCP tools:
+MCP tools (in Claude Code: `mcp__agent-memory__memory_search` and so on):
 
 | Tool | Purpose |
 |---|---|
-| `memoria_procurar(texto, projeto?, tipo?, tarefa?, epico?, limite=10)` | Search notes. A ticket key (`ABC-123`) returns the task and its epic. |
-| `memoria_adicionar(tipo, titulo, texto, projeto, tarefa?, epico?, url?, ficheiros?, ligacoes?, etiquetas?, custo_usd?)` | Save a note and return its path. |
-| `memoria_relacionadas(id_ou_caminho, limite=10)` | Linked notes, strongest relation first. |
+| `memory_search(text?, project?, task?, epic?, type?, limit=10)` | Search notes. A ticket key (`ABC-123`) returns the task and its epic. Empty `text` returns the latest. |
+| `memory_add(type, title, text, project, task?, epic?, url?, tags?, files?, links?, cost_usd?)` | Save a note and return its path. |
+| `memory_related(ref, limit=10)` | Linked notes, strongest relation first. `ref` is the path `memory_add` returned, or a note id, name or title. |
 
-Tool and parameter names are in Portuguese and never change; their descriptions are in English.
+`type` is `lesson`, `do`, `dont` or `history`.
+Results use the same English names: `{"total": 1, "results": [{"id", "path", "type", "title", "project", "task", "epic", "url", "tags", "files", "date", "cost_usd", "links", "excerpt", "score"}]}`
+(`memory_related` adds `strength` and `reasons`, for example `{"link": 1, "task": 1}`). Empty fields are left out.
 
 ## Use
 
 | Command | What it does |
 |---|---|
-| `memoria` | Opens the window. |
-| `memoria --browser` | Opens the same interface in the browser. |
-| `memoria add --tipo licao --projeto p --titulo "..." --texto "..." [--tarefa ABC-123 --epico ABC-100 --url ...]` | Saves a note. |
-| `memoria procurar "text" [--tarefa ABC-123] [--epico ABC-100]` | Searches from the command line. |
-| `memoria reindex` | Rebuilds the index from the Markdown files. |
-| `memoria update` | Installs the latest version. |
-| `memoria selftest [--gui]` | Checks the installation. With `--gui`, opens and closes the window. |
-| `memoria lingua [pt\|en\|hi\|he]` | Shows or sets the language. |
-| `memoria mcp` | MCP server (used by Claude Code). |
+| `agent-memory` | Opens the window. |
+| `agent-memory --browser` | Opens the same interface in the browser. |
+| `agent-memory add --type lesson --project p --title "..." --text "..." [--task ABC-123 --epic ABC-100 --url ... --tag ci --file a.py --link "Other note" --cost 1.25]` | Saves a note. |
+| `agent-memory search "text" [--project p] [--type dont] [--task ABC-123] [--epic ABC-100] [--limit 10] [--json]` | Searches from the command line. |
+| `agent-memory reindex` | Rebuilds the index from the Markdown files. |
+| `agent-memory update [--check] [--force] [--version vX.Y.Z]` | Installs the latest version. |
+| `agent-memory selftest [--gui]` | Checks the installation. With `--gui`, opens and closes the window. |
+| `agent-memory language [pt\|en\|hi\|he]` | Shows or sets the language. |
+| `agent-memory mcp` | MCP server (used by Claude Code). |
 
 In the window, click a node to see the note. Press `/` to search and `Esc` to close.
 Search shows memories, projects and tasks/epics; pick one to focus it.
@@ -116,8 +121,8 @@ The **Claude activity** button at the top of the column shows what Claude asked 
 
 The view refreshes on its own. It isn't split by session.
 
-The log lives in `~/.memoria/.indice/registo.sqlite`, on your computer, separate from the index
-(`memoria reindex` keeps it). The searched text goes through the same secret redaction and is cut short.
+The log lives in `~/.agent-memory/.index/activity.sqlite`, on your computer, separate from the index
+(`agent-memory reindex` keeps it). The searched text goes through the same secret redaction and is cut short.
 Note contents are never logged. Old rows are dropped automatically; the total call count is kept.
 
 ## Languages
@@ -129,8 +134,8 @@ The app speaks English, Portuguese, Hindi and Hebrew. By default it follows the 
 - **others:** `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` or `LANG`.
 
 If none is supported, it uses English.
-The picker at the top of the column switches the language at once and saves it in `~/.memoria/preferencias.json`.
-From the command line: `memoria lingua he`. The `MEMORIA_LANG` variable overrides everything.
+The picker at the top of the column switches the language at once and saves it in `~/.agent-memory/preferences.json`.
+From the command line: `agent-memory language he`. The `AGENT_MEMORY_LANG` variable overrides everything.
 
 - Hebrew opens right to left. Each note's text keeps its own direction.
 - Hindi and Hebrew use Noto Sans Devanagari and Noto Sans Hebrew, bundled with the app.
@@ -138,55 +143,72 @@ From the command line: `memoria lingua he`. The `MEMORIA_LANG` variable override
 
 ## Where memories live
 
-In `~/.memoria` (or the folder set in `MEMORIA_HOME`):
+In `~/.agent-memory` (or the folder set in `AGENT_MEMORY_HOME`):
 
 ```text
-~/.memoria/
+~/.agent-memory/
   <project>/<YYYY-MM-DD>-<slug>.md   one note per file
   config.json                        update URLs (optional)
-  .indice/memoria-v2.sqlite          index; safe to delete
-  .indice/registo.sqlite             MCP call log ("Claude activity" view)
-  preferencias.json                  language chosen in the picker
+  .index/index-v2.sqlite             index; safe to delete
+  .index/activity.sqlite             MCP call log ("Claude activity" view)
+  preferences.json                   language chosen in the picker
 ```
 
-Each note has a YAML header. The field names are Portuguese and are part of the contract:
+Each note has a YAML header. The field names are part of the contract:
 
 ```markdown
 ---
-tipo: licao            # licao (lesson) | fazer (do) | nao_fazer (don't) | historico (history)
-titulo: Use the build cache
-projeto: arena-de-seguranca
-tarefa: ARENA-12       # optional: ticket key (or owner/repo#12)
-epico: ARENA-1         # optional: epic or parent
+type: lesson           # lesson | do | dont | history
+title: Use the build cache
+project: security-arena
+task: ARENA-12         # optional: ticket key (or owner/repo#12)
+epic: ARENA-1          # optional: epic or parent
 url: https://company.atlassian.net/browse/ARENA-12   # optional
-etiquetas: [ci, cache] # optional: tags
-ficheiros: [orquestrador/plan.mjs]
-data: '2026-10-16T13:25:33+01:00'
-custo_usd: 1.25        # optional
-ligacoes: [Avoid retries]
+tags: [ci, cache]      # optional
+files: [orchestrator/plan.mjs]
+date: '2026-10-16T13:25:33+01:00'
+cost_usd: 1.25         # optional
+links: [Avoid retries]
 ---
 
 The build is 3x faster with the cache. See [[Avoid retries]].
 ```
 
 You can edit the files by hand. The app picks up the changes.
-`memoria reindex` rebuilds the index at any time.
-`epico`, `url` and `etiquetas` came in v0.2 and are optional: v0.1 notes are still valid.
+`agent-memory reindex` rebuilds the index at any time.
+`epic`, `url` and `tags` came in v0.2 and are optional: v0.1 notes are still valid.
 
 Tickets:
 
 - Jira keys are upper-cased (`abc-123` → `ABC-123`); GitHub keys look like `owner/repo#12`.
-- Without `tarefa`, the app takes it from `url` when it's a Jira ticket or an issue/PR.
-- A note without `epico` inherits its task's epic, if another note names it.
+- Without `task`, the app takes it from `url` when it's a Jira ticket or an issue/PR.
+- A note without `epic` inherits its task's epic, if another note names it.
 - Searching `ABC-123` finds that task's notes, its epic's notes and notes that mention it.
 
 Link strength, strongest first:
-explicit link (`[[...]]` or `ligacoes`), same task, same epic, same project, shared files.
+explicit link (`[[...]]` or `links`), same task, same epic, same project, shared files.
+
+## Coming from v0.4
+
+Nothing moves and nothing is rewritten. The old names keep working:
+
+| Until v0.4 | Since v0.5 |
+|---|---|
+| `memoria` command (and `memoria-gui`) | `agent-memory` (and `agent-memory-gui`); `memoria` still works |
+| `procurar`, `lingua`, `--tipo`, `--titulo`, `--projeto`, `--texto`, `--tarefa`, `--epico`, `--etiqueta`, `--ficheiro`, `--ligacao`, `--custo`, `--limite`, `--verificar`, `--forcar`, `--versao` | `search`, `language`, `--type`, `--title`, `--project`, `--text`, `--task`, `--epic`, `--tag`, `--file`, `--link`, `--cost`, `--limit`, `--check`, `--force`, `--version` (the old ones are still accepted) |
+| MCP server `memoria`: `memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas` | MCP server `agent-memory`: `memory_search`, `memory_add`, `memory_related` (the old tool names are gone) |
+| `~/.memoria`, `MEMORIA_HOME` | `~/.agent-memory`, `AGENT_MEMORY_HOME`. If `~/.memoria` exists and `~/.agent-memory` doesn't, the app keeps using `~/.memoria`. `MEMORIA_HOME` still works. |
+| `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE`, `MEMORIA_DOWNLOAD_TOKEN` | `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE`, `AGENT_MEMORY_DOWNLOAD_TOKEN` (the old ones still work) |
+| Header `tipo: licao`, `titulo`, `projeto`, `tarefa`, `epico`, `etiquetas`, `ficheiros`, `data`, `custo_usd`, `ligacoes` | `type: lesson`, `title`, `project`, `task`, `epic`, `tags`, `files`, `date`, `cost_usd`, `links`. Old notes are read as they are. |
+| `.indice/`, `registo.sqlite`, `preferencias.json` | `.index/`, `activity.sqlite`, `preferences.json`. The old activity log is copied once; the old language choice is read. |
+| `[REDIGIDO:…]` | `[REDACTED:…]` |
+
+To use the new MCP name in Claude Code: `claude mcp remove --scope user memoria`, then the `claude mcp add` above.
 
 ## Update
 
 ```bash
-memoria update
+agent-memory update
 ```
 
 1. Finds the latest version with `git ls-remote --tags` (no API).
@@ -199,7 +221,7 @@ On Windows, the install finishes in a new window. Close Claude Code first.
 In the portable version, update downloads the new zip, checks it and swaps the app folder in place.
 The connection to Claude Code keeps working.
 
-URLs come from `~/.memoria/config.json` and, if missing, from the package's `release.conf`.
+URLs come from `~/.agent-memory/config.json` and, if missing, from the package's `release.conf`.
 Keys read (an environment variable with the same name overrides them):
 
 | Key | Example |
@@ -215,17 +237,17 @@ Keys read (an environment variable with the same name overrides them):
 - Before saving, the app redacts tokens, API keys (`sk-ant-…`, `ghp_…`, `AKIA…`, `xox…`),
   JWTs, private keys and patterns like `password=…`.
 - The interface only listens on `127.0.0.1`, with a random session key.
-- The only network use is the version check (`git ls-remote`) and `memoria update`.
-  To turn it off: `MEMORIA_SEM_UPDATE=1`.
+- The only network use is the version check (`git ls-remote`) and `agent-memory update`.
+  To turn it off: `AGENT_MEMORY_NO_UPDATE=1`.
 - No embeddings and no models. Search is plain text (SQLite FTS5).
 
 ## Troubleshooting
 
 - **"This Python's SQLite has no FTS5"**: reinstall with uv's Python
   (`uv tool install --force --managed-python --python 3.12 <wheel>`).
-- **Company proxy**: uv and `memoria update` use `HTTPS_PROXY` and the system certificates.
+- **Company proxy**: uv and `agent-memory update` use `HTTPS_PROXY` and the system certificates.
   For uv, also set `UV_SYSTEM_CERTS=1`.
-- **The window doesn't open**: `memoria --browser` opens the same interface in the browser.
+- **The window doesn't open**: `agent-memory --browser` opens the same interface in the browser.
 
 ## Development
 

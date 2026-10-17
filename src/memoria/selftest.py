@@ -1,4 +1,4 @@
-"""`memoria selftest`: verifica a instalação sem tocar nas memórias do utilizador."""
+"""`agent-memory selftest`: verifica a instalação sem tocar nas memórias do utilizador."""
 
 from __future__ import annotations
 
@@ -36,26 +36,26 @@ def verificar_base() -> bool:
         resultados.append(_linha(False, str(erro)))
         return False
 
-    with tempfile.TemporaryDirectory(prefix="memoria-selftest-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="agent-memory-selftest-") as tmp:
         try:
             mem = Memoria(Path(tmp))
             a = mem.adicionar(
-                tipo="licao",
-                titulo="Teste de arranque",
-                texto="Chave sk-ant-api03-ABCDEFGHIJKLMNOPQRST não pode ficar. Ver [[segunda nota]].",
+                tipo="lesson",
+                titulo="Startup check",
+                texto="The key sk-ant-api03-ABCDEFGHIJKLMNOPQRST must not stay. See [[second note]].",
                 projeto="selftest",
-                tarefa="TESTE-2",
-                epico="TESTE-1",
+                tarefa="TEST-2",
+                epico="TEST-1",
             )
-            mem.adicionar(tipo="fazer", titulo="Segunda nota", texto="Outra nota.", projeto="selftest", tarefa="TESTE-3", epico="TESTE-1")
+            mem.adicionar(tipo="do", titulo="Second note", texto="Another note.", projeto="selftest", tarefa="TEST-3", epico="TEST-1")
             conteudo = Path(a["caminho"]).read_text("utf-8")
-            resultados.append(_linha("sk-ant-" not in conteudo and "[REDIGIDO:" in conteudo, t("st.redacao")))
-            achados = mem.procurar("arranque")
+            resultados.append(_linha("sk-ant-" not in conteudo and "[REDACTED:" in conteudo, t("st.redacao")))
+            achados = mem.procurar("startup")
             resultados.append(_linha(bool(achados) and achados[0]["id"] == a["id"], t("st.fts")))
             rel = mem.relacionadas(a["id"])
             resultados.append(_linha(bool(rel) and rel[0]["motivos"].get("ligacao") == 1, t("st.arestas")))
-            por_chave = {r["titulo"] for r in mem.procurar("TESTE-2")}
-            resultados.append(_linha(por_chave == {"Teste de arranque", "Segunda nota"}, t("st.chave")))
+            por_chave = {r["titulo"] for r in mem.procurar("TEST-2")}
+            resultados.append(_linha(por_chave == {"Startup check", "Second note"}, t("st.chave")))
             estado = mem.reindexar()
             resultados.append(_linha(estado["total"] == 2, t("st.reindex")))
             resultados.append(_linha(_mcp_ok(mem), t("st.mcp")))
@@ -96,13 +96,13 @@ def verificar_base() -> bool:
 def _mcp_ok(mem) -> bool:
     from mcp import Client
 
-    from memoria.mcp_server import criar_servidor
+    from memoria.mcp_server import FERRAMENTAS, criar_servidor
 
     async def correr() -> bool:
         async with Client(criar_servidor(mem)) as cliente:
             nomes = {t.name for t in (await cliente.list_tools()).tools}
-            r = await cliente.call_tool("memoria_procurar", {"texto": "arranque"})
-            return nomes == {"memoria_procurar", "memoria_adicionar", "memoria_relacionadas"} and not r.is_error
+            r = await cliente.call_tool("memory_search", {"text": "startup"})
+            return nomes == set(FERRAMENTAS) and not r.is_error
 
     return asyncio.run(correr())
 
@@ -122,5 +122,6 @@ def correr(gui: bool = False, timeout: float = 60.0, t0: float | None = None) ->
     from memoria import window
 
     sys.stdout.flush()
-    os.environ.setdefault("MEMORIA_SEM_UPDATE", "1")
+    for nome, valor in config.ambiente_sem_update().items():
+        os.environ.setdefault(nome, valor)
     return window.correr(selftest=True, timeout=timeout, t0=t0)

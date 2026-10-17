@@ -30,14 +30,14 @@ def test_ler_devolve_o_markdown_do_disco(mem: Memoria, api: Api):
     assert f["id"] == r["id"]
     assert f["nome"] == Path(r["caminho"]).name
     assert f["texto"] == Path(r["caminho"]).read_text("utf-8")
-    assert f["texto"].startswith("---\ntipo: licao\n")
+    assert f["texto"].startswith("---\ntype: lesson\ntitle: Usar cache\nproject: loja\n")
     assert f["versao"]
 
 
 def test_guardar_grava_e_reindexa(mem: Memoria, api: Api):
     r = _nova(mem)
     f = api.ficheiro(r["id"])
-    texto = f["texto"].replace("titulo: Usar cache", "titulo: Usar cache no CI").replace(
+    texto = f["texto"].replace("title: Usar cache", "title: Usar cache no CI").replace(
         "O build fica mais rápido.", "O build fica mais rápido com cache partilhada."
     )
     g = api.guardar_ficheiro(r["id"], texto, f["versao"])
@@ -55,16 +55,16 @@ def test_guardar_redige_segredos(mem: Memoria, api: Api):
     g = api.guardar_ficheiro(r["id"], f["texto"] + "\nChave sk-ant-api03-ABCDEFGHIJKLMNOPQRST\n", f["versao"])
     assert g["redigidos"] == 1
     gravado = Path(r["caminho"]).read_text("utf-8")
-    assert "sk-ant-" not in gravado and "[REDIGIDO:" in gravado
+    assert "sk-ant-" not in gravado and "[REDACTED:" in gravado
 
 
 @pytest.mark.parametrize(
     "estragar,mensagem",
     [
         (lambda t: t.replace("---\n", "", 1), "cabeçalho"),
-        (lambda t: t.replace("tipo: licao", "tipo: [aberto"), "YAML"),
-        (lambda t: t.replace("tipo: licao", "tipo: ideia"), "Tipo inválido"),
-        (lambda t: t.replace("titulo: Usar cache", "titulo: ''"), "titulo"),
+        (lambda t: t.replace("type: lesson", "type: [aberto"), "YAML"),
+        (lambda t: t.replace("type: lesson", "type: ideia"), "Tipo inválido"),
+        (lambda t: t.replace("title: Usar cache", "title: ''"), "title"),
     ],
 )
 def test_guardar_recusa_cabecalho_invalido_e_nao_mexe(mem: Memoria, api: Api, estragar, mensagem):
@@ -99,3 +99,18 @@ def test_guardar_normaliza_fins_de_linha(mem: Memoria, api: Api):
     api.guardar_ficheiro(r["id"], f["texto"].rstrip("\n").replace("\n", "\r\n"), f["versao"])
     gravado = Path(r["caminho"]).read_bytes()
     assert b"\r\n" not in gravado and gravado.endswith(b"\n")
+
+
+def test_editar_nota_antiga_mantem_as_chaves_dela(mem: Memoria, api: Api, home: Path):
+    """Uma nota da v0.4 (chaves em português) edita-se e grava-se sem ser convertida."""
+    pasta = home / "loja"
+    pasta.mkdir(parents=True)
+    antiga = pasta / "2026-10-01-antiga.md"
+    antiga.write_text("---\ntipo: licao\ntitulo: Antiga\nprojeto: loja\n---\n\nCorpo.\n", "utf-8")
+    f = api.ficheiro("loja/2026-10-01-antiga")
+    novo = f["texto"].replace("Corpo.", "Corpo editado.")
+    api.guardar_ficheiro("loja/2026-10-01-antiga", novo, f["versao"])
+    assert antiga.read_text("utf-8") == novo
+    assert mem.nota("loja/2026-10-01-antiga")["titulo"] == "Antiga"
+    with pytest.raises(ValueError, match="title"):
+        api.guardar_ficheiro("loja/2026-10-01-antiga", novo.replace("titulo: Antiga", "titulo: ''"), None)

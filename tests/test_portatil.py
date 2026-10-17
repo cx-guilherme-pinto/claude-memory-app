@@ -107,7 +107,7 @@ def test_raiz_e_comandos_no_mac(tmp_path: Path):
     lancador = str(app.resolve() / "Contents" / "MacOS" / "memoria")
     assert portatil.comando(prefixo) == [lancador]
     claude = portatil.comando_claude(prefixo)
-    assert claude.startswith("claude mcp add --scope user memoria -- ")
+    assert claude.startswith("claude mcp add --scope user agent-memory -- ")
     assert claude.endswith(" mcp")
     if os.name != "nt":
         assert f"'{lancador}'" in claude  # caminho com espaços vem entre plicas
@@ -261,7 +261,7 @@ def test_memoria_update_usa_a_troca_na_versao_portatil(monkeypatch):
 def test_script_troca_windows(tmp_path: Path):
     atual = Path("C:/Users/Zé d'Ávila/AppData/Local/Programs/Memoria")
     pasta = Path("C:/Users/Zé d'Ávila/AppData/Local/Programs/.memoria-update-x")
-    texto = portatil.script_troca(atual, pasta / "nova" / "Memoria", pasta, 4242, [str(atual / "python.exe"), "-m", "memoria"])
+    texto = portatil.script_troca(atual, pasta / "new" / "Memoria", pasta, 4242, [str(atual / "python.exe"), "-m", "memoria"])
     assert "Wait-Process -Id 4242" in texto
     assert "Zé d''Ávila" in texto and "d'Á" not in texto  # plicas escapadas para o PowerShell
     assert texto.count("Move-Item") == 2 and "reindex" in texto
@@ -279,9 +279,9 @@ def test_script_troca_windows(tmp_path: Path):
 
 @pytest.mark.skipif(not shutil.which("pwsh"), reason="pwsh não instalado: análise do script só estática")
 def test_script_troca_sintaxe_com_pwsh(tmp_path: Path):
-    script = tmp_path / "trocar.ps1"
+    script = tmp_path / "swap.ps1"
     comando = ["C:/a b/Memoria/python.exe", "-m", "memoria"]
-    texto = portatil.script_troca(Path("C:/a b/Memoria"), Path("C:/a b/.x/nova/Memoria"), Path("C:/a b/.x"), 1, comando)
+    texto = portatil.script_troca(Path("C:/a b/Memoria"), Path("C:/a b/.x/new/Memoria"), Path("C:/a b/.x"), 1, comando)
     script.write_text(texto, encoding="utf-8-sig")
     cmd = (
         "$e=$null; [System.Management.Automation.Language.Parser]::ParseFile("
@@ -293,16 +293,16 @@ def test_script_troca_sintaxe_com_pwsh(tmp_path: Path):
 def test_selftest_mostra_o_comando_do_claude(monkeypatch, capsys):
     monkeypatch.setattr(selftest, "verificar_base", lambda: True)
     monkeypatch.setattr(portatil, "info", lambda prefixo=None: {"plataforma": "macos-arm64"})
-    monkeypatch.setattr(portatil, "comando_claude", lambda prefixo=None: "claude mcp add --scope user memoria -- /x/memoria mcp")
+    monkeypatch.setattr(portatil, "comando_claude", lambda prefixo=None: "claude mcp add --scope user agent-memory -- /x/memoria mcp")
     assert selftest.correr() == 0
-    assert "claude mcp add --scope user memoria -- /x/memoria mcp" in capsys.readouterr().out
+    assert "claude mcp add --scope user agent-memory -- /x/memoria mcp" in capsys.readouterr().out
 
 
 # --- modelos ---------------------------------------------------------------
 
 
 def test_modelos_windows_ascii():
-    for nome in ("python._pth", "memoria.cmd"):
+    for nome in ("python._pth", "memoria.cmd", "agent-memory.cmd"):
         assert (MODELOS / "windows" / nome).read_bytes().isascii(), nome
     linhas = [linha.partition("#")[0].strip() for linha in (MODELOS / "windows" / "python._pth").read_text().splitlines()]
     assert [linha for linha in linhas if linha] == ["Lib", "DLLs", ".", "import site"]

@@ -128,7 +128,7 @@
   "atividade.abrir": "פתיחת הזיכרון",
   "atividade.vazio_titulo": "Claude עוד לא השתמש ב-Agent Memory.",
   "atividade.vazio_texto": "כש-Claude Code יפעיל את כלי ה-MCP, הקריאות יופיעו כאן.",
-  "ferramenta.memoria_procurar": "חיפוש",
-  "ferramenta.memoria_relacionadas": "קשורים",
-  "ferramenta.memoria_adicionar": "שמירה"
+  "ferramenta.memory_search": "חיפוש",
+  "ferramenta.memory_related": "קשורים",
+  "ferramenta.memory_add": "שמירה"
 }

@@ -4,12 +4,40 @@
 
 All notable changes are listed here. Versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.5.0] - 2026-10-17
 
 ### Changed
 
-- The app is now called **Agent Memory** in every language (window, page title, menus, messages, shortcuts and docs). It was *Memória* until v0.4. The `memoria` command, the `memoria` MCP server and the `~/.memoria` folder keep their names.
+- The app is now called **Agent Memory** in every language (window, page title, menus, messages, shortcuts and docs). It was *Memória* until v0.4.
 - The installers create `~/Applications/Agent Memory.app` (Mac) and "Agent Memory" in the Start menu (Windows), and remove the old *Memória* shortcut.
+- **Technical names in English**, so that an English workshop shows no Portuguese word:
+  - command `agent-memory` (and `agent-memory-gui`), with `search` and `language` and the options
+    `--type`, `--title`, `--project`, `--text`, `--task`, `--epic`, `--tag`, `--file`, `--link`, `--cost`, `--limit`,
+    and `update --check/--force/--version`;
+  - MCP server `agent-memory` with the tools `memory_search(text?, project?, task?, epic?, type?, limit)`,
+    `memory_add(type, title, text, project, task?, epic?, url?, tags?, files?, links?, cost_usd?)` and
+    `memory_related(ref, limit)`. Results use English keys (`results`, `path`, `title`, `type`, `task`, `excerpt`,
+    `score`, `strength`, `reasons`, ...). The instructions for the model use the new names;
+  - types `lesson`, `do`, `dont` and `history`;
+  - new notes are written with an English header (`type`, `title`, `project`, `task`, `epic`, `url`, `tags`,
+    `files`, `date`, `cost_usd`, `links`);
+  - data folder `~/.agent-memory` (`AGENT_MEMORY_HOME`), with `.index/index-v2.sqlite`, `.index/activity.sqlite`
+    and `preferences.json`;
+  - variables `AGENT_MEMORY_LANG`, `AGENT_MEMORY_NO_UPDATE` and `AGENT_MEMORY_DOWNLOAD_TOKEN`;
+  - the redaction mark is `[REDACTED:<kind>]`;
+  - the portable Windows zip has `agent-memory.cmd` and `README.pt.txt` (was `LEIA-ME.txt`).
+- The web server's error answers are in English (`{"error": "not found"}`).
+
+### Compatibility
+
+Nothing moves and no note is rewritten:
+
+- `memoria` (and `memoria-gui`) still work, and so do `procurar`, `lingua` and the Portuguese options (`--tipo`, `--projeto`, `--verificar`, ...). They don't show in the help.
+- If `~/.memoria` exists and `~/.agent-memory` doesn't, the app keeps using `~/.memoria`. `MEMORIA_HOME`, `MEMORIA_LANG`, `MEMORIA_SEM_UPDATE` and `MEMORIA_DOWNLOAD_TOKEN` still work (the new names win).
+- Notes with the old Portuguese header (`tipo: licao`, `titulo`, `projeto`, `tarefa`, ...) are read as they are. The type filters accept both names.
+- The old activity log (`.indice/registo.sqlite`) is copied once, never moved; old rows show the new tool names. The language saved in `preferencias.json` is read.
+- The old MCP tool names (`memoria_procurar`, `memoria_adicionar`, `memoria_relacionadas`) are **gone**: the kit's skills use the new ones. Re-register the server as `agent-memory` (`claude mcp remove --scope user memoria`, then `claude mcp add --scope user agent-memory -- <agent-memory> mcp`).
+- The wheel (`memoria-<version>-py3-none-any.whl`), the uv tool name (`memoria`), the Python package and the portable zips and folders (`Memoria-…zip`, `Memoria.app`, `Memoria\Memoria.exe`) keep their names, so installs and updates keep working.
 
 ## [0.4.1] - 2026-10-16
 

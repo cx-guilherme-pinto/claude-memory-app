@@ -108,7 +108,7 @@ class Memoria:
         return self.indice.grafo()
 
     def caminho_seguro(self, ref: str) -> Path:
-        """Caminho de uma memória, garantindo que fica dentro de MEMORIA_HOME."""
+        """Caminho de uma memória, garantindo que fica dentro da pasta dos dados."""
         nota = self.nota(ref)
         if not nota:
             raise LookupError(t("erro.memoria_nao_encontrada", ref=ref))

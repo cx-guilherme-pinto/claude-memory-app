@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "memoria"
-version = "0.4.1"
+version = "0.5.0"
 description = "Agent Memory: local Markdown notes for Claude Code, with a graph view and an MCP server."
 readme = "README.md"
 license = "MIT"
@@ -26,10 +26,13 @@ dependencies = [
 ]
 
 [project.scripts]
+agent-memory = "memoria.cli:main"
+# Nome antigo (até à v0.4): o kit, os registos MCP e os scripts antigos ainda o usam.
 memoria = "memoria.cli:main"
 
 [project.gui-scripts]
 # Sem consola no Windows. É o alvo do atalho do menu Iniciar.
+agent-memory-gui = "memoria.cli:main_gui"
 memoria-gui = "memoria.cli:main_gui"
 
 [dependency-groups]

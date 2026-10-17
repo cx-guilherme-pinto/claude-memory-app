@@ -1,21 +1,26 @@
 """Ficheiros Markdown das memórias (o contrato partilhado com as skills).
 
-Local:  $MEMORIA_HOME/<projeto>/<AAAA-MM-DD>-<slug>.md
-Frontmatter YAML:
-    tipo: licao | fazer | nao_fazer | historico
-    titulo: texto
-    projeto: texto
-    tarefa: chave do ticket (opcional, ex.: ABC-123 ou dono/repo#42)
-    epico: chave do épico ou do pai (opcional, ex.: ABC-100)        [v0.2]
+Local:  <pasta dos dados>/<projeto>/<AAAA-MM-DD>-<slug>.md
+Frontmatter YAML, escrito em inglês desde a v0.5:
+    type: lesson | do | dont | history
+    title: texto
+    project: texto
+    task: chave do ticket (opcional, ex.: ABC-123 ou dono/repo#42)
+    epic: chave do épico ou do pai (opcional, ex.: ABC-100)         [v0.2]
     url: ligação para o ticket ou PR (opcional, http/https)          [v0.2]
-    etiquetas: [palavras para pesquisa] (opcional)                   [v0.2]
-    ficheiros: [caminhos de código]
-    data: ISO 8601
-    custo_usd: número (opcional)
-    ligacoes: [nomes de outras memórias]
+    tags: [palavras para pesquisa] (opcional)                        [v0.2]
+    files: [caminhos de código]
+    date: ISO 8601
+    cost_usd: número (opcional)
+    links: [nomes de outras memórias]
 O corpo pode ter ligações [[nome]].
 
-Os campos novos da v0.2 são opcionais: as notas da v0.1 continuam válidas.
+As notas antigas, com as chaves em português (tipo: licao | fazer | nao_fazer | historico,
+titulo, projeto, tarefa, epico, etiquetas, ficheiros, data, custo_usd, ligacoes),
+continuam a ser lidas tal como estão: nunca se reescreve uma nota.
+
+Por dentro (índice e interface), o tipo usa os nomes antigos (licao, fazer, nao_fazer,
+historico). Para fora (ficheiros novos, MCP, CLI), usa os ingleses: ver TIPO_EXTERNO.
 """
 
 from __future__ import annotations
@@ -34,18 +39,53 @@ from memoria.i18n import t
 TIPOS = ("licao", "fazer", "nao_fazer", "historico")
 TIPOS_CONTEXTO = ("projeto", "epico", "tarefa", "ficheiro")
 
+# Nome de cada tipo fora da app: no frontmatter das notas novas, no MCP e na CLI.
+TIPO_EXTERNO = {"licao": "lesson", "fazer": "do", "nao_fazer": "dont", "historico": "history"}
+TIPOS_EXTERNOS = tuple(TIPO_EXTERNO.values())
+
 _SINONIMOS = {
     "licao": "licao",
     "licoes": "licao",
     "lesson": "licao",
+    "lessons": "licao",
     "fazer": "fazer",
     "do": "fazer",
     "nao_fazer": "nao_fazer",
     "naofazer": "nao_fazer",
     "dont": "nao_fazer",
+    "don_t": "nao_fazer",
+    "do_not": "nao_fazer",
     "historico": "historico",
     "history": "historico",
 }
+
+# Chave do frontmatter em inglês (as notas novas) -> a antiga em português (ainda lida).
+CHAVES_FRONTMATTER = {
+    "type": "tipo",
+    "title": "titulo",
+    "project": "projeto",
+    "task": "tarefa",
+    "epic": "epico",
+    "url": "url",
+    "tags": "etiquetas",
+    "files": "ficheiros",
+    "date": "data",
+    "cost_usd": "custo_usd",
+    "links": "ligacoes",
+}
+
+
+def campo(meta: dict, chave: str, omissao=None):
+    """Valor de um campo do frontmatter: a chave inglesa primeiro, depois a portuguesa."""
+    valor = meta.get(chave)
+    if valor is None:
+        valor = meta.get(CHAVES_FRONTMATTER.get(chave, chave))
+    return omissao if valor is None else valor
+
+
+def tipo_externo(tipo: str) -> str:
+    """licao -> lesson (os outros valores ficam como estão)."""
+    return TIPO_EXTERNO.get(tipo, tipo)
 
 _FRONTMATTER = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 LIGACAO_CORPO = re.compile(r"\[\[([^\[\]\n|]+)(?:\|[^\]\n]*)?\]\]")
@@ -103,12 +143,12 @@ def slug(texto: str, maximo: int = 60) -> str:
     s = sem_acentos(texto).lower()
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
     s = s[:maximo].rstrip("-")
-    return s or "memoria"
+    return s or "note"
 
 
 def pasta_projeto(projeto: str) -> str:
     """Nome seguro da pasta do projeto (sem '..', barras ou espaços)."""
-    return slug(projeto, maximo=80) if projeto else "geral"
+    return slug(projeto, maximo=80) if projeto else "general"
 
 
 def normalizar_tipo(tipo: str) -> str:
@@ -118,7 +158,7 @@ def normalizar_tipo(tipo: str) -> str:
         return _SINONIMOS[chave]
     if chave.replace("_", "") in _SINONIMOS:
         return _SINONIMOS[chave.replace("_", "")]
-    raise ValueError(t("erro.tipo_invalido", tipo=repr(tipo), tipos=", ".join(TIPOS)))
+    raise ValueError(t("erro.tipo_invalido", tipo=repr(tipo), tipos=", ".join(TIPOS_EXTERNOS)))
 
 
 def limpar_ligacao(nome: str) -> str:
@@ -184,23 +224,6 @@ class Nota:
                 vistas.setdefault(nome, None)
         return list(vistas)
 
-    def resumo(self) -> dict:
-        return {
-            "id": self.id,
-            "caminho": str(self.caminho),
-            "tipo": self.tipo,
-            "titulo": self.titulo,
-            "projeto": self.projeto,
-            "tarefa": self.tarefa,
-            "epico": self.epico,
-            "url": self.url,
-            "etiquetas": self.etiquetas,
-            "ficheiros": self.ficheiros,
-            "data": self.data,
-            "custo_usd": self.custo_usd,
-            "ligacoes": self.todas_ligacoes,
-        }
-
 
 def id_de(caminho: Path, home: Path) -> str:
     rel = caminho.resolve().relative_to(home.resolve())
@@ -218,16 +241,17 @@ def ler_nota(caminho: Path, home: Path) -> Nota:
             raise ValueError(t("erro.frontmatter_mapa"))
         meta = dados
         corpo = texto[m.end():]
+    tipo_lido = campo(meta, "type", "historico")
     try:
-        tipo = normalizar_tipo(meta.get("tipo", "historico"))
+        tipo = normalizar_tipo(tipo_lido)
     except ValueError:
-        tipo = str(meta.get("tipo"))
-    custo = meta.get("custo_usd")
+        tipo = str(tipo_lido)
+    custo = campo(meta, "cost_usd")
     try:
         custo = float(custo) if custo not in (None, "") else None
     except (TypeError, ValueError):
         custo = None
-    data_txt = _data_iso(meta.get("data"))
+    data_txt = _data_iso(campo(meta, "date"))
     if not data_txt:
         data_txt = _data_do_nome(caminho) or datetime.fromtimestamp(
             caminho.stat().st_mtime
@@ -236,16 +260,16 @@ def ler_nota(caminho: Path, home: Path) -> Nota:
         id=id_de(caminho, home),
         caminho=caminho.resolve(),
         tipo=tipo,
-        titulo=str(meta.get("titulo") or caminho.stem),
-        projeto=str(meta.get("projeto") or caminho.parent.name),
-        tarefa=normalizar_chave(meta.get("tarefa")),
-        epico=normalizar_chave(meta.get("epico")),
-        url=str(meta.get("url") or "").strip(),
-        etiquetas=_etiquetas(meta.get("etiquetas")),
-        ficheiros=_lista(meta.get("ficheiros")),
+        titulo=str(campo(meta, "title") or caminho.stem),
+        projeto=str(campo(meta, "project") or caminho.parent.name),
+        tarefa=normalizar_chave(campo(meta, "task")),
+        epico=normalizar_chave(campo(meta, "epic")),
+        url=str(campo(meta, "url") or "").strip(),
+        etiquetas=_etiquetas(campo(meta, "tags")),
+        ficheiros=_lista(campo(meta, "files")),
         data=data_txt,
         custo_usd=custo,
-        ligacoes=[limpar_ligacao(x) for x in _lista(meta.get("ligacoes"))],
+        ligacoes=[limpar_ligacao(x) for x in _lista(campo(meta, "links"))],
         corpo=corpo.lstrip("\n"),
     )
 
@@ -256,7 +280,7 @@ def _data_do_nome(caminho: Path) -> str:
 
 
 def listar_ficheiros(home: Path):
-    """Todos os .md em $MEMORIA_HOME/<projeto>/ (ignora pastas escondidas)."""
+    """Todos os .md em <pasta dos dados>/<projeto>/ (ignora pastas escondidas)."""
     if not home.is_dir():
         return
     for pasta in sorted(home.iterdir()):
@@ -292,27 +316,28 @@ def escrever_nota(
     if not projeto:
         raise ValueError(t("erro.falta_projeto"))
     agora = (agora or datetime.now()).astimezone()
+    # Chaves e valores em inglês (ver o topo do ficheiro).
     meta = {
-        "tipo": tipo,
-        "titulo": titulo,
-        "projeto": projeto,
+        "type": tipo_externo(tipo),
+        "title": titulo,
+        "project": projeto,
     }
     url = validar_url(url)
     tarefa = normalizar_chave(tarefa) or chave_de_url(url)
     epico = normalizar_chave(epico)
     if tarefa:
-        meta["tarefa"] = tarefa
+        meta["task"] = tarefa
     if epico and epico != tarefa:
-        meta["epico"] = epico
+        meta["epic"] = epico
     if url:
         meta["url"] = url
     if _etiquetas(etiquetas):
-        meta["etiquetas"] = _etiquetas(etiquetas)
-    meta["ficheiros"] = _lista(ficheiros)
-    meta["data"] = agora.isoformat(timespec="seconds")
+        meta["tags"] = _etiquetas(etiquetas)
+    meta["files"] = _lista(ficheiros)
+    meta["date"] = agora.isoformat(timespec="seconds")
     if custo_usd is not None and custo_usd != "":
-        meta["custo_usd"] = round(float(custo_usd), 6)
-    meta["ligacoes"] = [x for x in (limpar_ligacao(v) for v in _lista(ligacoes)) if x]
+        meta["cost_usd"] = round(float(custo_usd), 6)
+    meta["links"] = [x for x in (limpar_ligacao(v) for v in _lista(ligacoes)) if x]
 
     cabecalho = yaml.safe_dump(meta, allow_unicode=True, sort_keys=False, width=1000)
     conteudo = f"---\n{cabecalho}---\n\n{str(texto or '').strip()}\n"
@@ -362,14 +387,14 @@ def validar_texto(texto: str) -> None:
         raise ValueError(t("erro.yaml_linha", linha=linha + 2)) from None
     if not isinstance(dados, dict):
         raise ValueError(t("erro.cabecalho_mapa"))
-    normalizar_tipo(dados.get("tipo", ""))
-    if not str(dados.get("titulo") or "").strip():
+    normalizar_tipo(campo(dados, "type", ""))
+    if not str(campo(dados, "title") or "").strip():
         raise ValueError(t("erro.falta_titulo_cabecalho"))
 
 
 def gravar_atomico(caminho: Path, texto: str) -> None:
     """Substitui o ficheiro de uma vez: nunca fica meio escrito."""
-    temporario = caminho.with_name(f".{caminho.name}.a-gravar")
+    temporario = caminho.with_name(f".{caminho.name}.saving")
     with open(temporario, "w", encoding="utf-8", newline="\n") as f:
         f.write(texto)
         f.flush()
